@@ -1,32 +1,32 @@
-# 🏎️ AutoWorx Inventory Management System
+# AutoWorx Inventory Management System
 
-AutoWorx is a premium, real-time inventory and logistics suite designed for high-performance automotive operations. Built with a focus on speed, precision, and state-of-the-art aesthetics.
-
-![System Status](https://img.shields.io/badge/System-Operational-green?style=for-the-badge)
+![System Status](https://img.shields.io/badge/System-Operational-brightgreen?style=for-the-badge)
 ![Tech Stack](https://img.shields.io/badge/Next.js%2014-React%2018-black?style=for-the-badge&logo=next.js)
 ![Database](https://img.shields.io/badge/Supabase-Real--time-blue?style=for-the-badge&logo=supabase)
 
-## ✨ Key Features
+AutoWorx is a professional, real-time inventory and logistics suite designed for automotive operations. Built with a focus on speed, precision, and a modern user interface.
 
-### 📦 Smart Parts Registry
+## Key Features
+
+### Smart Parts Registry
 *   **Full CRUD Suite**: Manage your entire inventory with create, update, and deletion tools.
 *   **Compatible Vehicles**: Track part fitment across multiple vehicle models (Hilux, Ranger, etc.).
 *   **Dynamic Stock Alerts**: Instant visual indicators for "Low Stock" and "Out of Stock" items based on custom thresholds.
 
-### 🎨 Paint Batch Management
+### Paint Batch Management
 *   **Color-Coded Registry**: Track automotive paint batches with real Hex/OEM mix code previews.
-*   **Volume Monitoring**: Real-time Liters/Kg tracking with automated depletion alerts.
+*   **Volume Monitoring**: Real-time tracking with automated depletion alerts.
 
-### 🚛 Fleet & Logistics Tracking
+### Fleet and Logistics Tracking
 *   **Dispatch Authorization**: Manage vehicle missions from "Pending" to "Dispatched" and "Delivered."
 *   **Route Control**: Live destination and driver assignment tracking.
 
-### 📊 Advanced Reports & Analytics
+### Advanced Reports and Analytics
 *   **Real-Time Valuation**: Instantly calculate the total asset value of your current stock.
 *   **Operational Exports**: Generate and download professional CSV reports for accounting.
 *   **Print-Ready Registry**: Native browser print support for physical inventory logs.
 
-## 🚀 Technology Stack
+## Technology Stack
 
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **Styling**: Tailwind CSS 3.4+ (Custom Glassmorphism Design System)
@@ -34,11 +34,11 @@ AutoWorx is a premium, real-time inventory and logistics suite designed for high
 - **Icons**: Lucide React
 - **Animations**: Framer Motion / Tailwind Animate
 
-## 🛠️ Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 18.x or later
-- pnpm (recommended) or npm
+- pnpm or npm
 - Supabase Account
 
 ### Installation
@@ -69,9 +69,9 @@ AutoWorx is a premium, real-time inventory and logistics suite designed for high
    pnpm dev
    ```
 
-## 📐 Architecture
+## Architecture
 
 The system uses a **Real-Time Hook Pattern** (`useRealtime`) which ensures that any change made by one staff member is instantly reflected on the screens of all other users without page refreshes.
 
 ---
-*Developed for Sir Alfred - AutoWorx Operations.*
+*Developed for Autoworx Sir Alfred by Javier Siliacay.*
