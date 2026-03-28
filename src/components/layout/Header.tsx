@@ -1,54 +1,111 @@
 "use client";
 
-import React from "react";
-import { 
-  Search, 
-  Bell, 
-  User, 
-  Plus,
-  Menu,
-  Moon,
-  Sun
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, Filter, ChevronDown, UserCircle } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 export default function Header() {
+  const { data: session } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentBranchId = searchParams.get("branch") || "all";
+
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    async function fetchBranches() {
+      const { data } = await supabase.from('branches').select('id, name');
+      setBranches(data || []);
+    }
+    fetchBranches();
+  }, []);
+
+  const handleBranchChange = (branchId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (branchId === "all") {
+      params.delete("branch");
+    } else {
+      params.set("branch", branchId);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  let title = "Main Branch Inventory";
+  let badge = "Owner View";
+  let subtitle = "";
+
+  if (pathname.includes("inventory")) {
+    title = "Manage Inventory";
+    subtitle = "Technical stock levels and product catalog.";
+    badge = "";
+  } else if (pathname.includes("branches")) {
+    title = "Manage Branches";
+    subtitle = "Overview and performance of your retail network.";
+    badge = "";
+  } else if (pathname.includes("staff")) {
+    title = "Manage Access";
+    subtitle = "Control staff permissions and branch assignments.";
+    badge = "";
+  }
+
   return (
-    <header className="h-16 md:h-20 bg-slate-950/50 backdrop-blur-xl border-b border-slate-900 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40">
-      <div className="flex items-center gap-4 w-full max-w-xl">
-        <button className="md:hidden p-2 text-slate-400 hover:text-white transition-colors">
-          <Menu className="w-6 h-6" />
-        </button>
-        
-        <div className="relative flex-1 group hidden sm:block">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-primary-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search inventory, parts, orders..."
-            className="w-full pl-11 pr-4 py-2.5 bg-slate-900/50 border border-slate-800 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600/50 transition-all placeholder:text-slate-600"
-          />
-        </div>
+    <header className="w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-6 bg-transparent">
+      <div className="flex items-center gap-4">
+        <h2 className="font-manrope font-bold text-lg md:text-2xl tracking-tight text-[#1e40af] truncate max-w-[150px] md:max-w-none">
+          {title}
+        </h2>
+        {badge && (
+          <div className="px-3 py-1 bg-[#1e40af]/10 rounded-full hidden sm:block">
+            <span className="text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{badge}</span>
+          </div>
+        )}
+        {subtitle && (
+          <p className="text-sm text-[#64748b] hidden xl:block">{subtitle}</p>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4">
-        <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold hover:bg-primary-500 transition-all shadow-lg shadow-primary-600/20 active:scale-95">
-          <Plus className="w-4 h-4" />
-          New Entry
-        </button>
+      <div className="flex items-center gap-3 md:gap-6">
+        <div className="relative flex items-center bg-white border border-[#e2e8f0] rounded-xl px-2 md:px-3 hover:border-[#1e40af]/30 transition-all focus-within:ring-2 focus-within:ring-[#1e40af]/10">
+          <Filter className="w-3 md:w-4 h-3 md:h-4 text-[#64748b] mr-1 md:mr-2" />
+          <select 
+            value={currentBranchId}
+            onChange={(e) => handleBranchChange(e.target.value)}
+            className="bg-transparent border-none outline-none py-1.5 md:py-2 pr-6 md:pr-8 text-xs md:text-sm font-semibold text-[#1e40af] appearance-none cursor-pointer"
+          >
+            <option value="all">All Network</option>
+            {branches.map(b => (
+              <option key={b.id} value={b.id}>{b.name.split(" ")[0]}</option>
+            ))}
+          </select>
+          <div className="absolute right-2 md:right-3 pointer-events-none">
+             <ChevronDown className="w-3 md:w-4 h-3 md:h-4 text-[#64748b]" />
+          </div>
+        </div>
 
-        <div className="flex items-center gap-1 md:gap-2 border-l border-slate-800 ml-2 md:ml-4 pl-2 md:pl-4">
-          <button className="relative p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-950" />
+        <div className="flex items-center gap-2 md:gap-3">
+          <button className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative">
+            <Bell className="w-5 h-5 text-[#64748b]" />
+            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
           </button>
           
-          <button className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
-            <User className="w-5 h-5" />
-          </button>
+          <div className="hidden sm:block h-6 w-[1px] bg-slate-200 mx-1" />
 
-          <div className="hidden sm:block ml-2 text-right">
-            <p className="text-xs font-bold text-white leading-tight">Admin User</p>
-            <p className="text-[10px] text-slate-500 font-medium">Administrator</p>
-          </div>
+          <button className="flex items-center gap-3 pr-2 pl-1 hover:bg-slate-50 rounded-full transition-all active:scale-95 group">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white ring-1 ring-slate-200 group-hover:ring-[#1e40af]/30 transition-all shadow-sm">
+                {session?.user?.image ? (
+                  <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <UserCircle className="w-5 md:w-6 h-5 md:h-6 text-[#64748b]" />
+                )}
+            </div>
+            <div className="hidden xl:flex flex-col items-start pr-2">
+               <span className="text-[11px] font-bold text-slate-800 leading-none">{session?.user?.name || "Admin Owner"}</span>
+               <span className="text-[9px] font-bold text-[#16a34a] uppercase tracking-widest mt-0.5">Verified Account</span>
+            </div>
+          </button>
         </div>
       </div>
     </header>

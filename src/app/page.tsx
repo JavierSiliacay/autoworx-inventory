@@ -1,329 +1,259 @@
 "use client";
 
-import React from "react";
-import { 
-  Package, 
-  AlertTriangle, 
-  PaintBucket, 
-  Truck, 
-  TrendingUp, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  Activity,
-  Plus,
-  Clock,
-  MoreVertical
-} from "lucide-react";
-import { clsx } from "clsx";
-import { useRealtime } from "@/hooks/useRealtime";
-import { Part, Paint, Truck as TruckType, Transaction } from "@/types";
-import PartModal from "@/components/parts/PartModal";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { Search, ArrowRight, Loader2, MapPin, Shield } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import PublicNav from "@/components/layout/PublicNav";
 
-export default function Dashboard() {
-  const [mounted, setMounted] = React.useState(false);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const parts = useRealtime<Part>('parts');
-  const paints = useRealtime<Paint>('paints');
-  const trucks = useRealtime<TruckType>('trucks');
-  const transactions = useRealtime<Transaction>('transactions');
+const LOGO_URL = "/logo.png";
 
-  React.useEffect(() => {
-    setMounted(true);
+interface GroupedProduct {
+  category: string;
+  name: string;
+  total: number;
+  branches: { b: string; v: string; low: boolean }[];
+}
+
+export default function HomePage() {
+  const [products, setProducts] = useState<GroupedProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLiveInventory();
   }, []);
 
-  const stats = [
-    { 
-      name: "Total Parts", 
-      value: parts.length.toLocaleString(), 
-      change: parts.length > 0 ? "+0%" : "NONE", 
-      trend: "up", 
-      icon: Package,
-      color: "bg-blue-600",
-      accent: "from-blue-600/20 to-transparent"
-    },
-    { 
-      name: "Stock Alerts", 
-      value: parts.filter(p => p.stock_quantity <= p.reorder_threshold).length.toString(), 
-      change: parts.filter(p => p.stock_quantity <= p.reorder_threshold).length > 0 ? "CRITICAL" : "CLEAR", 
-      trend: "down", 
-      icon: AlertTriangle,
-      color: "bg-red-600",
-      accent: "from-red-600/20 to-transparent"
-    },
-    { 
-      name: "Paint Stock", 
-      value: paints.reduce((acc, p) => acc + Number(p.quantity), 0).toFixed(0) + " L", 
-      change: paints.length > 0 ? "0%" : "NONE", 
-      trend: "down", 
-      icon: PaintBucket,
-      color: "bg-purple-600",
-      accent: "from-purple-600/20 to-transparent"
-    },
-    { 
-      name: "Active Deliveries", 
-      value: trucks.filter(t => t.status === 'dispatched').length.toString(), 
-      change: trucks.length > 0 ? "TRACKING" : "IDLE", 
-      trend: "up", 
-      icon: Truck,
-      color: "bg-teal-600",
-      accent: "from-teal-600/20 to-transparent"
-    },
-  ];
+  async function fetchLiveInventory() {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('product_name, category, quantity, branches(name)');
 
-  const categories = Array.from(new Set([...parts.map(p => p.category), ...paints.map(() => 'Paint')]));
+      if (error) {
+        console.error("Dashboard Sync Error:", error);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setProducts([]);
+        return;
+      }
+
+      const grouped = data.reduce((acc: Record<string, GroupedProduct>, item) => {
+        const name = item.product_name;
+        if (!acc[name]) {
+          acc[name] = {
+            category: item.category,
+            name: name,
+            total: 0,
+            branches: []
+          };
+        }
+        acc[name].total += parseFloat(item.quantity.toString());
+        acc[name].branches.push({
+          b: (item.branches as any)?.name || "Unknown",
+          v: parseFloat(item.quantity.toString()) > 0 
+            ? `${parseFloat(item.quantity.toString()).toFixed(1)} L` 
+            : "Out of Stock",
+          low: parseFloat(item.quantity.toString()) < 5
+        });
+        return acc;
+      }, {});
+
+      const list = Object.values(grouped)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 6);
+      
+      setProducts(list);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20">
-      {/* Welcome Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white italic uppercase">AutoWorx <span className="text-primary-500 not-italic">Dashboard</span></h1>
-          <p className="text-slate-500 mt-1 font-medium">Real-time status of your automotive inventory and operations.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2 text-xs font-bold px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-slate-400">LIVE SYSTEM STATUS</span>
-          </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary-600/20 hover:scale-[1.02] transition-transform active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            Add Entry
-          </button>
-        </div>
-      </div>
+    <div className="bg-white text-[#0f172a] selection:bg-[#16a34a]/20 selection:text-[#16a34a]" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <PublicNav />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {stats.map((stat) => (
-          <div key={stat.name} className="glass-card p-4 md:p-6 rounded-3xl relative overflow-hidden group">
-            <div className={clsx("absolute inset-0 bg-gradient-to-br opacity-5", stat.accent)} />
+      <main className="pt-24">
+        {/* Hero Section */}
+        <section className="relative min-h-[500px] md:min-h-[700px] flex flex-col items-center justify-center px-6 py-20 md:py-32 text-center overflow-hidden">
+          <div className="absolute inset-0 -z-10 opacity-10 pointer-events-none">
+            <div className="absolute top-0 left-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-[#16a34a] blur-[80px] md:blur-[160px] rounded-full" />
+            <div className="absolute bottom-0 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-[#1e40af] blur-[80px] md:blur-[160px] rounded-full" />
+          </div>
+          
+          <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 relative z-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#1e40af]/5 rounded-full border border-[#1e40af]/10 animate-fade-in">
+               <Shield className="w-3.5 h-3.5 text-[#1e40af]" />
+               <span className="text-[10px] font-black uppercase tracking-widest text-[#1e40af]">High-Performance Automotive Coatings</span>
+            </div>
             
-            <div className="flex items-start justify-between relative z-10">
-              <div className={clsx("p-2.5 md:p-3 rounded-2xl text-white shadow-xl bg-slate-900 border border-slate-800", stat.color.replace('bg-', 'text-'))}>
-                <stat.icon className="w-5 h-5 md:w-6 md:h-6" />
-              </div>
-              <div className={clsx(
-                "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
-                stat.trend === "up" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-              )}>
-                {stat.change}
-              </div>
-            </div>
-
-            <div className="mt-4 relative z-10">
-              <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.name}</p>
-              <h3 className="text-xl md:text-3xl font-black mt-1 text-white">{stat.value}</h3>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Inventory Movement */}
-        <div className="lg:col-span-2 glass-card p-6 rounded-3xl">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-bold text-white uppercase italic tracking-tighter">Inventory Movement</h3>
-              <p className="text-xs text-slate-500 font-medium mt-1 uppercase tracking-widest leading-none">Global units processed across modules</p>
-            </div>
-          </div>
-          
-          <div className="h-64 flex items-end justify-between gap-2 px-2">
-            {transactions.length > 0 ? (
-              [0, 1, 2, 3, 4, 5, 6].map((i) => {
-                const date = new Date();
-                date.setDate(date.getDate() - (6 - i));
-                const day = date.toISOString().slice(0, 10);
-                const dayTrans = transactions.filter(t => t.timestamp.slice(0, 10) === day);
-                const count = dayTrans.length;
-                const height = Math.min(100, (count / 10) * 100);
-                
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-3 group">
-                    <div className="w-full relative flex flex-col items-center justify-end gap-1 h-full">
-                      <div 
-                        className="w-full bg-primary-600/50 rounded-t-lg transition-all duration-500 hover:bg-primary-500" 
-                        style={{ height: `${height > 0 ? height : 5}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-700 uppercase">{['Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()]}</span>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                <Activity className="w-8 h-8 text-slate-900" />
-                <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Awaiting system transaction data</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Stock Distribution */}
-        <div className="glass-card p-6 rounded-3xl flex flex-col">
-          <h3 className="text-lg font-bold text-white mb-8 uppercase italic tracking-tighter">Stock Distribution</h3>
-          
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="relative w-48 h-48">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="96" cy="96" r="80"
-                  fill="transparent"
-                  stroke="currentColor"
-                  strokeWidth="16"
-                  className="text-slate-900"
-                />
-                {parts.length > 0 && (
-                  <circle
-                    cx="96" cy="96" r="80"
-                    fill="transparent"
-                    stroke="currentColor"
-                    strokeWidth="16"
-                    strokeDasharray={2 * Math.PI * 80}
-                    strokeDashoffset={0}
-                    strokeLinecap="round"
-                    className="text-primary-600"
+            <h1 className="text-4xl md:text-7xl lg:text-8xl font-manrope font-extrabold tracking-tighter text-[#111827] leading-[1] md:leading-[0.9]">
+              The Ultimate <span className="text-[#16a34a]">Finish</span> <br className="hidden md:block"/> for Your Masterpiece.
+            </h1>
+            
+            <p className="text-base md:text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed md:leading-loose">
+              Professional-grade automotive paint, synchronized across our 6-branch regional network. Discover the technical standard trusted by the region’s top body shops and ateliers.
+            </p>
+            
+            {/* Search Protocol */}
+            <div className="relative max-w-2xl mx-auto mt-8 md:mt-16 w-full">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center bg-white p-2 rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 group transition-all focus-within:ring-8 focus-within:ring-[#16a34a]/5">
+                <div className="flex items-center flex-1 px-4 py-3 md:py-0">
+                  <Search className="w-5 h-5 text-slate-300 group-focus-within:text-[#16a34a] transition-colors" />
+                  <input
+                    className="w-full border-none focus:ring-0 bg-transparent px-4 text-sm md:text-base font-semibold text-slate-900 placeholder:text-slate-300 outline-none"
+                    placeholder="Reference code or product location..."
                   />
-                )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-white">{parts.length > 0 ? '100%' : '0%'}</span>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{parts.length > 0 ? 'SYNCHRONIZED' : 'IDLE'}</span>
+                </div>
+                <button className="bg-[#16a34a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all hover:bg-[#15803d] active:scale-95 shadow-xl shadow-[#16a34a]/20">
+                  Search Inventory
+                </button>
+              </div>
+              <div className="flex justify-center gap-4 mt-6">
+                 <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-pulse" />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Network Online</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#1e40af]" />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">6 Strategic Branches</span>
+                 </div>
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="mt-10 w-full space-y-4">
-              {categories.length > 0 ? (
-                categories.slice(0, 3).map((cat, i) => (
-                  <div key={cat} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={clsx("w-2 h-2 rounded-full", i === 0 ? 'bg-primary-500' : i === 1 ? 'bg-purple-600' : 'bg-teal-600')} />
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-tight">{cat}</span>
-                    </div>
-                    <span className="text-xs font-black text-white">
-                      {Math.round(100 / categories.slice(0, 3).length)}%
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-[10px] text-slate-700 font-bold uppercase text-center italic">No items to analyze</p>
-              )}
+        {/* Live Archive Grid */}
+        <section className="max-w-[1440px] mx-auto px-6 md:px-16 pb-24 md:pb-40">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 md:mb-16">
+            <div>
+              <h2 className="text-2xl md:text-4xl font-manrope font-black tracking-tight text-[#111827]">Professional Inventory</h2>
+              <p className="text-sm md:text-base text-slate-500 font-medium tracking-tight mt-1 md:mt-2">Live stock availability for our high-performance automotive coating network.</p>
             </div>
+            <Link href="/products" className="group flex items-center gap-2 text-xs font-black text-[#16a34a] uppercase tracking-widest hover:translate-x-1 transition-all">
+              Browse Full Catalog <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Live Activity Feed */}
-        <div className="lg:col-span-2 glass-card p-6 rounded-3xl">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 uppercase italic tracking-tighter">
-              Live Activity
-              <span className="px-2 py-0.5 bg-primary-600/10 text-primary-500 text-[10px] rounded-full not-italic">REAL-TIME</span>
-            </h3>
-            <button className="text-xs font-black text-primary-500 hover:text-primary-400 uppercase tracking-widest transition-colors">Audit Logs</button>
-          </div>
-          
-          <div className="space-y-8">
-            {transactions.length > 0 ? transactions.slice(0, 4).map((log, i, arr) => (
-              <div key={log.id} className="flex gap-6 group relative">
-                {i !== arr.length - 1 && (
-                  <div className="absolute left-6 top-8 bottom-0 w-px bg-slate-900 z-0" />
-                )}
-                
-                <div className={clsx(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-lg border border-slate-800 transition-all group-hover:border-slate-600",
-                  log.transaction_type === "inbound" ? "bg-green-600/10 text-green-500" :
-                  log.transaction_type === "outbound" ? "bg-primary-600/10 text-primary-500" :
-                  "bg-red-600/10 text-red-500"
-                )}>
-                  {log.transaction_type === "inbound" ? <Plus className="w-5 h-5" /> :
-                   log.transaction_type === "outbound" ? <Truck className="w-5 h-5" /> :
-                   <AlertTriangle className="w-5 h-5" />}
-                </div>
-
-                <div className="flex-1 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-black text-white truncate max-w-[200px] md:max-w-md uppercase tracking-tight italic">
-                      {log.transaction_type === 'inbound' ? 'New Stock Received' : 
-                       log.transaction_type === 'outbound' ? 'Order Dispatched' : 
-                       'Low Stock Warning'}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 font-bold mt-0.5">{log.remarks}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                       <div className="flex items-center gap-1 text-[10px] text-slate-600 font-bold">
-                         <Clock className="w-3 h-3" />
-                         {mounted ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...'}
-                       </div>
-                       <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest bg-slate-900 px-1.5 py-0.5 rounded">Verified</span>
+          {loading ? (
+            <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
+              <Loader2 className="w-12 h-12 text-[#16a34a] animate-spin opacity-40" />
+              <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-[0.2em]">Acquiring Archives...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+              {products.map((card, i) => (
+                <div key={i} className="bg-white rounded-[2rem] p-8 md:p-10 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#16a34a]/30 transition-all group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500" />
+                  
+                  <div className="flex justify-between items-start mb-8 relative z-10">
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#16a34a]/60">{card.category}</span>
+                      <h3 className="text-xl md:text-2xl font-manrope font-extrabold text-[#111827] group-hover:text-[#1e40af] transition-colors">{card.name}</h3>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-manrope font-black text-[#16a34a] leading-none">{Math.round(card.total)}</div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Unit Volume (L)</span>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end">
-                    <span className={clsx(
-                      "text-sm font-black italic",
-                      log.quantity > 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
-                    </span>
-                    <button className="p-1 text-slate-700 hover:text-slate-400 mt-2">
-                       <MoreVertical className="w-4 h-4" />
+                  
+                  <div className="space-y-3 relative z-10">
+                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1">Stock Distribution</p>
+                    {card.branches.map((b, bi) => (
+                      <div key={bi} className="flex justify-between items-center py-3 px-4 bg-slate-50/50 rounded-xl border border-slate-50 group-hover:bg-white transition-all">
+                        <span className="text-xs font-bold text-slate-600">{b.b}</span>
+                        <span className={`text-xs font-black tracking-tight ${b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                          {b.v}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Link href="/products" className="block w-full mt-10 relative z-10">
+                    <button className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-[#16a34a] transition-all active:scale-95 leading-none">
+                      Technical Access
                     </button>
-                  </div>
+                  </Link>
                 </div>
-              </div>
-            )) : (
-              <div className="py-20 text-center border-2 border-dashed border-slate-900 rounded-3xl">
-                <Clock className="w-10 h-10 text-slate-900 mx-auto mb-3" />
-                <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">No recent system activity</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Stock Check */}
-        <div className="glass-card p-6 rounded-3xl">
-          <h3 className="text-lg font-bold text-white mb-6 uppercase italic tracking-tighter">Running Low</h3>
-          
-          <div className="space-y-4">
-            {parts.filter(p => p.stock_quantity <= p.reorder_threshold).length > 0 ? (
-              parts.filter(p => p.stock_quantity <= p.reorder_threshold).slice(0, 5).map((item, i) => (
-              <div key={i} className="p-4 bg-slate-900/50 border border-slate-800 rounded-2xl flex items-center justify-between group hover:border-red-600/30 transition-colors">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 group-hover:bg-red-600/10 group-hover:text-red-500 transition-colors">
-                     <Package className="w-5 h-5" />
+              ))}
+              {products.length === 0 && (
+                <div className="col-span-full py-32 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center gap-4">
+                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                      <Search className="w-8 h-8 text-slate-200" />
                    </div>
                    <div>
-                     <p className="text-xs font-black text-white leading-none uppercase italic">{item.name}</p>
-                     <p className="text-[10px] text-slate-500 font-bold mt-1.5 uppercase tracking-tighter">STOCK: {item.stock_quantity} / MIN: {item.reorder_threshold}</p>
+                      <p className="text-slate-900 font-black text-xl tracking-tight">Archives Unavailable</p>
+                      <p className="text-sm text-slate-400 font-medium">Please verify local network connection or check back later.</p>
                    </div>
                 </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.8)]" />
-              </div>
-              ))
-            ) : (
-              <div className="py-12 text-center bg-slate-950/30 rounded-3xl border border-slate-900/50">
-                 <Package className="w-8 h-8 text-slate-900 mx-auto mb-2" />
-                 <p className="text-[10px] font-black text-slate-700 uppercase tracking-tighter">All units optimized</p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
+        </section>
 
-          <button 
-            onClick={() => window.location.href = '/parts'}
-            className="w-full py-4 mt-6 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+        {/* Tactical Banner */}
+        <section className="max-w-[1440px] mx-auto px-6 md:px-16 pb-24 md:pb-40">
+          <div
+            className="relative rounded-[2.5rem] md:rounded-[4rem] overflow-hidden min-h-[450px] md:min-h-[550px] flex items-center shadow-2xl shadow-[#1e40af]/20"
+            style={{
+              backgroundImage: "url('/paint-banner-bg.png')",
+              backgroundSize: "cover",
+              backgroundPosition: "center right",
+              backgroundColor: "#111827",
+            }}
           >
-             Open Acquisition Panel
-          </button>
-        </div>
-      </div>
+            <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#111827] via-[#111827]/90 to-transparent" />
+            <div className="relative z-10 px-8 md:px-24 max-w-2xl space-y-8">
+               <div className="flex items-center gap-3">
+                  <div className="w-12 h-1 bg-[#16a34a]" />
+                  <span className="text-[10px] font-black text-[#16a34a] uppercase tracking-[0.3em]">The Autoworx Standard</span>
+               </div>
+              <h2 className="text-4xl md:text-6xl font-manrope font-black text-white leading-tight tracking-tighter">Your Partner in <br/> Finishing Perfection.</h2>
+              <p className="text-base md:text-xl text-white/60 font-medium leading-relaxed">Experience the ultimate in precision color matching and technical support. Our expert ateliers are synchronized to deliver the perfect finish to every project.</p>
+              <div className="flex flex-col sm:flex-row gap-5">
+                <Link href="/branches" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto bg-[#16a34a] text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-[#15803d] transition-all shadow-2xl shadow-[#16a34a]/30 flex items-center justify-center gap-3">
+                    Locate Your Branch <MapPin className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/products" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto border border-white/20 text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all backdrop-blur-md">
+                    Technical Catalog
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
-      <PartModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {/* Footer Interface */}
+      <footer className="bg-white border-t border-slate-100 pt-20 pb-12">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-16 flex flex-col md:flex-row justify-between items-center gap-12">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <div className="flex items-center gap-4">
+              <img src={LOGO_URL} alt="Logo" className="h-12 md:h-16 w-auto grayscale brightness-0 opacity-80" />
+              <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+              <div className="flex flex-col">
+                 <span className="font-manrope font-black text-[#1e40af] text-xl md:text-2xl tracking-tighter">Autoworx</span>
+                 <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Network Integrated</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-12 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Link href="#" className="hover:text-[#16a34a] transition-colors">Privacy Policy</Link>
+            <Link href="#" className="hover:text-[#16a34a] transition-colors">Terms of Service</Link>
+            <Link href="#" className="hover:text-[#16a34a] transition-colors">Customer Support</Link>
+          </div>
+          <div className="text-slate-300 text-[10px] font-black uppercase tracking-[0.2em] text-center md:text-right">
+             © 2026 Autoworx Paint Center <br className="md:hidden" /> All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
