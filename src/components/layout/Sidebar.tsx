@@ -24,11 +24,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  const role = (session?.user as any)?.role || 'staff';
+  const isStaff = role === 'staff';
+
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Inventory", href: "/admin/inventory", icon: Package },
-    { name: "Branches", href: "/admin/branches", icon: Store },
-    { name: "Staff", href: "/admin/staff", icon: Users },
+    // Only show these to Owners/Developers
+    ...(!isStaff ? [
+      { name: "Branches", href: "/admin/branches", icon: Store },
+      { name: "Staff", href: "/admin/staff", icon: Users },
+    ] : []),
   ];
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);

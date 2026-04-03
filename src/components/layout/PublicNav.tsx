@@ -18,14 +18,14 @@ export default function PublicNav() {
   ];
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-      <div className="max-w-[1440px] mx-auto px-6 md:px-16 flex justify-between items-center h-20 md:h-28">
+    <nav className={`fixed top-0 w-full z-[100] border-b border-slate-100 transition-all duration-300 ${isOpen ? "bg-white" : "bg-white/80 backdrop-blur-xl"}`}>
+      <div className="max-w-[1440px] mx-auto px-6 md:px-16 flex justify-between items-center h-16 md:h-20">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 active:scale-95 transition-transform">
           <img 
             src={LOGO_URL} 
             alt="Autoworx Logo" 
-            className="h-14 md:h-20 w-auto object-contain" 
+            className="h-10 md:h-12 w-auto object-contain" 
           />
           <div className="hidden sm:flex flex-col">
             <span className="font-manrope font-black text-lg md:text-xl text-[#1e40af] leading-tight tracking-tighter">AUTOWORX</span>
@@ -52,7 +52,10 @@ export default function PublicNav() {
             );
           })}
           <Link href="/login">
-            <button className="bg-[#16a34a] text-white px-8 py-3 rounded-full font-bold text-sm shadow-xl shadow-[#16a34a]/20 hover:bg-[#15803d] active:scale-95 transition-all">
+            <button 
+              suppressHydrationWarning
+              className="bg-[#16a34a] text-white px-8 py-3 rounded-full font-bold text-sm shadow-xl shadow-[#16a34a]/20 hover:bg-[#15803d] active:scale-95 transition-all"
+            >
               Staff Login
             </button>
           </Link>
@@ -60,7 +63,7 @@ export default function PublicNav() {
 
         {/* Mobile Toggle */}
         <button 
-          className="md:hidden p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+          className="md:hidden p-3 text-[#1e40af] bg-slate-50 rounded-2xl active:scale-95 transition-all"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -69,10 +72,13 @@ export default function PublicNav() {
 
       {/* Mobile Menu Overlay */}
       <div className={`
-        fixed inset-0 top-20 bg-white z-40 md:hidden transition-all duration-300 ease-in-out
-        ${isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"}
+        fixed inset-x-0 bottom-0 top-20 bg-white z-[90] md:hidden overflow-y-auto transition-all duration-500 ease-in-out border-t border-slate-50
+        ${isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"}
       `}>
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-4">
+          <div className="pb-4">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-4">Navigation</span>
+          </div>
           {links.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -80,23 +86,28 @@ export default function PublicNav() {
                 key={link.name} 
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-4 p-4 rounded-2xl text-lg font-bold transition-all ${
+                className={`flex items-center gap-4 p-5 rounded-[1.5rem] text-lg font-bold transition-all ${
                   isActive 
-                    ? "bg-[#16a34a]/10 text-[#16a34a]" 
-                    : "text-slate-900 border border-slate-50"
+                    ? "bg-[#16a34a] text-white shadow-lg shadow-[#16a34a]/20" 
+                    : "text-slate-700 bg-slate-50 border border-transparent hover:border-slate-200"
                 }`}
               >
-                <link.icon className="w-5 h-5" />
+                <link.icon className={`w-5 h-5 ${isActive ? "text-white" : "text-[#16a34a]"}`} />
                 {link.name}
               </Link>
             );
           })}
-          <div className="pt-8">
+          
+          <div className="pt-10 space-y-6">
+            <div className="h-px bg-slate-100 w-full" />
             <Link href="/login" onClick={() => setIsOpen(false)}>
-              <button className="w-full bg-[#1e40af] text-white py-5 rounded-2xl font-bold text-lg shadow-2xl shadow-[#1e40af]/20 active:scale-95 transition-all">
-                Sign in to Dashboard
+              <button className="w-full bg-[#1e40af] text-white py-6 rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-[#1e40af]/30 active:scale-95 transition-all flex items-center justify-center gap-3">
+                Authorize Personnel Access
               </button>
             </Link>
+            <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+              Secured Administrative Control Panel
+            </p>
           </div>
         </div>
       </div>

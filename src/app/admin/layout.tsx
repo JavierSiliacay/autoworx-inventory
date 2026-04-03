@@ -16,10 +16,11 @@ export default async function AdminLayout({
 
   // 2. Extract our custom Supabase claims from the NextAuth session
   const role = (session.user as any)?.role;
-  const branchId = (session.user as any)?.branch_id;
+  const branchIds = (session.user as any)?.branch_ids || [];
 
-  // 3. Enforce Branch Selection for Staff without a branch
-  if (role === "staff" && !branchId) {
+  // 3. Enforce Branch Selection for Staff without a branch assigned
+  // If role is staff and no branch_ids, redirect to select-branch
+  if (role === "staff" && branchIds.length === 0) {
     redirect("/select-branch");
   }
 

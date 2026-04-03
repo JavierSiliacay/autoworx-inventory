@@ -12,7 +12,8 @@ interface InventoryItem {
   category: string;
   sku: string;
   quantity: number;
-  price: number;
+  cost: number; // Added cost
+  price: number; // mapped to Retail
   branch_id?: string;
   branch_name: string;
   last_modified_by?: string;
@@ -36,6 +37,16 @@ export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  const role = (session?.user as any)?.role || 'staff';
+  const isOwner = role === 'owner';
+  const isDeveloper = role === 'developer';
+  const isManager = role === 'manager';
+  const isStaff = role === 'staff';
+
+  const canEditCost = isStaff || isManager || isDeveloper;
+  // Everyone (including Staff) can view cost now.
+  const canViewCost = true;
+
   const categories = ["Urethane", "Clearcoat", "Primer", "Paint"];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -44,9 +55,11 @@ export default function AdminInventoryPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchInventory();
-    fetchBranches();
-  }, [filterBranch]);
+    if (session) {
+      fetchInventory();
+      fetchBranches();
+    }
+  }, [filterBranch, session]);
 
   useEffect(() => {
     const channel = supabase
@@ -73,16 +86,25 @@ export default function AdminInventoryPage() {
         .from('inventory')
         .select(`*, branches (name)`);
       
+      const userBranchIds = (session?.user as any)?.branch_ids || [];
+
+      // 1. Enforce Role-Based Scoping
+      if (role === 'staff') {
+        if (userBranchIds.length > 0) {
+           query = query.in('branch_id', userBranchIds);
+        } else {
+           setItems([]);
+           return;
+        }
+      }
+
+      // 2. Additional filtering from URL search params (if any)
       if (filterBranch) {
         query = query.eq('branch_id', filterBranch);
       }
 
       const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching inventory:", error);
-        return;
-      }
+      if (error) throw error;
       
       const mappedItems = data.map(item => ({
         ...item,
@@ -101,6 +123,7 @@ export default function AdminInventoryPage() {
       category: "Paint",
       sku: "",
       quantity: 0,
+      cost: 0,
       price: 0,
       branch_id: filterBranch || ""
     });
@@ -125,6 +148,7 @@ export default function AdminInventoryPage() {
         category: currentProduct.category,
         sku: currentProduct.sku,
         quantity: parseFloat(currentProduct.quantity?.toString() || "0"),
+        cost: parseFloat(currentProduct.cost?.toString() || "0"),
         price: parseFloat(currentProduct.price?.toString() || "0"),
         branch_id: currentProduct.branch_id,
         last_modified_by: session?.user?.email || 'System Admin',
@@ -176,6 +200,17 @@ export default function AdminInventoryPage() {
   });
 
   const lowStockCount = items.filter(i => i.quantity < 5).length;
+
+  const formatCurrency = (val: number | string) => {
+    if (!val && val !== 0) return "";
+    const num = parseFloat(val.toString());
+    if (isNaN(num)) return "";
+    return num.toLocaleString();
+  };
+
+  const parseCurrency = (val: string) => {
+    return parseFloat(val.replace(/,/g, "")) || 0;
+  };
 
   return (
     <div className="pb-20" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -260,57 +295,79 @@ export default function AdminInventoryPage() {
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px] md:min-w-0">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                {["Product Detail", "Branch Hub", "Category", "Quantity (L)", "Price (PHP)", "Operations"].map((h, i) => (
-                  <th key={h} className={`px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${i === 5 ? "text-right" : ""}`}>
-                    {h}
-                  </th>
-                ))}
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Product Detail</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Hub</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Category</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Stock (L)</th>
+                {canViewCost && (
+                  <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Unit Cost</th>
+                )}
+                <th className={`px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${canViewCost ? "text-right" : ""}`}>Retail Price</th>
+                {canViewCost && (
+                  <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Margin</th>
+                )}
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Ops</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-10 py-24 text-center">
+                  <td colSpan={canViewCost ? 8 : 6} className="px-10 py-24 text-center">
                     <p className="text-slate-400 font-manrope font-bold mb-1">No Matching Technical Assets Found</p>
                   </td>
                 </tr>
               )}
-              {filtered.map((product, i) => (
-                <tr key={i} className="hover:bg-slate-50/80 transition-all group">
-                  <td className="px-10 py-7">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-[#111827] mb-1">{product.product_name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#16a34a] tracking-widest uppercase">{product.sku || 'No SKU'}</span>
-                        <span className="text-[9px] text-slate-400">Updated by {product.last_modified_by?.split('@')[0] || 'Admin'}</span>
+              {filtered.map((product, i) => {
+                const margin = (product.price || 0) - (product.cost || 0);
+                return (
+                  <tr key={i} className="hover:bg-slate-50/80 transition-all group">
+                    <td className="px-10 py-7">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-[#111827] mb-1">{product.product_name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-[#16a34a] tracking-widest uppercase">{product.sku || 'No SKU'}</span>
+                          <span className="text-[9px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Updated by {product.last_modified_by?.split('@')[0] || 'Admin'}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-10 py-7 text-xs font-bold text-[#1e40af] uppercase tracking-tight">{product.branch_name}</td>
-                  <td className="px-10 py-7">
-                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${categoryColors[product.category] || "bg-slate-100 text-slate-500"}`}>
-                      {product.category}
-                    </span>
-                  </td>
-                  <td className="px-10 py-7">
-                    <span className={`text-lg font-manrope font-extrabold tracking-tight ${product.quantity < 5 ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
-                      {parseFloat(product.quantity.toString()).toFixed(1)}
-                    </span>
-                  </td>
-                  <td className="px-10 py-7 text-sm font-manrope font-extrabold text-[#111827]">
-                    ₱{parseFloat(product.price?.toString() || "0").toLocaleString()}
-                  </td>
-                  <td className="px-10 py-7 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => openModal(product)} className="p-3 hover:text-[#16a34a] transition-all"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => deleteProduct(product.id)} className="p-3 hover:text-[#ba1a1a] transition-all"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-10 py-7 text-xs font-bold text-[#1e40af] uppercase tracking-tight">{product.branch_name}</td>
+                    <td className="px-10 py-7">
+                      <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${categoryColors[product.category] || "bg-slate-100 text-slate-500"}`}>
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="px-10 py-7">
+                      <span className={`text-lg font-manrope font-extrabold tracking-tight ${product.quantity < 5 ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                        {parseFloat(product.quantity.toString()).toFixed(1)}
+                      </span>
+                    </td>
+                    {canViewCost && (
+                      <td className="px-10 py-7 text-sm font-manrope font-extrabold text-[#64748b] text-right bg-slate-50/30">
+                        ₱{parseFloat(product.cost?.toString() || "0").toLocaleString()}
+                      </td>
+                    )}
+                    <td className={`px-10 py-7 text-sm font-manrope font-extrabold text-[#111827] ${canViewCost ? "text-right" : ""}`}>
+                      ₱{parseFloat(product.price?.toString() || "0").toLocaleString()}
+                    </td>
+                    {canViewCost && (
+                      <td className="px-10 py-7 text-right">
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${margin > 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                          + ₱{margin.toLocaleString()}
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-10 py-7 text-right">
+                      <div className="flex justify-end gap-2 text-slate-400">
+                        <button onClick={() => openModal(product)} className="p-2 hover:text-[#16a34a] transition-all"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => deleteProduct(product.id)} className="p-2 hover:text-[#ba1a1a] transition-all"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -321,52 +378,81 @@ export default function AdminInventoryPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
            <div className="bg-white rounded-[2rem] w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
               <div className="px-8 md:px-10 py-8 bg-[#1e40af] text-white flex justify-between items-center sticky top-0 z-10">
-                 <h2 className="text-xl md:text-2xl font-manrope font-bold">{currentProduct.id ? 'Edit Inventory Asset' : 'New Technical Asset'}</h2>
+                 <h2 className="text-xl md:text-2xl font-manrope font-bold">{currentProduct.id ? 'Refine Asset Parameters' : 'Register New Hub Asset'}</h2>
                  <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-all"><X className="w-6 h-6"/></button>
               </div>
-              <div className="p-8 md:p-10 space-y-6">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Product Identity</label>
-                       <input className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none" value={currentProduct.product_name || ""} onChange={(e) => setCurrentProduct({...currentProduct, product_name: e.target.value})} />
+              <div className="p-8 md:p-10 space-y-8">
+                 <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Product Identity</label>
+                          <input className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none focus:border-[#16a34a]/30 transition-all" value={currentProduct.product_name || ""} onChange={(e) => setCurrentProduct({...currentProduct, product_name: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Branch Location</label>
+                          <select className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none" value={currentProduct.branch_id || ""} onChange={(e) => setCurrentProduct({...currentProduct, branch_id: e.target.value})}>
+                              <option value="">Select Target Hub...</option>
+                              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                          </select>
+                        </div>
                     </div>
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Branch Location</label>
-                       <select className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-semibold outline-none" value={currentProduct.branch_id || ""} onChange={(e) => setCurrentProduct({...currentProduct, branch_id: e.target.value})}>
-                          <option value="">Select Branch...</option>
-                          {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                       </select>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                          <select className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none uppercase" value={currentProduct.category || "Paint"} onChange={(e) => setCurrentProduct({...currentProduct, category: e.target.value})}>
+                              <option value="Paint">Paint</option>
+                              <option value="Urethane">Urethane</option>
+                              <option value="Clearcoat">Clearcoat</option>
+                              <option value="Primer">Primer</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">SKU Reference</label>
+                          <input className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold" value={currentProduct.sku || ""} onChange={(e) => setCurrentProduct({...currentProduct, sku: e.target.value})} />
+                        </div>
+                        <div className="col-span-2 lg:col-span-1">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock Level (L)</label>
+                          <input type="number" step="0.1" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-[#16a34a]" value={currentProduct.quantity || 0} onChange={(e) => setCurrentProduct({...currentProduct, quantity: parseFloat(e.target.value)})} />
+                        </div>
                     </div>
-                 </div>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Category</label>
-                       <select className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none uppercase" value={currentProduct.category || "Paint"} onChange={(e) => setCurrentProduct({...currentProduct, category: e.target.value})}>
-                          <option value="Paint">Paint</option>
-                          <option value="Urethane">Urethane</option>
-                          <option value="Clearcoat">Clearcoat</option>
-                          <option value="Primer">Primer</option>
-                       </select>
-                    </div>
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">SKU</label>
-                       <input className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold" value={currentProduct.sku || ""} onChange={(e) => setCurrentProduct({...currentProduct, sku: e.target.value})} />
-                    </div>
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock (L)</label>
-                       <input type="number" step="0.1" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-[#16a34a]" value={currentProduct.quantity || 0} onChange={(e) => setCurrentProduct({...currentProduct, quantity: parseFloat(e.target.value)})} />
-                    </div>
-                    <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Price (PHP)</label>
-                       <input type="number" step="0.01" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-[#1e40af]" value={currentProduct.price || 0} onChange={(e) => setCurrentProduct({...currentProduct, price: parseFloat(e.target.value)})} />
+
+                    <div className="grid grid-cols-2 gap-8 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                        {canViewCost && (
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Unit Acquisition Cost</label>
+                            <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₱</span>
+                               <input 
+                                 type="text" 
+                                 disabled={!canEditCost}
+                                 className={`w-full pl-8 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-sm font-bold ${!canEditCost ? 'opacity-50 cursor-not-allowed text-slate-400' : 'text-[#64748b]'}`}
+                                 value={formatCurrency(currentProduct.cost || 0)} 
+                                 onChange={(e) => setCurrentProduct({...currentProduct, cost: parseCurrency(e.target.value)})} 
+                               />
+                            </div>
+                          </div>
+                        )}
+                        <div className={!canViewCost ? "col-span-2" : ""}>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retail Selling Price</label>
+                          <div className="relative">
+                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1e40af] font-bold text-xs">₱</span>
+                             <input 
+                               type="text" 
+                               className="w-full pl-8 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-[#1e40af]" 
+                               value={formatCurrency(currentProduct.price || 0)} 
+                               onChange={(e) => setCurrentProduct({...currentProduct, price: parseCurrency(e.target.value)})} 
+                             />
+                          </div>
+                        </div>
                     </div>
                  </div>
               </div>
-              <div className="px-8 md:px-10 py-8 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-end gap-4">
-                 <button onClick={closeModal} className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors py-4 px-8">Discard</button>
-                 <button onClick={saveProduct} disabled={saving} className="flex items-center justify-center gap-3 px-10 py-4 bg-[#16a34a] text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[11px] disabled:opacity-50">
+              <div className="px-8 md:px-10 py-8 bg-slate-100/50 border-t border-slate-100 flex flex-col md:flex-row justify-end gap-4">
+                 <button onClick={closeModal} className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors py-4 px-8">Discard Change</button>
+                 <button onClick={saveProduct} disabled={saving} className="flex items-center justify-center gap-3 px-10 py-4 bg-[#16a34a] text-white rounded-[1.25rem] font-black uppercase tracking-widest text-[11px] shadow-lg shadow-[#16a34a]/20 disabled:opacity-50">
                     {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Package className="w-5 h-5" />}
-                    {currentProduct.id ? 'Authorize Update' : 'Initialize Asset'}
+                    {currentProduct.id ? 'Authorize Updates' : 'Commit Asset to Network'}
                  </button>
               </div>
            </div>

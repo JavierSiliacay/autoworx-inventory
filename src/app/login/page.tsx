@@ -8,6 +8,10 @@ const LOGO_URL = "/logo.png";
 export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
 
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const error = searchParams?.get("error");
+  const isAccessDenied = error === "AccessDenied" || error === "Configuration";
+
   const handleLogin = async () => {
     setIsLoading(true);
     await signIn("google", { callbackUrl: "/admin" });
@@ -41,6 +45,20 @@ export default function LoginPage() {
               Access the technical atelier inventory and mixing systems.
             </p>
           </div>
+
+          {isAccessDenied && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-white font-bold text-[10px]">!</span>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700 uppercase tracking-tight">Access Restricted</p>
+                <p className="text-[11px] text-red-600 mt-1 font-medium leading-relaxed">
+                  Your email is not authorized to access this system. Please contact your administrator to be registered in the Access Control list.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
             {/* Google OAuth Button */}

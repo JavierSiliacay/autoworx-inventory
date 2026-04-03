@@ -4,34 +4,60 @@ import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { MapPin, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function SelectBranchPage() {
+  const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const router = useRouter();
+  const { data: session, update } = useSession();
 
-  // These should match the branches in your Supabase DB
-  const branches = [
-    { id: "1", name: "Valencia", color: "bg-blue-500" },
-    { id: "2", name: "Kauswagan", color: "bg-emerald-500" },
-    { id: "3", name: "Agora", color: "bg-indigo-500" },
-    { id: "4", name: "Iponan", color: "bg-orange-500" },
-    { id: "5", name: "Bulua", color: "bg-slate-500" },
-  ];
+  React.useEffect(() => {
+    async function fetchBranches() {
+      try {
+        const { data, error } = await supabase
+          .from('branches')
+          .select('id, name')
+          .order('name');
+        
+        if (error) throw error;
+        setBranches(data || []);
+      } catch (e) {
+        console.error("Error fetching branches:", e);
+      } finally {
+        setFetching(false);
+      }
+    }
+    fetchBranches();
+  }, []);
 
   const handleConfirm = async () => {
-    if (!selectedBranch) return;
+    if (!selectedBranch || !session?.user?.email) return;
     setLoading(true);
     
-    // In a real app, send a POST to an API route that updates the user's branch in Supabase
-    // Then call `update()` from useSession to refresh the session JWT
     try {
-       // Mock API delay
-       await new Promise(resolve => setTimeout(resolve, 800));
+       // 1. Update the user's branch in Supabase using the real UUID
+       const { error } = await supabase
+         .from('users')
+         .update({ branch_ids: [selectedBranch] })
+         .eq('email', session.user.email);
+
+       if (error) {
+         console.error("Supabase Update Error:", error);
+         throw error;
+       }
+
+       // 2. Refresh the session so the new branch_ids are in the JWT
+       await update(); 
+
+       // 3. Navigate home
        router.push("/admin");
-       router.refresh();
+       window.location.href = "/admin"; // Force a full reload to be safe
     } catch (e) {
-      console.error(e);
+      console.error("Branch Selection Error:", e);
+      alert("Failed to save branch selection. " + (e as any).message);
     } finally {
       setLoading(false);
     }
@@ -51,7 +77,16 @@ export default function SelectBranchPage() {
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
           <div className="space-y-3">
-            {branches.map(branch => (
+            {fetching ? (
+              <div className="py-12 text-center">
+                 <div className="w-8 h-8 border-4 border-slate-100 border-t-[#00BA88] rounded-full animate-spin mx-auto mb-3" />
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scanning Network...</p>
+              </div>
+            ) : branches.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-sm italic">
+                 No branches found in database.
+              </div>
+            ) : branches.map(branch => (
               <button
                 key={branch.id}
                 onClick={() => setSelectedBranch(branch.id)}
@@ -61,7 +96,7 @@ export default function SelectBranchPage() {
                     : "border-slate-100 hover:border-slate-200 bg-slate-50 hover:bg-slate-100/50"
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center opacity-90 ${branch.color}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center opacity-90 ${selectedBranch === branch.id ? "bg-[#00BA88]" : "bg-slate-400"}`}>
                   <MapPin className="w-4 h-4 text-white" />
                 </div>
                 <span className={`font-bold ${selectedBranch === branch.id ? "text-[#00BA88]" : "text-slate-700"}`}>
@@ -76,7 +111,7 @@ export default function SelectBranchPage() {
 
           <button
             onClick={handleConfirm}
-            disabled={!selectedBranch || loading}
+            disabled={!selectedBranch || loading || fetching}
             className={`w-full mt-6 py-3.5 rounded-xl font-bold transition-all shadow-sm ${
               selectedBranch && !loading 
                 ? "bg-[#00BA88] hover:bg-[#00a377] text-white shadow-[#00BA88]/30" 

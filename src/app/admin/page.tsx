@@ -2,11 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText, Loader2, Shield } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 
 export default function AdminDashboardPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const filterBranch = searchParams.get("branch");
+
   const [stats, setStats] = useState({ products: 0, stock: 0, value: 0, branches: 0 });
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   const [distribution, setDistribution] = useState<any[]>([]);
@@ -19,7 +23,7 @@ export default function AdminDashboardPage() {
       const sub = supabase.channel('dashboard-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, fetchDashboardData).subscribe();
       return () => { supabase.removeChannel(sub); };
     }
-  }, [session]);
+  }, [session, filterBranch]); // Re-fetch when filter changes
 
   async function fetchDashboardData() {
     try {
@@ -28,15 +32,23 @@ export default function AdminDashboardPage() {
       const isStaff = user?.role === 'staff';
       const userBranchIds = user?.branch_ids || [];
 
+      // 1. Fetch Branches (Determine the scope of the table columns)
       let branchQuery = supabase.from('branches').select('id, name').order('name');
-      if (isStaff && userBranchIds.length > 0) {
+      
+      if (filterBranch) {
+        branchQuery = branchQuery.eq('id', filterBranch);
+      } else if (isStaff && userBranchIds.length > 0) {
         branchQuery = branchQuery.in('id', userBranchIds);
       }
       
       const { data: branchDocs, error: branchError } = await branchQuery;
       
+      // 2. Fetch Inventory (Determine stats and row data)
       let invQuery = supabase.from('inventory').select('*, branches(name)').order('updated_at', { ascending: false });
-      if (isStaff && userBranchIds.length > 0) {
+      
+      if (filterBranch) {
+        invQuery = invQuery.eq('branch_id', filterBranch);
+      } else if (isStaff && userBranchIds.length > 0) {
         invQuery = invQuery.in('branch_id', userBranchIds);
       }
       const { data: invDocs, error: invError } = await invQuery;
@@ -91,11 +103,14 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const role = (session?.user as any)?.role || 'staff';
+  const isStaff = role === 'staff';
+
   const summaryCards = [
-    { title: "Inventory", value: stats.products.toString(), label: "Unique Products", icon: Package, iconColor: "text-[#16a34a]", iconBg: "bg-[#16a34a]/10", caption: "INVENTORY" },
-    { title: "Network Value", value: `₱${stats.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, label: "Net Asset Estimation", icon: TrendingUp, iconColor: "text-purple-600", iconBg: "bg-purple-50", caption: "FINANCIALS" },
-    { title: "Global Stock", value: stats.stock.toLocaleString(), label: "Liters in Stock", icon: ClipboardList, iconColor: "text-[#1e40af]", iconBg: "bg-[#1e40af]/10", caption: "NETWORK STOCK" },
-    { title: "Network", value: stats.branches.toString(), label: "Active Nodes", icon: Map, iconColor: "text-[#64748b]", iconBg: "bg-slate-100", caption: "PRIVILEGES" },
+    { title: "Inventory", value: stats.products.toString(), label: "Items in Stock", icon: Package, iconColor: "text-[#16a34a]", iconBg: "bg-[#16a34a]/10", caption: "STOCK" },
+    { title: isStaff ? "Branch Value" : "Network Value", value: `₱${stats.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, label: "Asset Estimation", icon: TrendingUp, iconColor: "text-purple-600", iconBg: "bg-purple-50", caption: isStaff ? "CURRENT DEPT" : "FINANCIALS" },
+    { title: isStaff ? "Branch Stock" : "Global Stock", value: stats.stock.toLocaleString(), label: "Liters Available", icon: ClipboardList, iconColor: "text-[#1e40af]", iconBg: "bg-[#1e40af]/10", caption: "VOLUME" },
+    { title: isStaff ? "Permissions" : "Network Hubs", value: stats.branches.toString(), label: isStaff ? "Assigned Clusters" : "Active Nodes", icon: Map, iconColor: "text-[#64748b]", iconBg: "bg-slate-100", caption: "ACCESS" },
   ];
 
   if (!session && !loading) return <div className="p-20 text-center text-slate-400">Please sign in to view administrative data.</div>;
@@ -138,9 +153,22 @@ export default function AdminDashboardPage() {
                 <tr className="bg-slate-50 border-b border-[#e2e8f0]">
                   <th className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Product Name</th>
                   <th className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Scope Total</th>
-                  {branches.map((b) => (
-                    <th key={b.id} className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">{b.name.split(" ")[0]}</th>
-                  ))}
+                  {branches.map((b) => {
+                    const parts = b.name.split(" ");
+                    // Smart name: If it's "Valencia X", show "V-X". If "Main X", show "M-X".
+                    let displayName = parts[0];
+                    if (parts[0].toLowerCase() === "valencia" && parts[1]) {
+                      displayName = `Valencia ${parts[1]}`;
+                    } else if (parts[0].toLowerCase() === "main" && parts[1]) {
+                      displayName = `Main ${parts[1]}`;
+                    } else if (parts.length > 1) {
+                      // fallback for others to show first word
+                      displayName = parts[0];
+                    }
+                    return (
+                      <th key={b.id} className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#1e40af]">{displayName}</th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e2e8f0]">

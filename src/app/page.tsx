@@ -77,13 +77,19 @@ export default function HomePage() {
     <div className="bg-white text-[#0f172a] selection:bg-[#16a34a]/20 selection:text-[#16a34a]" style={{ fontFamily: "'Inter', sans-serif" }}>
       <PublicNav />
 
-      <main className="pt-24">
+      <main className="pt-20">
         {/* Hero Section */}
         <section className="relative min-h-[500px] md:min-h-[700px] flex flex-col items-center justify-center px-6 py-20 md:py-32 text-center overflow-hidden">
-          <div className="absolute inset-0 -z-10 opacity-10 pointer-events-none">
-            <div className="absolute top-0 left-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-[#16a34a] blur-[80px] md:blur-[160px] rounded-full" />
-            <div className="absolute bottom-0 right-1/4 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-[#1e40af] blur-[80px] md:blur-[160px] rounded-full" />
-          </div>
+          {/* Spray Gun Background */}
+          <div 
+            className="absolute inset-0 z-0 pointer-events-none"
+            style={{
+              backgroundImage: "url('/hero-bg.png')",
+              backgroundSize: "cover",
+              backgroundPosition: "center right",
+              backgroundRepeat: "no-repeat"
+            }}
+          />
           
           <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#1e40af]/5 rounded-full border border-[#1e40af]/10 animate-fade-in">
@@ -105,11 +111,15 @@ export default function HomePage() {
                 <div className="flex items-center flex-1 px-4 py-3 md:py-0">
                   <Search className="w-5 h-5 text-slate-300 group-focus-within:text-[#16a34a] transition-colors" />
                   <input
+                    suppressHydrationWarning
                     className="w-full border-none focus:ring-0 bg-transparent px-4 text-sm md:text-base font-semibold text-slate-900 placeholder:text-slate-300 outline-none"
                     placeholder="Reference code or product location..."
                   />
                 </div>
-                <button className="bg-[#16a34a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all hover:bg-[#15803d] active:scale-95 shadow-xl shadow-[#16a34a]/20">
+                <button 
+                  suppressHydrationWarning
+                  className="bg-[#16a34a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all hover:bg-[#15803d] active:scale-95 shadow-xl shadow-[#16a34a]/20"
+                >
                   Search Inventory
                 </button>
               </div>
@@ -174,7 +184,10 @@ export default function HomePage() {
                   </div>
                   
                   <Link href="/products" className="block w-full mt-10 relative z-10">
-                    <button className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-[#16a34a] transition-all active:scale-95 leading-none">
+                    <button 
+                      suppressHydrationWarning
+                      className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-[#16a34a] transition-all active:scale-95 leading-none"
+                    >
                       Technical Access
                     </button>
                   </Link>
@@ -216,12 +229,18 @@ export default function HomePage() {
               <p className="text-base md:text-xl text-white/60 font-medium leading-relaxed">Experience the ultimate in precision color matching and technical support. Our expert ateliers are synchronized to deliver the perfect finish to every project.</p>
               <div className="flex flex-col sm:flex-row gap-5">
                 <Link href="/branches" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto bg-[#16a34a] text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-[#15803d] transition-all shadow-2xl shadow-[#16a34a]/30 flex items-center justify-center gap-3">
+                  <button 
+                    suppressHydrationWarning
+                    className="w-full sm:w-auto bg-[#16a34a] text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-[#15803d] transition-all shadow-2xl shadow-[#16a34a]/30 flex items-center justify-center gap-3"
+                  >
                     Locate Your Branch <MapPin className="w-4 h-4" />
                   </button>
                 </Link>
                 <Link href="/products" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto border border-white/20 text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all backdrop-blur-md">
+                  <button 
+                    suppressHydrationWarning
+                    className="w-full sm:w-auto border border-white/20 text-white px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all backdrop-blur-md"
+                  >
                     Technical Catalog
                   </button>
                 </Link>

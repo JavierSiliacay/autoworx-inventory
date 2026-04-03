@@ -17,11 +17,28 @@ export default function Header() {
 
   useEffect(() => {
     async function fetchBranches() {
-      const { data } = await supabase.from('branches').select('id, name');
+      const role = (session?.user as any)?.role;
+      const userBranchIds = (session?.user as any)?.branch_ids || [];
+
+      let query = supabase.from('branches').select('id, name').order('name');
+      
+      // Enforce Role-Based Scoping for the selector
+      if (role === 'staff' && userBranchIds.length > 0) {
+        query = query.in('id', userBranchIds);
+      } else if (role === 'staff' && userBranchIds.length === 0) {
+        // Staff with no assignments see nothing
+        setBranches([]);
+        return;
+      }
+
+      const { data } = await query;
       setBranches(data || []);
     }
-    fetchBranches();
-  }, []);
+
+    if (session) {
+      fetchBranches();
+    }
+  }, [session]);
 
   const handleBranchChange = (branchId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -33,22 +50,28 @@ export default function Header() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  let title = "Main Branch Inventory";
-  let badge = "Owner View";
+  const role = (session?.user as any)?.role || 'staff';
+  const isStaff = role === 'staff';
+
+  let title = "Network Overview";
+  let badge = role.charAt(0).toUpperCase() + role.slice(1) + " View";
   let subtitle = "";
 
   if (pathname.includes("inventory")) {
-    title = "Manage Inventory";
-    subtitle = "Technical stock levels and product catalog.";
+    title = isStaff ? "Branch Inventory" : "Global Inventory";
+    subtitle = "Real-time stock levels and product catalog.";
     badge = "";
   } else if (pathname.includes("branches")) {
-    title = "Manage Branches";
+    title = "Regional Hubs";
     subtitle = "Overview and performance of your retail network.";
     badge = "";
   } else if (pathname.includes("staff")) {
-    title = "Manage Access";
-    subtitle = "Control staff permissions and branch assignments.";
+    title = "Team Access";
+    subtitle = "Manage staff permissions and assignments.";
     badge = "";
+  } else if (pathname === "/admin") {
+    title = isStaff ? "Branch Performance" : "Main Network Hub";
+    badge = role.charAt(0).toUpperCase() + role.slice(1) + " Mode";
   }
 
   return (
@@ -76,9 +99,21 @@ export default function Header() {
             className="bg-transparent border-none outline-none py-1.5 md:py-2 pr-6 md:pr-8 text-xs md:text-sm font-semibold text-[#1e40af] appearance-none cursor-pointer"
           >
             <option value="all">All Network</option>
-            {branches.map(b => (
-              <option key={b.id} value={b.id}>{b.name.split(" ")[0]}</option>
-            ))}
+            {branches.map(b => {
+              const parts = b.name.split(" ");
+              let label = b.name;
+              // If it's too long, shorten the prefix
+              if (b.name.length > 15 && parts[0].toLowerCase() === "valencia") {
+                label = `Valencia ${parts[1]}`;
+              } else if (b.name.length > 15 && parts[0].toLowerCase() === "main") {
+                label = `Main ${parts[1]}`;
+              } else if (b.name.length > 15) {
+                label = parts.slice(0, 2).join(" ");
+              }
+              return (
+                <option key={b.id} value={b.id}>{label}</option>
+              );
+            })}
           </select>
           <div className="absolute right-2 md:right-3 pointer-events-none">
              <ChevronDown className="w-3 md:w-4 h-3 md:h-4 text-[#64748b]" />
