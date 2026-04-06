@@ -72,47 +72,30 @@ export default function StaffPage() {
     
     try {
       setSaving(true);
-      const payload = {
-        email: currentMember.email,
-        name: currentMember.name,
+      
+      const payload: any = {
+        email: currentMember.email.trim().toLowerCase(),
+        name: currentMember.name || "Pending Login",
         role: currentMember.role,
-        branch_ids: currentMember.branch_ids
+        branch_ids: currentMember.branch_ids || []
       };
 
-      let error;
       if (currentMember.id) {
-        const { error: err } = await supabase
-          .from('users')
-          .update(payload)
-          .eq('id', currentMember.id);
-        error = err;
-      } else {
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', currentMember.email)
-          .single();
-          
-        if (existing) {
-          const { error: err } = await supabase
-            .from('users')
-            .update(payload)
-            .eq('id', existing.id);
-          error = err;
-        } else {
-          const { error: err } = await supabase
-            .from('users')
-            .insert([{ ...payload, id: `pre-${currentMember.email}` }]);
-          error = err;
-        }
+        payload.id = currentMember.id;
       }
 
-      if (error) throw error;
+      // Use upsert with email as the conflict target to handle both new and existing users
+      const { error: upsertError } = await supabase
+        .from('users')
+        .upsert(payload, { onConflict: 'email' });
+
+      if (upsertError) throw upsertError;
+
       await fetchData();
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error("Save Error:", e);
-      alert("Error saving staff member");
+      alert(`Error saving staff member: ${e.message || "Unknown error"}`);
     } finally {
       setSaving(false);
     }
