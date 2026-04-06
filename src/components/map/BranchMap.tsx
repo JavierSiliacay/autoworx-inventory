@@ -165,8 +165,8 @@ export default function BranchMap({ branches, center, zoom = 13 }: BranchMapProp
   return (
     <div
       ref={mapRef}
-      className="w-full h-full rounded-xl"
-      style={{ minHeight: "500px" }}
+      className="w-full h-full rounded-xl shadow-inner border border-slate-100"
+      style={{ minHeight: "clamp(300px, 50vh, 600px)" }}
     />
   );
 }

@@ -43,9 +43,9 @@ export default function AdminInventoryPage() {
   const isManager = role === 'manager';
   const isStaff = role === 'staff';
 
-  const canEditCost = isStaff || isManager || isDeveloper;
-  // Everyone (including Staff) can view cost now.
-  const canViewCost = true;
+  const isGlobal = isOwner || isDeveloper || isManager;
+  const canEditCost = isStaff || isGlobal; 
+  const canViewCost = true; 
 
   const categories = ["Urethane", "Clearcoat", "Primer", "Paint"];
 
@@ -267,8 +267,8 @@ export default function AdminInventoryPage() {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-          <div className="flex gap-2 min-w-max">
+        <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide snap-x">
+          <div className="flex gap-2 min-w-max px-1">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -381,7 +381,7 @@ export default function AdminInventoryPage() {
                  <h2 className="text-xl md:text-2xl font-manrope font-bold">{currentProduct.id ? 'Refine Asset Parameters' : 'Register New Hub Asset'}</h2>
                  <button onClick={closeModal} className="p-2 hover:bg-white/10 rounded-full transition-all"><X className="w-6 h-6"/></button>
               </div>
-              <div className="p-8 md:p-10 space-y-8">
+              <div className="p-6 md:p-10 space-y-8">
                  <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>

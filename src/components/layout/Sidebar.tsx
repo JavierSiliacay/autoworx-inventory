@@ -71,7 +71,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 space-y-1.5 overflow-hidden">
+      <nav className="flex-1 px-3 space-y-1.5 overflow-y-auto custom-scrollbar">
         <div className={`mb-4 px-3 flex items-center ${isCollapsed ? "justify-center" : ""}`}>
            {!isCollapsed && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Main Menu</span>}
            {isCollapsed && <div className="h-[1px] w-8 bg-slate-100" />}

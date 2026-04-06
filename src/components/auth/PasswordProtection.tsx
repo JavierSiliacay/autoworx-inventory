@@ -54,7 +54,7 @@ export function PasswordProtection({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             className="fixed inset-0 m-auto w-full max-w-md h-fit bg-white rounded-3xl shadow-2xl border border-slate-200 z-[60] overflow-hidden"
           >
-            <div className="p-8">
+            <div className="p-6 md:p-10">
               <button 
                 onClick={onClose}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors"

@@ -8,7 +8,7 @@ interface StaffMember {
   id: string;
   email: string;
   name: string;
-  role: 'developer' | 'owner' | 'staff';
+  role: 'developer' | 'owner' | 'manager' | 'staff';
   branch_ids: string[];
 }
 
@@ -207,11 +207,13 @@ export default function StaffPage() {
                     </div>
                   </td>
                   <td className="px-6 md:px-10 py-5 md:py-7 text-center">
-                     <span className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
-                       s.role === 'owner' ? "bg-purple-50 text-purple-700 ring-1 ring-purple-100" : "bg-[#eff6ff] text-[#1e40af] ring-1 ring-blue-100"
-                     }`}>
-                       {s.role}
-                     </span>
+                      <span className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
+                        s.role === 'owner' ? "bg-purple-50 text-purple-700 ring-1 ring-purple-100" : 
+                        s.role === 'manager' ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" :
+                        "bg-[#eff6ff] text-[#1e40af] ring-1 ring-blue-100"
+                      }`}>
+                        {s.role}
+                      </span>
                   </td>
                   <td className="px-6 md:px-10 py-5 md:py-7">
                      <div className="flex flex-wrap gap-1 md:gap-2">
@@ -281,15 +283,16 @@ export default function StaffPage() {
                        />
                     </div>
                     <div>
-                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Security Protocol</label>
+                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">APC System Role</label>
                        <select 
                          className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-[#1e40af] outline-none appearance-none"
                          value={currentMember.role}
                          onChange={(e) => setCurrentMember({...currentMember, role: e.target.value as any})}
                        >
-                          <option value="staff">Standard Personnel</option>
-                          <option value="owner">System Authority</option>
-                          <option value="developer">Infrastructure Lead</option>
+                          <option value="staff">Staff</option>
+                          <option value="manager">Manager</option>
+                          <option value="owner">Owner</option>
+                          <option value="developer">Developer</option>
                        </select>
                     </div>
                  </div>

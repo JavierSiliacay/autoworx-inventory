@@ -26,8 +26,7 @@ const MANAGERS = [
 const STAFF_MAPPING: Record<string, string[]> = {
   "paintcenterautoworx@gmail.com": ["Kauswagan"],
   "valenciacoloursmile@gmail.com": ["Valencia ColourSmile Paint Trading", "Valencia Distribution"],
-  "autoworxpaintcenter909@gmail.com": ["Agora", "Main Distribution"],
-  "variacioncarla@gmail.com": ["Agora", "Main Distribution"] 
+  "autoworxpaintcenter909@gmail.com": ["Agora", "Main Distribution"]
 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
