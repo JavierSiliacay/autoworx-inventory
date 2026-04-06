@@ -80,11 +80,10 @@ export default function StaffPage() {
         branch_ids: currentMember.branch_ids || []
       };
 
-      if (currentMember.id) {
-        payload.id = currentMember.id;
-      }
+      // Ensure an ID is present (either existing or a new random UUID)
+      payload.id = currentMember.id || crypto.randomUUID();
 
-      // Use upsert with email as the conflict target to handle both new and existing users
+      // Use upsert with email as the conflict target
       const { error: upsertError } = await supabase
         .from('users')
         .upsert(payload, { onConflict: 'email' });
