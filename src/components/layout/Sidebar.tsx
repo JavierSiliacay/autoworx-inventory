@@ -9,6 +9,7 @@ import {
   Store, 
   Users,
   LogOut, 
+  TrendingUp,
   ChevronLeft, 
   ChevronRight,
   User,
@@ -30,6 +31,7 @@ export default function Sidebar() {
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Inventory", href: "/admin/inventory", icon: Package },
+    { name: "Sales", href: "/admin/sales", icon: TrendingUp },
     // Only show these to Owners/Developers
     ...(!isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },

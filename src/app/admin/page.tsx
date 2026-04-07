@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText, Loader2, Shield } from "lucide-react";
+import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText, Loader2, Shield, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -11,16 +11,22 @@ export default function AdminDashboardPage() {
   const searchParams = useSearchParams();
   const filterBranch = searchParams.get("branch");
 
-  const [stats, setStats] = useState({ products: 0, stock: 0, value: 0, branches: 0 });
+  const [stats, setStats] = useState({ products: 0, stock: 0, value: 0, currentStockValue: 0, branches: 0 });
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   const [distribution, setDistribution] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revenue, setRevenue] = useState(0);
+  const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (session) {
       fetchDashboardData();
-      const sub = supabase.channel('dashboard-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, fetchDashboardData).subscribe();
+      const sub = supabase.channel('dashboard-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, fetchDashboardData)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchDashboardData)
+        .subscribe();
       return () => { supabase.removeChannel(sub); };
     }
   }, [session, filterBranch]); // Re-fetch when filter changes
@@ -64,15 +70,6 @@ export default function AdminDashboardPage() {
       setBranches(bList);
 
       const uniqueNames = Array.from(new Set(invDocs.map(i => i.product_name)));
-      const totalStock = invDocs.reduce((acc, i) => acc + parseFloat(i.quantity.toString()), 0);
-      const totalValue = invDocs.reduce((acc, i) => acc + (parseFloat(i.quantity.toString()) * parseFloat(i.price?.toString() || "0")), 0);
-
-      setStats({
-        products: uniqueNames.length,
-        stock: Math.round(totalStock),
-        value: totalValue,
-        branches: bList.length
-      });
 
       // Recent 5 updates
       setRecentLogs(invDocs.slice(0, 5));
@@ -91,13 +88,123 @@ export default function AdminDashboardPage() {
           name,
           sku: productInv[0]?.sku || "N/A",
           global: `${Math.round(globalStock)}L`,
+          unit_cost: productInv[0]?.unit_cost || 0,
           ...branchStocks
         };
       });
 
       setDistribution(rows);
-    } catch (err) {
-      console.error(err);
+
+      // 1. Fetch Sales Sources Individually (Fail-Soft)
+      let allOutHistory: any[] = [];
+      let officialSalesTable: any[] = [];
+      
+      try {
+        const { data: techLogs } = await supabase
+          .from('transactions')
+          .select('item_id, quantity')
+          .eq('transaction_type', 'outbound');
+        if (techLogs) allOutHistory = techLogs;
+      } catch (err) { console.warn("Tech Audit logs failed:", err); }
+
+      try {
+        const { data: salesRows } = await supabase
+          .from('sales')
+          .select('item_id, quantity');
+        if (salesRows) officialSalesTable = salesRows;
+      } catch (err) { console.warn("Official Sales table failed:", err); }
+
+      // 2. Current Stock Value (Liquid Assets) - This one DOES decrease on sale
+      const currentStockCost = (invDocs as any[]).reduce((acc, item) => {
+        const cost = item.unit_cost ?? item.cost ?? item.unit_price ?? 0;
+        return acc + (Number(item.quantity || 0) * Number(cost));
+      }, 0);
+
+      // 3. Historical Total Purchase (Double-Audit Permanent Ledger)
+      // Math: (Current Shelf Quantity + (Technical Logs OR Official Invoices)) * Unit Cost
+      // Even if one log fails, the other will "catch" the sale and lock the Total Purchase.
+      const totalPurchaseValue = (invDocs as any[]).reduce((acc, item) => {
+        const cost = item.unit_cost ?? item.cost ?? item.unit_price ?? 0;
+        const currentQty = Number(item.quantity || 0);
+        const itemStrId = String(item.id);
+
+        // Cross-reference both sources to find Total Outbound
+        const techSoldQty = (allOutHistory || [])
+          .filter(t => String(t.item_id) === itemStrId)
+          .reduce((sum, t) => sum + Number(t.quantity || 0), 0);
+
+        const officialSoldQty = (officialSalesTable || [])
+          .filter(s => String(s.item_id) === itemStrId)
+          .reduce((sum, s) => sum + Number(s.quantity || 0), 0);
+
+        // Use whichever is higher (failsafe)
+        const totalSoldForThisItem = Math.max(techSoldQty, officialSoldQty);
+          
+        return acc + ((currentQty + totalSoldForThisItem) * Number(cost));
+      }, 0);
+
+      const totalVolume = (invDocs as any[]).reduce((acc, item) => acc + (parseFloat(item.quantity) || 0), 0);
+      const uniqueProdCount = new Set((invDocs as any[]).map(i => i.product_name)).size;
+
+      // 3. Official Sales Fetch (With Graceful Fallback)
+      let salesDocs = null;
+      try {
+        let salesQuery = supabase
+          .from('sales')
+          .select(`*, inventory(product_name, sku, price, branch_id, branches(name))`)
+          .order('date', { ascending: false });
+
+        if (filterBranch) {
+          salesQuery = salesQuery.eq('branch_id', filterBranch);
+        } else if (isStaff && userBranchIds.length > 0) {
+          salesQuery = salesQuery.in('branch_id', userBranchIds);
+        }
+
+        const { data, error: sErr } = await salesQuery.limit(20);
+        
+        // If "sales" table is missing, use "transactions" as a fallback
+        if (sErr && (sErr.message.includes('relation "public.sales" does not exist') || sErr.code === '42P01')) {
+           console.warn("Sales table not found. Falling back to stock-out transactions.");
+           const { data: transSales } = await supabase
+             .from('transactions')
+             .select('*, inventory(product_name, sku, price, branch_id, branches(name))')
+             .eq('transaction_type', 'outbound')
+             .order('id', { ascending: false })
+             .limit(20);
+           
+           if (transSales) {
+             const mapped = transSales.map((t: any) => ({
+               ...t,
+               invoice_no: "TRX-" + t.id.slice(0,5),
+               customer_name: "Internal Stock-Out",
+               total_amount: (parseFloat(t.quantity || 0) * parseFloat(t.inventory?.price || 0)),
+               payment_type: "Internal",
+               date: t.created_at
+             }));
+             salesDocs = mapped;
+           }
+        } else if (data) {
+           salesDocs = data;
+        }
+
+        if (salesDocs) {
+          setSales(salesDocs);
+          const totalRev = salesDocs.reduce((acc: number, s: any) => acc + (parseFloat(s.total_amount || 0)), 0);
+          setRevenue(totalRev);
+        }
+      } catch (err) {
+        console.error("Revenue Fetch error:", err);
+      }
+
+      setStats({
+        products: uniqueProdCount,
+        stock: totalVolume,
+        value: totalPurchaseValue,
+        currentStockValue: currentStockCost,
+        branches: bList.length
+      });
+    } catch (err: any) {
+      console.error("Dashboard Fetch Error:", err.message);
     } finally {
       setLoading(false);
     }
@@ -106,11 +213,95 @@ export default function AdminDashboardPage() {
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
 
+  const handleDeleteSale = async (id: string, invoiceNo: string, itemId: string, qty: number) => {
+    if (role !== 'developer') return;
+    if (!confirm(`DEVELOPER ONLY: Delete test sale ${invoiceNo}? This will revert stock (+${qty}L).`)) return;
+
+    try {
+      setLoading(true);
+      
+      // 1. Revert Inventory
+      const { data: item } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('id', itemId)
+        .single();
+      
+      if (item) {
+        await supabase
+          .from('inventory')
+          .update({ quantity: item.quantity + qty })
+          .eq('id', itemId);
+      }
+
+      // 2. Delete the Sale Record
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // 3. Clean up transactions
+      await supabase
+        .from('transactions')
+        .delete()
+        .eq('item_id', itemId)
+        .eq('transaction_type', 'outbound')
+        .ilike('notes', `%Inv: ${invoiceNo}%`);
+
+      fetchDashboardData();
+    } catch (err: any) {
+      alert("Error deleting record: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkDeleteDashboard = async () => {
+    if (role !== 'developer' || selectedSaleIds.length === 0) return;
+    if (!confirm(`DEVELOPER ONLY: Purge ${selectedSaleIds.length} test records? This will attempt to restore stock.`)) return;
+
+    try {
+      setLoading(true);
+      for (const id of selectedSaleIds) {
+        const sale = sales.find(s => s.id === id);
+        if (sale) {
+          // Revert Stock
+          const { data: item } = await supabase.from('inventory').select('quantity').eq('id', sale.item_id).single();
+          if (item) {
+            await supabase.from('inventory').update({ quantity: item.quantity + sale.quantity }).eq('id', sale.item_id);
+          }
+          // Clean transaction
+          await supabase.from('transactions').delete().eq('item_id', sale.item_id).eq('transaction_type', 'outbound').ilike('notes', `%Inv: ${sale.invoice_no}%`);
+        }
+      }
+      
+      const { error } = await supabase.from('sales').delete().in('id', selectedSaleIds);
+      if (error) throw error;
+
+      setSelectedSaleIds([]);
+      fetchDashboardData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedSaleIds.length === sales.length) setSelectedSaleIds([]);
+    else setSelectedSaleIds(sales.map(s => s.id));
+  };
+
+  const toggleSelectSale = (id: string) => {
+    setSelectedSaleIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
   const summaryCards = [
-    { title: "Inventory", value: stats.products.toString(), label: "Items in Stock", icon: Package, iconColor: "text-[#16a34a]", iconBg: "bg-[#16a34a]/10", caption: "STOCK" },
-    { title: isStaff ? "Branch Value" : "Network Value", value: `₱${stats.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, label: "Asset Estimation", icon: TrendingUp, iconColor: "text-purple-600", iconBg: "bg-purple-50", caption: isStaff ? "CURRENT DEPT" : "FINANCIALS" },
-    { title: isStaff ? "Branch Stock" : "Global Stock", value: stats.stock.toLocaleString(), label: "Liters Available", icon: ClipboardList, iconColor: "text-[#1e40af]", iconBg: "bg-[#1e40af]/10", caption: "VOLUME" },
-    { title: isStaff ? "Permissions" : "Network Hubs", value: stats.branches.toString(), label: isStaff ? "Assigned Clusters" : "Active Nodes", icon: Map, iconColor: "text-[#64748b]", iconBg: "bg-slate-100", caption: "ACCESS" },
+    { title: "Available Stock Value", value: `₱${(stats as any).currentStockValue?.toLocaleString() || 0}`, label: "AVAILABLE STOCK VALUE", icon: Package, iconColor: "text-[#16a34a]", iconBg: "bg-[#16a34a]/10", caption: "AVAILABILITY" },
+    { title: "Total Purchase", value: `₱${stats.value.toLocaleString()}`, label: "Total Purchase", icon: ClipboardList, iconColor: "text-[#1e40af]", iconBg: "bg-[#1e40af]/10", caption: "PURCHASE PERFORMANCE" },
+    { title: isStaff ? "Permissions" : "Network Hubs", value: stats.branches.toString(), label: isStaff ? "Assigned Clusters" : "Active Branch", icon: Map, iconColor: "text-[#64748b]", iconBg: "bg-slate-100", caption: "ACCESS" },
   ];
 
   if (!session && !loading) return <div className="p-20 text-center text-slate-400">Please sign in to view administrative data.</div>;
@@ -119,6 +310,16 @@ export default function AdminDashboardPage() {
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Summary Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+          <div className="flex justify-between items-start">
+            <div className="w-10 h-10 rounded-xl bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a]">
+              <TrendingUp size={20} />
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sales Performance</span>
+          </div>
+          <p className="text-3xl font-manrope font-black text-[#16a34a] mt-4">₱{revenue.toLocaleString()}</p>
+          <p className="text-sm text-[#64748b] mt-1">Total Sales</p>
+        </div>
         {summaryCards.map((card, i) => (
           <div key={i} className="bg-white p-5 md:p-6 rounded-2xl border border-[#e2e8f0] shadow-sm hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
@@ -188,6 +389,117 @@ export default function AdminDashboardPage() {
                     ))}
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      
+      {/* Sales Monitoring Section */}
+      <section className="space-y-6 mb-12">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h3 className="font-manrope font-bold text-xl text-[#1e40af]">Sales Monitoring</h3>
+            <p className="text-sm text-[#64748b]">Automated reporting for product stock-out movements</p>
+          </div>
+          <div className="bg-[#16a34a]/10 px-6 py-3 rounded-2xl border border-[#16a34a]/20">
+            <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-widest mb-1">Recent Revenue</p>
+            <p className="text-2xl font-manrope font-black text-[#16a34a]">₱{revenue.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* Dashboard Bulk Action Bar */}
+        {role === 'developer' && selectedSaleIds.length > 0 && (
+          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between mb-4">
+             <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">{selectedSaleIds.length} Test Records Selected</span>
+             <button 
+               onClick={handleBulkDeleteDashboard}
+               className="bg-red-600 text-white px-5 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-700 transition-all font-manrope"
+             >
+               Confirm Purge
+             </button>
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl overflow-hidden border border-[#e2e8f0] shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-[#e2e8f0]">
+                  {role === 'developer' && (
+                    <th className="px-6 py-4 w-10">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#16a34a]"
+                        checked={selectedSaleIds.length === sales.length && sales.length > 0}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                  )}
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Invoice / Date</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Customer Name</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Asset Sold</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center">Qty</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-right">Revenue</th>
+                  {role === 'developer' && <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e2e8f0]">
+                {sales.map((sale, i) => (
+                  <tr key={i} className={`hover:bg-slate-50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/50' : ''}`}>
+                    {role === 'developer' && (
+                      <td className="px-6 py-4">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#16a34a]"
+                          checked={selectedSaleIds.includes(sale.id)}
+                          onChange={() => toggleSelectSale(sale.id)}
+                        />
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-slate-900">{sale.invoice_no}</p>
+                      <p className="text-[10px] font-bold text-slate-400">
+                        {new Date(sale.date).toLocaleDateString()}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-slate-700">{sale.customer_name}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">{sale.payment_type}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-slate-900">{sale.inventory?.product_name}</p>
+                      <span className="text-[10px] font-black text-[#1e40af] bg-[#1e40af]/5 px-2 py-1 rounded-md uppercase tracking-tight">
+                        {sale.inventory?.branches?.name || 'Central Hub'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-bold text-red-600">-{sale.quantity}L</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="text-sm font-manrope font-black text-[#111827]">
+                        ₱{parseFloat(sale.total_amount || 0).toLocaleString()}
+                      </p>
+                    </td>
+                    {role === 'developer' && (
+                      <td className="px-6 py-4 text-right text-slate-400">
+                        <button 
+                          onClick={() => handleDeleteSale(sale.id, sale.invoice_no, sale.item_id, sale.quantity)}
+                          className="p-1.5 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {sales.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic text-sm">
+                      Waiting for technical stock-out transactions...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

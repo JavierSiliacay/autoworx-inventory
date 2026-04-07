@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, TrendingUp, AlertTriangle, Loader2, X, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, TrendingUp, AlertTriangle, Loader2, X, Package, Minus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -156,6 +156,7 @@ export default function AdminInventoryPage() {
       };
 
       let error;
+      let newProductData;
       if (currentProduct.id) {
         const { error: err } = await supabase
           .from('inventory')
@@ -163,13 +164,29 @@ export default function AdminInventoryPage() {
           .eq('id', currentProduct.id);
         error = err;
       } else {
-        const { error: err } = await supabase
+        const { data, error: err } = await supabase
           .from('inventory')
-          .insert([payload]);
+          .insert([payload])
+          .select()
+          .single();
         error = err;
+        newProductData = data;
       }
 
       if (error) throw error;
+      
+      // LOG THE INITIAL INBOUND TRANSACTION (Required for Permanent Ledger)
+      if (!currentProduct.id && newProductData && Number(payload.quantity) > 0) {
+        await supabase.from('transactions').insert([{
+          item_id: newProductData.id,
+          module_type: 'paints',
+          transaction_type: 'inbound',
+          quantity: payload.quantity,
+          performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
+          remarks: `Initial inventory acquisition: ${payload.product_name}`
+        }]);
+      }
+
       await fetchInventory();
       closeModal();
     } catch (e) {
@@ -188,6 +205,61 @@ export default function AdminInventoryPage() {
       setItems(items.filter(i => i.id !== id));
     } catch (e) {
       console.error("Delete error:", e);
+    }
+  }
+
+  async function adjustStock(item: InventoryItem, deltaSign: number) {
+    const mode = deltaSign < 0 ? 'out' : 'in';
+    const userInput = window.prompt(`Enter how many products to stock ${mode}:`, "1");
+    
+    if (userInput === null) return;
+    const inputQty = parseFloat(userInput);
+    
+    if (isNaN(inputQty) || inputQty <= 0) {
+      alert("Please enter a valid positive quantity.");
+      return;
+    }
+
+    const delta = deltaSign * inputQty;
+    const newQty = Math.max(0, parseFloat(item.quantity.toString()) + delta);
+    
+    if (newQty === item.quantity && delta !== 0) {
+      // Allow it to proceed if they want to record a transaction even if qty results in 0
+    }
+
+    try {
+      // 1. Update Inventory
+      const { error: invError } = await supabase
+        .from('inventory')
+        .update({ 
+          quantity: newQty,
+          last_modified_by: session?.user?.email || 'Adjustment',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+      
+      if (invError) throw invError;
+
+      // 2. Record Financial Transaction (Sales if Stock Out)
+      // This will appear in the Dashboard Sales section
+      const { error: txError } = await supabase
+        .from('transactions')
+        .insert([{
+          item_id: item.id,
+          module_type: 'paints',
+          transaction_type: delta < 0 ? 'outbound' : 'inbound',
+          quantity: Math.abs(delta),
+          performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
+          remarks: delta < 0 ? `Stock Out: ${inputQty} units` : `Stock In: ${inputQty} units`
+        }]);
+
+      if (txError) throw txError;
+
+      // Local update for snappier UI
+      setItems(items.map(i => i.id === item.id ? { ...i, quantity: newQty } : i));
+    } catch (e: any) {
+      console.error("Adjustment Error:", e);
+      alert("Failed to adjust stock: " + e.message);
     }
   }
 
@@ -340,9 +412,25 @@ export default function AdminInventoryPage() {
                       </span>
                     </td>
                     <td className="px-10 py-7">
-                      <span className={`text-lg font-manrope font-extrabold tracking-tight ${product.quantity < 5 ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
-                        {parseFloat(product.quantity.toString()).toFixed(1)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => adjustStock(product, -1)}
+                          className="p-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 active:scale-90"
+                          title="Stock Out (Sales)"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className={`text-lg font-manrope font-extrabold tracking-tight min-w-[32px] text-center ${product.quantity < 5 ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                          {parseFloat(product.quantity.toString()).toFixed(1)}
+                        </span>
+                        <button 
+                          onClick={() => adjustStock(product, 1)}
+                          className="p-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm border border-green-100 active:scale-90"
+                          title="Stock In (Replenish)"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                     {canViewCost && (
                       <td className="px-10 py-7 text-sm font-manrope font-extrabold text-[#64748b] text-right bg-slate-50/30">
@@ -408,7 +496,7 @@ export default function AdminInventoryPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">SKU Reference</label>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Product Code</label>
                           <input className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold" value={currentProduct.sku || ""} onChange={(e) => setCurrentProduct({...currentProduct, sku: e.target.value})} />
                         </div>
                         <div className="col-span-2 lg:col-span-1">
