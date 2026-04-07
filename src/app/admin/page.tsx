@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
         let salesQuery = supabase
           .from('sales')
           .select(`*, inventory(product_name, sku, price, branch_id, branches(name))`)
-          .order('date', { ascending: false });
+          .order('created_at', { ascending: false });
 
         if (filterBranch) {
           salesQuery = salesQuery.eq('branch_id', filterBranch);
@@ -179,7 +179,8 @@ export default function AdminDashboardPage() {
                customer_name: "Internal Stock-Out",
                total_amount: (parseFloat(t.quantity || 0) * parseFloat(t.inventory?.price || 0)),
                payment_type: "Internal",
-               date: t.created_at
+               date: t.created_at,
+               created_at: t.created_at
              }));
              salesDocs = mapped;
            }
@@ -460,7 +461,7 @@ export default function AdminDashboardPage() {
                     <td className="px-6 py-4">
                       <p className="text-sm font-bold text-slate-900">{sale.invoice_no}</p>
                       <p className="text-[10px] font-bold text-slate-400">
-                        {new Date(sale.date).toLocaleDateString()}
+                        {new Date(sale.created_at || sale.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </td>
                     <td className="px-6 py-4">

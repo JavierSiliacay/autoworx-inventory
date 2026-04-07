@@ -18,6 +18,7 @@ interface SaleEntry {
   branch_id: string;
   payment_type: "Cash" | "Charge";
   performed_by: string;
+  created_at: string;
   inventory?: {
     product_name: string;
     sku: string;
@@ -98,7 +99,7 @@ export default function AdminSalesPage() {
       let query = supabase
         .from('sales')
         .select(`*, inventory(product_name, sku), branches(name)`)
-        .order('date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (filterBranch) {
         query = query.eq('branch_id', filterBranch);
@@ -478,7 +479,9 @@ export default function AdminSalesPage() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-[#1a1b20]">{sale.invoice_no}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{new Date(sale.date).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {new Date(sale.created_at || sale.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 font-bold text-sm text-[#334155]">{sale.customer_name}</td>
