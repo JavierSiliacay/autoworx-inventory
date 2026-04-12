@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT,
-  role TEXT DEFAULT 'staff' CHECK (role IN ('developer', 'owner', 'staff')),
+  image TEXT, -- Google Profile Picture
+  role TEXT DEFAULT 'staff' CHECK (role IN ('developer', 'owner', 'manager', 'staff')),
   branch_ids UUID[] DEFAULT '{}', -- Array to support staff with multiple assigned branches
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

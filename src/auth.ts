@@ -78,13 +78,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // Upsert user to sync their Google ID and latest name/role
+      console.log(`Syncing Google profile for ${user.email}. Image found: ${!!user.image}`);
+
+      // Upsert user to sync their Google ID and latest name/role/image
       const { error } = await supabase
         .from('users')
         .upsert({
           id: user.id,
           email: user.email,
           name: user.name,
+          image: user.image, // Sync profile picture
           role: computedRole,
           // Only update branch_ids if we have hardcoded ones, otherwise keep existing
           ...(branchUuids.length > 0 ? { branch_ids: branchUuids } : {}),
@@ -97,15 +100,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.sub) {
         session.user.id = token.sub;
         
-        // Fetch role and branches from Supabase
+        // Fetch role, branches, and image from Supabase to ensure everything is synced
         const { data } = await supabase
           .from('users')
-          .select('role, branch_ids')
+          .select('role, branch_ids, image')
           .eq('email', session.user.email)
           .single();
           
         if (data) {
           (session.user as any).role = data.role;
+          (session.user as any).image = data.image || session.user.image; // Use DB image if available
           // Managers, Owners, and Developers get empty branch_ids so they can see all
           const isGlobal = data.role === 'owner' || data.role === 'developer' || data.role === 'manager';
           (session.user as any).branch_ids = isGlobal ? [] : (data.branch_ids || []);
