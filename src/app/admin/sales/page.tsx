@@ -5,6 +5,7 @@ import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calen
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useNetwork } from "@/context/NetworkContext";
 
 interface SaleEntry {
   id: string;
@@ -41,7 +42,8 @@ interface InventoryItem {
 export default function AdminSalesPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const filterBranch = searchParams.get("branch");
+  const { selectedBranchId } = useNetwork();
+  const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
   const [sales, setSales] = useState<SaleEntry[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -75,7 +77,7 @@ export default function AdminSalesPage() {
       fetchInventory();
       fetchBranches();
     }
-  }, [session, filterBranch]);
+  }, [session, selectedBranchId]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
@@ -156,7 +158,7 @@ export default function AdminSalesPage() {
         .insert([{
           ...currentSale,
           total_amount,
-          performed_by: session?.user?.id || session?.user?.email
+          performed_by: session?.user?.email || 'Anonymous'
         }])
         .select()
         .single();
