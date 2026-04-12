@@ -5,11 +5,13 @@ import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
+import { useNetwork } from "@/context/NetworkContext";
 
 export default function AdminDashboardPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const filterBranch = searchParams.get("branch");
+  const { selectedBranchId } = useNetwork();
+  const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
   const [stats, setStats] = useState({ products: 0, stock: 0, value: 0, currentStockValue: 0, branches: 0 });
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
@@ -29,7 +31,7 @@ export default function AdminDashboardPage() {
         .subscribe();
       return () => { supabase.removeChannel(sub); };
     }
-  }, [session, filterBranch]); // Re-fetch when filter changes
+  }, [session, selectedBranchId]); // Re-fetch when filter changes
 
   async function fetchDashboardData() {
     try {
@@ -309,6 +311,16 @@ export default function AdminDashboardPage() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Welcome Header */}
+      <div className="mb-10">
+        <h1 className="text-3xl md:text-5xl font-manrope font-extrabold text-[#111827] tracking-tight mb-2">
+          Hello, <span className="text-[#16a34a]">{session?.user?.name || "Member"}</span> 👋
+        </h1>
+        <p className="text-sm md:text-base text-[#64748b] font-medium font-manrope">
+          Welcome back! Here's the current pulse of the Autoworx branch network.
+        </p>
+      </div>
+
       {/* Summary Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">

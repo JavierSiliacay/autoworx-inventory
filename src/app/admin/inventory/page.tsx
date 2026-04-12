@@ -5,6 +5,7 @@ import { Plus, Search, Edit, Trash2, TrendingUp, AlertTriangle, Loader2, X, Pack
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { useNetwork } from "@/context/NetworkContext";
 
 interface InventoryItem {
   id: string;
@@ -30,7 +31,8 @@ const categoryColors: Record<string, string> = {
 export default function AdminInventoryPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const filterBranch = searchParams.get("branch");
+  const { selectedBranchId } = useNetwork();
+  const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
   const [filter, setFilter] = useState("");
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -59,7 +61,7 @@ export default function AdminInventoryPage() {
       fetchInventory();
       fetchBranches();
     }
-  }, [filterBranch, session]);
+  }, [selectedBranchId, session]);
 
   useEffect(() => {
     const channel = supabase
@@ -72,7 +74,7 @@ export default function AdminInventoryPage() {
     return () => {
       supabase.removeChannel(channel);
     }
-  }, [filterBranch]);
+  }, [selectedBranchId]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
