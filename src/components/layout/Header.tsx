@@ -5,13 +5,14 @@ import { Bell, Filter, ChevronDown, UserCircle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
+import { useNetwork } from "@/context/NetworkContext";
 
 export default function Header() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentBranchId = searchParams.get("branch") || "all";
+  const { selectedBranchId, setSelectedBranchId } = useNetwork();
 
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
 
@@ -41,13 +42,7 @@ export default function Header() {
   }, [session]);
 
   const handleBranchChange = (branchId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (branchId === "all") {
-      params.delete("branch");
-    } else {
-      params.set("branch", branchId);
-    }
-    router.push(`${pathname}?${params.toString()}`);
+    setSelectedBranchId(branchId);
   };
 
   const role = (session?.user as any)?.role || 'staff';
@@ -94,7 +89,7 @@ export default function Header() {
         <div className="relative flex items-center bg-white border border-[#e2e8f0] rounded-xl px-2 md:px-3 hover:border-[#1e40af]/30 transition-all focus-within:ring-2 focus-within:ring-[#1e40af]/10">
           <Filter className="w-3 md:w-4 h-3 md:h-4 text-[#64748b] mr-1 md:mr-2" />
           <select 
-            value={currentBranchId}
+            value={selectedBranchId}
             onChange={(e) => handleBranchChange(e.target.value)}
             className="bg-transparent border-none outline-none py-1.5 md:py-2 pr-6 md:pr-8 text-xs md:text-sm font-semibold text-[#1e40af] appearance-none cursor-pointer"
           >
