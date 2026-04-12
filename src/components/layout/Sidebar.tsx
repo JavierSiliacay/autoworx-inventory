@@ -24,6 +24,11 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
@@ -32,8 +37,8 @@ export default function Sidebar() {
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Inventory", href: "/admin/inventory", icon: Package },
     { name: "Sales", href: "/admin/sales", icon: TrendingUp },
-    // Only show these to Owners/Developers
-    ...(!isStaff ? [
+    // Only show these to Owners/Developers after mounting or if session is available on server
+    ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },
       { name: "Staff", href: "/admin/staff", icon: Users },
     ] : []),
@@ -87,8 +92,8 @@ export default function Sidebar() {
               href={item.href}
               className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
                 isActive
-                  ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
-                  : "text-[#64748b] font-medium hover:bg-slate-50"
+                   ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
+                   : "text-[#64748b] font-medium hover:bg-slate-50"
               }`}
             >
               <item.icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
@@ -102,7 +107,7 @@ export default function Sidebar() {
           );
         })}
 
-        <div className="pt-8 mb-4 px-3 flex items-center ${isCollapsed ? 'justify-center' : ''}">
+        <div className={`pt-8 mb-4 px-3 flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
            {!isCollapsed && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System</span>}
         </div>
         
