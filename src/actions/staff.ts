@@ -73,40 +73,66 @@ export async function getStaffStats(email: string, role: string, userId?: string
 }
 
 export async function getDeveloperStats(email: string) {
+  const lowercaseEmail = email.toLowerCase();
+  
   try {
-    // Run git log to get commits for this email
-    // %h: hash, %s: subject, %ad: author date
+    // Attempt 1: Local Git Log (Development/VPS)
     const { stdout } = await execPromise(
-      `git log --author="${email}" --pretty=format:"%h|%s|%ad" --date=iso-strict -n 50`
+      `git log --author="${lowercaseEmail}" --pretty=format:"%h|%s|%ad" --date=iso-strict -n 50`
     );
 
-    if (!stdout) return { success: true, stats: { commitCount: 0, recentCommits: [] } };
+    if (stdout) {
+      const commits = stdout.split('\n').map(line => {
+        const [hash, subject, date] = line.split('|');
+        return { hash, subject, date };
+      });
+      return formatDevStats(commits);
+    }
+  } catch (localError) {
+    console.warn("Local git failed, attempting GitHub API fallback...");
+  }
 
-    const commits = stdout.split('\n').map(line => {
-      const [hash, subject, date] = line.split('|');
-      return { hash, subject, date };
-    });
+  try {
+    // Attempt 2: GitHub API Fallback (Production/Vercel)
+    // We use the known repo: JavierSiliacay/autoworx-inventory
+    const token = process.env.GITHUB_TOKEN;
+    const headers: any = { "Accept": "application/vnd.github.v3+json" };
+    if (token) headers["Authorization"] = `token ${token}`;
 
-    // Simple analysis of commit types
-    const analysis = {
-      feat: commits.filter(c => c.subject.toLowerCase().includes('feat')).length,
-      fix: commits.filter(c => c.subject.toLowerCase().includes('fix')).length,
-      refactor: commits.filter(c => c.subject.toLowerCase().includes('refactor')).length,
-    };
+    const url = `https://api.github.com/repos/JavierSiliacay/autoworx-inventory/commits?author=${lowercaseEmail}&per_page=50`;
+    const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+    
+    if (!res.ok) throw new Error(`GitHub API error: ${res.statusText}`);
+    
+    const data = await res.json();
+    const commits = data.map((c: any) => ({
+      hash: c.sha.substring(0, 7),
+      subject: c.commit.message.split('\n')[0],
+      date: c.commit.author.date
+    }));
 
-    return {
-      success: true,
-      stats: {
-        commitCount: commits.length,
-        recentCommits: commits.slice(0, 15),
-        analysis
-      }
-    };
+    return formatDevStats(commits);
   } catch (error) {
-    console.error("Error fetching git stats:", error);
-    // If not a git repo or git not found, return empty
+    console.error("Error fetching git/github stats:", error);
     return { success: false, error: "Failed to access code metrics" };
   }
+}
+
+function formatDevStats(commits: any[]) {
+  const analysis = {
+    feat: commits.filter(c => c.subject.toLowerCase().includes('feat')).length,
+    fix: commits.filter(c => c.subject.toLowerCase().includes('fix')).length,
+    refactor: commits.filter(c => c.subject.toLowerCase().includes('refactor')).length,
+  };
+
+  return {
+    success: true,
+    stats: {
+      commitCount: commits.length,
+      recentCommits: commits.slice(0, 15),
+      analysis
+    }
+  };
 }
 
 export async function updateUserStatus(email: string, status: string) {

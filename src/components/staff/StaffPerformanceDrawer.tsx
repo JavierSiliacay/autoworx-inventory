@@ -96,7 +96,9 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
 
       if (staff.role === 'developer' || staff.role === 'owner') {
         const technicalRes = await getDeveloperStats(staff.email);
-        if (technicalRes.success) setDevStats(technicalRes.stats);
+        if (technicalRes.success && 'stats' in technicalRes) {
+          setDevStats(technicalRes.stats);
+        }
       }
     } catch (e) {
       console.error("Load stats error:", e);
