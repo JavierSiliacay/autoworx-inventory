@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Mail, Shield, MapPin, Loader2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import StaffPerformanceDrawer from "@/components/staff/StaffPerformanceDrawer";
 
 interface StaffMember {
   id: string;
   email: string;
   name: string;
+  image?: string; // Google Profile Picture
   role: 'developer' | 'owner' | 'manager' | 'staff';
   branch_ids: string[];
 }
@@ -27,6 +29,9 @@ export default function StaffPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<Partial<StaffMember> | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Performance View State
+  const [performanceStaff, setPerformanceStaff] = useState<StaffMember | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -176,11 +181,19 @@ export default function StaffPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredStaff.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50/80 transition-all group">
+                <tr 
+                  key={s.id} 
+                  className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                  onClick={() => setPerformanceStaff(s)}
+                >
                   <td className="px-6 md:px-10 py-5 md:py-7">
                     <div className="flex items-center gap-3 md:gap-4">
-                      <div className="w-9 md:w-11 h-9 md:h-11 rounded-2xl bg-[#1e40af]/10 flex items-center justify-center text-[#1e40af] font-black text-xs md:text-sm shadow-inner">
-                         {s.email[0].toUpperCase()}
+                      <div className="w-9 md:w-11 h-9 md:h-11 rounded-2xl bg-[#1e40af]/10 flex items-center justify-center text-[#1e40af] font-black text-xs md:text-sm shadow-inner overflow-hidden border border-slate-100">
+                         {s.image ? (
+                           <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
+                         ) : (
+                           s.email[0].toUpperCase()
+                         )}
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-900 leading-tight">{s.name || 'Pending Login'}</div>
@@ -214,7 +227,7 @@ export default function StaffPage() {
                      </div>
                   </td>
                   <td className="px-6 md:px-10 py-5 md:py-7 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => openModal(s)} className="p-2 md:p-3 hover:bg-[#1e40af]/10 text-[#1e40af] rounded-xl transition-all active:scale-90">
                         <Edit className="w-4 h-4" />
                       </button>
@@ -240,6 +253,17 @@ export default function StaffPage() {
               </div>
               
               <div className="p-8 md:p-10 space-y-8">
+                 {currentMember.image && (
+                   <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-sm shrink-0">
+                         <img src={currentMember.image} alt={currentMember.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                         <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-widest">Verified Identity</p>
+                         <p className="text-sm font-bold text-slate-900 leading-tight">Syncing Google Profile...</p>
+                      </div>
+                   </div>
+                 )}
                  <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Authentication Identity (Gmail)</label>
                     <div className="flex items-center px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus-within:ring-4 focus-within:ring-[#1e40af]/5 transition-all">
@@ -316,6 +340,12 @@ export default function StaffPage() {
            </div>
         </div>
       )}
+
+      {/* Performance Drawer */}
+      <StaffPerformanceDrawer 
+        staff={performanceStaff} 
+        onClose={() => setPerformanceStaff(null)} 
+      />
     </div>
   );
 }
