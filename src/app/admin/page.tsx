@@ -102,18 +102,34 @@ export default function AdminDashboardPage() {
       let officialSalesTable: any[] = [];
       
       try {
-        const { data: techLogs } = await supabase
+        let techQuery = supabase
           .from('transactions')
           .select('item_id, quantity')
           .eq('transaction_type', 'outbound')
           .neq('module_type', 'production_mixing');
+        
+        if (filterBranch) {
+          techQuery = techQuery.eq('branch_id', filterBranch);
+        } else if (isStaff && userBranchIds.length > 0) {
+          techQuery = techQuery.in('branch_id', userBranchIds);
+        }
+        
+        const { data: techLogs } = await techQuery;
         if (techLogs) allOutHistory = techLogs;
       } catch (err) { console.warn("Tech Audit logs failed:", err); }
 
       try {
-        const { data: salesRows } = await supabase
+        let sRowsQuery = supabase
           .from('sales')
           .select('item_id, quantity');
+          
+        if (filterBranch) {
+          sRowsQuery = sRowsQuery.eq('branch_id', filterBranch);
+        } else if (isStaff && userBranchIds.length > 0) {
+          sRowsQuery = sRowsQuery.in('branch_id', userBranchIds);
+        }
+
+        const { data: salesRows } = await sRowsQuery;
         if (salesRows) officialSalesTable = salesRows;
       } catch (err) { console.warn("Official Sales table failed:", err); }
 
@@ -157,7 +173,7 @@ export default function AdminDashboardPage() {
       try {
         let salesQuery = supabase
           .from('sales')
-          .select(`*, inventory(product_name, sku, price, branch_id, branches(name))`)
+          .select(`*, inventory(product_name, sku, price), branches(name)`)
           .order('created_at', { ascending: false });
 
         if (filterBranch) {
@@ -173,7 +189,7 @@ export default function AdminDashboardPage() {
            console.warn("Sales table not found. Falling back to stock-out transactions.");
            const { data: transSales } = await supabase
              .from('transactions')
-             .select('*, inventory(product_name, sku, price, branch_id, branches(name))')
+             .select('*, inventory(product_name, sku, price), branches(name)')
              .eq('transaction_type', 'outbound')
              .order('id', { ascending: false })
              .limit(20);
@@ -195,8 +211,13 @@ export default function AdminDashboardPage() {
         }
 
         if (salesDocs) {
-          setSales(salesDocs);
-          const totalRev = salesDocs.reduce((acc: number, s: any) => acc + (parseFloat(s.total_amount || 0)), 0);
+          const mapped = salesDocs.map((s: any) => ({
+            ...s,
+            inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
+            branches: Array.isArray(s.branches) ? s.branches[0] : s.branches
+          }));
+          setSales(mapped);
+          const totalRev = mapped.reduce((acc: number, s: any) => acc + (parseFloat(s.total_amount || 0)), 0);
           setRevenue(totalRev);
         }
       } catch (err) {
@@ -327,26 +348,34 @@ export default function AdminDashboardPage() {
 
       {/* Summary Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+        <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div className="w-10 h-10 rounded-xl bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a]">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a] shrink-0">
               <TrendingUp size={20} />
             </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sales Performance</span>
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right ml-2 lg:ml-0">Sales Performance</span>
           </div>
-          <p className="text-3xl font-manrope font-black text-[#16a34a] mt-4">₱{revenue.toLocaleString()}</p>
-          <p className="text-sm text-[#64748b] mt-1">Total Sales</p>
+          <div className="mt-4 md:mt-6 overflow-hidden">
+            <p className="text-xl sm:text-2xl md:text-3xl font-manrope font-black text-[#16a34a] truncate" title={`₱${revenue.toLocaleString()}`}>
+              ₱{revenue.toLocaleString()}
+            </p>
+            <p className="text-[10px] md:text-sm text-[#64748b] mt-1 font-bold uppercase tracking-tighter opacity-70">Total Sales</p>
+          </div>
         </div>
         {summaryCards.map((card, i) => (
-          <div key={i} className="bg-white p-5 md:p-6 rounded-2xl border border-[#e2e8f0] shadow-sm hover:shadow-md transition-shadow">
+          <div key={i} className="bg-white p-5 md:p-6 rounded-2xl border border-[#e2e8f0] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-lg ${card.iconBg}`}>
+              <div className={`p-2 rounded-lg ${card.iconBg} shrink-0`}>
                 <card.icon className={`w-4 md:w-5 h-4 md:h-5 ${card.iconColor}`} />
               </div>
-              <span className="text-[9px] md:text-[10px] font-bold text-[#64748b] tracking-tighter uppercase opacity-60">{card.caption}</span>
+              <span className="text-[9px] md:text-[10px] font-bold text-[#64748b] tracking-tighter uppercase opacity-60 text-right ml-2 lg:ml-0">{card.caption}</span>
             </div>
-            <p className="text-2xl md:text-3xl font-manrope font-extrabold text-[#111827]">{card.value}</p>
-            <p className="text-xs md:text-sm font-medium text-[#64748b] mt-1">{card.label}</p>
+            <div className="overflow-hidden">
+              <p className="text-xl sm:text-2xl md:text-3xl font-manrope font-extrabold text-[#111827] truncate" title={card.value}>
+                {card.value}
+              </p>
+              <p className="text-[10px] md:text-sm font-bold text-[#64748b] mt-1 uppercase tracking-tighter opacity-70">{card.label}</p>
+            </div>
           </div>
         ))}
       </section>
@@ -369,8 +398,8 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left border-collapse min-w-[600px] md:min-w-0">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#e2e8f0]">
-                  <th className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Product Name</th>
-                  <th className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Scope Total</th>
+                  <th className="sticky left-0 bg-slate-50 z-20 px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b] border-r border-slate-100">Product Detail</th>
+                  <th className="px-6 py-4 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Total</th>
                   {branches.map((b) => {
                     const parts = b.name.split(" ");
                     // Smart name: If it's "Valencia X", show "V-X". If "Main X", show "M-X".
@@ -392,10 +421,10 @@ export default function AdminDashboardPage() {
               <tbody className="divide-y divide-[#e2e8f0]">
                 {distribution.map((row, ri) => (
                   <tr key={ri} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="sticky left-0 bg-white group-hover:bg-slate-50 px-6 py-4 z-10 border-r border-slate-50">
                       <div>
                         <p className="text-xs md:text-sm font-bold text-[#1a1b20]">{row.name}</p>
-                        <p className="text-[9px] md:text-[10px] text-[#64748b]">{row.sku}</p>
+                        <p className="text-[9px] md:text-[10px] text-[#64748b] font-medium tracking-tight uppercase">{row.sku}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4 font-manrope font-bold text-[#1e40af] text-base md:text-lg">{row.global}</td>
@@ -453,12 +482,11 @@ export default function AdminDashboardPage() {
                       />
                     </th>
                   )}
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Invoice / Date</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Customer Name</th>
-                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Asset Sold</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b]">Invoice / Customer</th>
+                  <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] hidden md:table-cell">Asset Detail</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center">Qty</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-right">Revenue</th>
-                  {role === 'developer' && <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-right">Actions</th>}
+                  {role === 'developer' && <th className="sticky right-0 bg-slate-50 z-20 px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center border-l border-slate-100">Ops</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e2e8f0]">
@@ -475,19 +503,21 @@ export default function AdminDashboardPage() {
                       </td>
                     )}
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-slate-900">{sale.invoice_no}</p>
-                      <p className="text-[10px] font-bold text-slate-400">
-                        {new Date(sale.created_at || sale.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-900 leading-tight">{sale.customer_name}</p>
+                        {(sale.payment_type === 'Debt' || sale.payment_type === 'Charge') && (
+                          <span className="text-[8px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-md uppercase tracking-widest border border-orange-200">Debt</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{sale.invoice_no}</span>
+                        <span className="text-[10px] text-slate-400 font-medium"> {new Date(sale.created_at || sale.date).toLocaleDateString()}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-slate-700">{sale.customer_name}</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">{sale.payment_type}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-slate-900">{sale.inventory?.product_name}</p>
-                      <span className="text-[10px] font-black text-[#1e40af] bg-[#1e40af]/5 px-2 py-1 rounded-md uppercase tracking-tight">
-                        {sale.inventory?.branches?.name || 'Central Hub'}
+                    <td className="px-6 py-4 hidden md:table-cell">
+                      <p className="text-xs font-bold text-slate-900 mb-1">{sale.inventory?.product_name}</p>
+                      <span className="text-[9px] font-black text-[#1e40af] bg-[#1e40af]/5 px-2 py-0.5 rounded uppercase tracking-tighter">
+                        {sale.branches?.name || 'Central Hub'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -499,10 +529,10 @@ export default function AdminDashboardPage() {
                       </p>
                     </td>
                     {role === 'developer' && (
-                      <td className="px-6 py-4 text-right text-slate-400">
+                      <td className="sticky right-0 bg-white group-hover:bg-slate-50 px-6 py-4 text-center border-l border-slate-100 z-10 transition-colors">
                         <button 
                           onClick={() => handleDeleteSale(sale.id, sale.invoice_no, sale.item_id, sale.quantity)}
-                          className="p-1.5 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-95"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
