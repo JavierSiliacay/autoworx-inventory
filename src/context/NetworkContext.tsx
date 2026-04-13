@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface NetworkContextType {
   selectedBranchId: string;
@@ -16,10 +17,21 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const { data: session } = useSession();
+
   // Initialize from localStorage and URL
   useEffect(() => {
     const storedBranchId = localStorage.getItem("selectedBranchId");
     const urlBranchId = searchParams.get("branch");
+    
+    // RBAC: If staff and has only 1 branch, lock them to it
+    const role = (session?.user as any)?.role;
+    const branchIds = (session?.user as any)?.branch_ids || [];
+    
+    if (role === 'staff' && branchIds.length === 1) {
+      setSelectedBranchIdState(branchIds[0]);
+      return;
+    }
 
     if (urlBranchId) {
       setSelectedBranchIdState(urlBranchId);
@@ -27,7 +39,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     } else if (storedBranchId) {
       setSelectedBranchIdState(storedBranchId);
     }
-  }, []);
+  }, [session]);
 
   const setSelectedBranchId = (id: string) => {
     setSelectedBranchIdState(id);
