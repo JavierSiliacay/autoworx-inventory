@@ -18,7 +18,7 @@ interface SaleEntry {
   unit_cost: number;
   total_amount: number;
   branch_id: string;
-  payment_type: "Cash" | "Charge";
+  payment_type: "Cash" | "Debt" | "Charge"; // Charge for legacy support
   performed_by: string;
   created_at: string;
   inventory?: {
@@ -61,7 +61,7 @@ export default function AdminSalesPage() {
     item_id: "",
     quantity: 1,
     unit_price: 0,
-    payment_type: "Cash" as const,
+    payment_type: "Cash" as "Cash" | "Debt",
     branch_id: ""
   });
 
@@ -249,10 +249,13 @@ export default function AdminSalesPage() {
       setSaving(true);
       const total_amount = currentSale.quantity * currentSale.unit_price;
       const selectedItem = inventory.find(i => i.id === currentSale.item_id);
+      if (!selectedItem) {
+        alert("Product record not found. Please refresh and try again.");
+        return;
+      }
 
-      if (!selectedItem) throw new Error("Item not found");
-      if (selectedItem.quantity < currentSale.quantity) {
-        alert(`Insufficient stock! Available: ${selectedItem.quantity}L`);
+      if (currentSale.payment_type === "Debt" && !currentSale.customer_name.trim()) {
+        alert("Customer Name is required for Debt transactions.");
         return;
       }
 
@@ -269,6 +272,19 @@ export default function AdminSalesPage() {
         .single();
 
       if (saleError) throw saleError;
+
+      // 1.1 Create Payable record if it's a debt
+      if (currentSale.payment_type === "Debt") {
+        await supabase.from('payables').insert([{
+          sale_id: saleData.id,
+          customer_name: currentSale.customer_name,
+          total_amount: total_amount,
+          balance: total_amount,
+          paid_amount: 0,
+          status: 'Unpaid',
+          branch_id: currentSale.branch_id
+        }]);
+      }
 
       // 2. Deduct from Inventory
       const { error: invError } = await supabase
@@ -609,7 +625,7 @@ export default function AdminSalesPage() {
                         <div className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                           <span>Cost: ₱{(sale.unit_cost * sale.quantity).toLocaleString()}</span>
                           <span className="opacity-50">|</span>
-                          <span>{sale.payment_type}</span>
+                          <span>{sale.payment_type === 'Charge' ? 'Debt' : sale.payment_type}</span>
                         </div>
                       </div>
                     </td>
@@ -816,7 +832,7 @@ export default function AdminSalesPage() {
                     onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
                   >
                     <option value="Cash">Cash</option>
-                    <option value="Charge">Charge</option>
+                    <option value="Debt">Debt</option>
                   </select>
                 </div>
               </div>
