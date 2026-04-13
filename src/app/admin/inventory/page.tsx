@@ -57,13 +57,26 @@ export default function AdminInventoryPage() {
   const [currentProduct, setCurrentProduct] = useState<Partial<InventoryItem> | null>(null);
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [saving, setSaving] = useState(false);
+  const [staffMap, setStaffMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (session) {
       fetchInventory();
       fetchBranches();
+      fetchStaff();
     }
-  }, [selectedBranchId, session]);
+  }, [session, selectedBranchId]);
+
+  async function fetchStaff() {
+    const { data } = await supabase.from('users').select('email, name');
+    if (data) {
+      const map: Record<string, string> = {};
+      data.forEach(u => {
+        if (u.email) map[u.email.toLowerCase()] = u.name || u.email;
+      });
+      setStaffMap(map);
+    }
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -378,56 +391,60 @@ export default function AdminInventoryPage() {
             <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-[0.2em]">Acquiring Assets...</p>
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+        {/* DESKTOP TABLE VIEW (xl and up) */}
+        <div className="hidden xl:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Product Detail</th>
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Hub</th>
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Category</th>
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Unit</th>
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Stock</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Product & Hub</th>
+                <th className="px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Category</th>
+                <th className="px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Unit</th>
+                <th className="px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Stock</th>
                 {canViewCost && (
-                  <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Unit Cost</th>
+                  <th className="px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Unit Cost</th>
                 )}
-                <th className={`px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${canViewCost ? "text-right" : ""}`}>Retail Price</th>
+                <th className={`px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${canViewCost ? "text-right" : ""}`}>Retail Price</th>
                 {canViewCost && (
-                  <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Margin</th>
+                  <th className="px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Margin</th>
                 )}
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Ops</th>
+                <th className="sticky right-0 bg-slate-50 border-l border-slate-100 px-6 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-center z-20">Ops</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={canViewCost ? 9 : 7} className="px-10 py-24 text-center">
-                    <p className="text-slate-400 font-manrope font-bold mb-1">No Matching Technical Assets Found</p>
-                  </td>
-                </tr>
-              )}
               {filtered.map((product, i) => {
                 const margin = (product.price || 0) - (product.cost || 0);
                 return (
                   <tr key={i} className={`hover:bg-slate-50/80 transition-all group ${product.quantity <= 0 ? 'bg-red-50/50 opacity-80' : ''}`}>
-                    <td className="px-10 py-7">
+                    <td className="px-10 py-7 relative group/row">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-[#111827] mb-1">{product.product_name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-[#16a34a] tracking-widest uppercase">{product.sku || 'No SKU'}</span>
-                          <span className="text-[9px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Updated by {product.last_modified_by?.split('@')[0] || 'Admin'}</span>
+                        {/* Desktop Audit Tooltip */}
+                        <div className="absolute left-[80%] top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 group-hover/row:left-[90%] transition-all duration-300 pointer-events-none z-[100] hidden lg:block">
+                           <div className="bg-slate-900/90 text-[10px] text-white px-4 py-3 rounded-2xl backdrop-blur-md shadow-2xl border border-white/10 w-max max-w-[180px]">
+                              <p className="font-bold text-green-400 mb-1 uppercase tracking-widest">Digital Audit</p>
+                              <p className="opacity-70 mb-1 leading-tight">Last modified by:</p>
+                              <p className="font-bold text-xs mb-2">
+                                {product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : 'System Automatic'}
+                              </p>
+                              <p className="opacity-70 leading-tight">Timestamp:</p>
+                              <p className="font-bold text-[#94a3b8]">{new Date(product.updated_at).toLocaleDateString()} • {new Date(product.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-black text-[#1e40af] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-tighter shrink-0">{product.branch_name}</span>
+                          <span className="text-[10px] font-bold text-[#16a34a] tracking-widest uppercase shrink-0">{product.sku || 'No SKU'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-10 py-7 text-xs font-bold text-[#1e40af] uppercase tracking-tight">{product.branch_name}</td>
-                    <td className="px-10 py-7">
+                    <td className="px-6 py-7 text-center">
                       <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${categoryColors[product.category] || "bg-slate-100 text-slate-500"}`}>
                         {product.category}
                       </span>
                     </td>
-                    <td className="px-10 py-7 text-xs font-bold text-slate-500 uppercase tracking-tight">
+                    <td className="px-6 py-7 text-xs font-bold text-slate-500 uppercase tracking-tight text-center">
                       {product.unit === 'Piece' ? 'pcs' : product.unit === 'Kilogram' ? 'kg' : product.unit === 'Meter' ? 'm' : product.unit === 'Liter' ? 'L' : product.unit === 'Gallon' ? 'gal' : product.unit === 'Can' ? 'can' : product.unit}
                     </td>
-                    <td className="px-10 py-7">
+                    <td className="px-6 py-7">
                       <div className="flex items-center gap-3">
                         <button 
                           onClick={() => adjustStock(product, -1)}
@@ -437,7 +454,6 @@ export default function AdminInventoryPage() {
                               ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed" 
                               : "bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-red-100"
                           }`}
-                          title={product.quantity <= 0 ? "Out of stock" : "Stock Out (Sales)"}
                         >
                           <Minus className="w-4 h-4" />
                         </button>
@@ -447,31 +463,30 @@ export default function AdminInventoryPage() {
                         <button 
                           onClick={() => adjustStock(product, 1)}
                           className="p-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm border border-green-100 active:scale-90"
-                          title="Stock In (Replenish)"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                     {canViewCost && (
-                      <td className="px-10 py-7 text-sm font-manrope font-extrabold text-[#64748b] text-right bg-slate-50/30">
+                      <td className="px-6 py-7 text-sm font-manrope font-extrabold text-[#64748b] text-right bg-slate-50/10">
                         ₱{parseFloat(product.cost?.toString() || "0").toLocaleString()}
                       </td>
                     )}
-                    <td className={`px-10 py-7 text-sm font-manrope font-extrabold text-[#111827] ${canViewCost ? "text-right" : ""}`}>
+                    <td className={`px-6 py-7 text-sm font-manrope font-extrabold text-[#111827] ${canViewCost ? "text-right" : ""}`}>
                       ₱{parseFloat(product.price?.toString() || "0").toLocaleString()}
                     </td>
                     {canViewCost && (
-                      <td className="px-10 py-7 text-right">
+                      <td className="px-6 py-7 text-right">
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${margin > 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
                           + ₱{margin.toLocaleString()}
                         </span>
                       </td>
                     )}
-                    <td className="px-10 py-7 text-right">
-                      <div className="flex justify-end gap-2 text-slate-400">
-                        <button onClick={() => openModal(product)} className="p-2 hover:text-[#16a34a] transition-all"><Edit className="w-4 h-4" /></button>
-                        <button onClick={() => deleteProduct(product.id)} className="p-2 hover:text-[#ba1a1a] transition-all"><Trash2 className="w-4 h-4" /></button>
+                    <td className="sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-100 px-6 py-7 text-right z-20">
+                      <div className="flex justify-center gap-2 text-slate-400">
+                        <button onClick={() => openModal(product)} className="p-2 bg-slate-50 hover:bg-[#16a34a] hover:text-white rounded-lg transition-all"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => deleteProduct(product.id)} className="p-2 bg-slate-50 hover:bg-red-500 hover:text-white rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -479,6 +494,77 @@ export default function AdminInventoryPage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* MOBILE/TABLET CARD VIEW (below xl) */}
+        <div className="xl:hidden space-y-4 px-2">
+           {filtered.map((product, i) => {
+              const margin = (product.price || 0) - (product.cost || 0);
+              return (
+                <div key={i} className={`bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 ${product.quantity <= 0 ? 'border-red-100 shadow-red-50/50' : ''}`}>
+                   {/* Card Header */}
+                   <div className="p-5 border-b border-dashed border-slate-100 flex justify-between items-start gap-4">
+                      <div className="min-w-0">
+                         <h4 className="text-base font-bold text-slate-900 truncate">{product.product_name}</h4>
+                         <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] font-black text-[#1e40af] bg-blue-50 px-2 py-0.5 rounded uppercase">{product.branch_name}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{product.sku || 'N/A'}</span>
+                         </div>
+                         <p className="text-[8px] text-slate-400 mt-2 font-bold uppercase tracking-[0.2em] italic">
+                            By: {product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || "System") : 'System'} • {new Date(product.updated_at).toLocaleDateString()}
+                         </p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                         <button onClick={() => openModal(product)} className="w-9 h-9 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-[#16a34a] hover:bg-green-50 rounded-xl transition-all"><Edit className="w-4 h-4" /></button>
+                         <button onClick={() => deleteProduct(product.id)} className="w-9 h-9 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                   </div>
+
+                   {/* Card Body */}
+                   <div className="p-5 space-y-5">
+                      <div className="flex justify-between items-end">
+                         <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Technical Parameters</p>
+                            <div className="flex gap-2">
+                               <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${categoryColors[product.category] || "bg-slate-100 text-slate-500"}`}>
+                                  {product.category}
+                               </span>
+                               <span className="px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[9px] font-bold text-slate-500 uppercase">
+                                  {product.unit}
+                               </span>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                            <button onClick={() => adjustStock(product, -1)} disabled={product.quantity <= 0} className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-red-500 disabled:opacity-30 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5"/></button>
+                            <span className={`text-base font-black px-1 ${product.quantity < 5 ? 'text-red-600' : 'text-slate-900'}`}>{parseFloat(product.quantity.toString()).toFixed(1)}</span>
+                            <button onClick={() => adjustStock(product, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-green-500 active:scale-90 transition-transform"><Plus className="w-3.5 h-3.5"/></button>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+                         <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Retail Price</p>
+                            <p className="text-base font-manrope font-black text-[#1e40af]">₱{product.price?.toLocaleString()}</p>
+                         </div>
+                         {canViewCost && (
+                            <div className="text-right border-l border-slate-200 pl-3">
+                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Unit Cost</p>
+                               <p className="text-sm font-bold text-slate-500 italic">₱{product.cost?.toLocaleString()}</p>
+                            </div>
+                         )}
+                         {canViewCost && (
+                            <div className="col-span-2 pt-2 border-t border-slate-200 flex justify-between items-center">
+                               <span className="text-[9px] font-bold text-slate-400 uppercase">Margin</span>
+                               <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${margin > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  + ₱{margin.toLocaleString()}
+                               </span>
+                            </div>
+                         )}
+                      </div>
+                   </div>
+                </div>
+              );
+           })}
         </div>
       </div>
 

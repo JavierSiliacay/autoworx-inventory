@@ -23,11 +23,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
       `}>
-          <div className="relative group">
-            {/* Close button for mobile inside the sidebar tray area */}
+          <div className="relative h-full">
+            {/* Improved Mobile Close Action */}
             <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden absolute top-6 right-[-48px] p-2 bg-white text-slate-800 rounded-full shadow-lg border border-slate-100 transition-transform active:scale-90"
+                className="lg:hidden absolute top-6 right-6 p-2 bg-slate-100/80 backdrop-blur-sm text-slate-900 rounded-xl shadow-sm border border-slate-200 z-[60] hover:bg-white transition-all active:scale-90"
+                aria-label="Close Sidebar"
             >
                 <X className="w-5 h-5" />
             </button>
