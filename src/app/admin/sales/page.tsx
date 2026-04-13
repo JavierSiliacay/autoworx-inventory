@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2 } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -15,6 +15,7 @@ interface SaleEntry {
   item_id: string;
   quantity: number;
   unit_price: number;
+  unit_cost: number;
   total_amount: number;
   branch_id: string;
   payment_type: "Cash" | "Charge";
@@ -35,6 +36,8 @@ interface InventoryItem {
   sku: string;
   quantity: number;
   price: number;
+  cost: number;
+  unit: string;
   branch_id: string;
   branches?: { name: string };
 }
@@ -66,6 +69,44 @@ export default function AdminSalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSetupAlert, setShowSetupAlert] = useState(false);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
+  
+  const [saleFormulationLog, setSaleFormulationLog] = useState<string | null>(null);
+  const [fetchingFormulation, setFetchingFormulation] = useState(false);
+  
+  const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
+  const [mixBreakdown, setMixBreakdown] = useState<string | null>(null);
+  const [mixLoading, setMixLoading] = useState(false);
+
+  const toggleExpandSale = async (sale: SaleEntry) => {
+    if (expandedSaleId === sale.id) {
+      setExpandedSaleId(null);
+      return;
+    }
+    setExpandedSaleId(sale.id);
+    setMixBreakdown(null);
+    
+    if (sale.inventory?.product_name?.startsWith('[MIX]')) {
+      setMixLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('remarks')
+          .eq('item_id', sale.item_id)
+          .or('remarks.ilike.Formulated Asset Output%,remarks.ilike.Batch Production Output%')
+          .order('timestamp', { ascending: false })
+          .limit(1);
+        if (data && data.length > 0) {
+          setMixBreakdown(data[0].remarks);
+        } else {
+          setMixBreakdown("No formulation history found.");
+        }
+      } catch (err) {
+        setMixBreakdown("Error loading breakdown.");
+      } finally {
+        setMixLoading(false);
+      }
+    }
+  };
 
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
@@ -76,6 +117,17 @@ export default function AdminSalesPage() {
       fetchSales();
       fetchInventory();
       fetchBranches();
+
+      const channel = supabase
+        .channel('sales-inventory-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+          fetchInventory();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session, selectedBranchId]);
 
@@ -85,14 +137,22 @@ export default function AdminSalesPage() {
   }
 
   async function fetchInventory() {
-    let query = supabase.from('inventory').select('*, branches(name)').order('product_name');
+    let query = supabase.from('inventory').select('id, product_name, sku, quantity, unit, price, cost, branch_id, branches(name)').order('product_name');
     if (filterBranch) {
       query = query.eq('branch_id', filterBranch);
     } else if (isStaff && userBranchIds.length > 0) {
       query = query.in('branch_id', userBranchIds);
     }
     const { data } = await query;
-    setInventory(data || []);
+    if (data) {
+      const results = (data as any[]).map(item => ({
+        ...item,
+        branches: Array.isArray(item.branches) ? item.branches[0] : item.branches
+      }));
+      setInventory(results);
+    } else {
+      setInventory([]);
+    }
   }
 
   async function fetchSales() {
@@ -117,7 +177,13 @@ export default function AdminSalesPage() {
         }
         throw error;
       }
-      setSales(data || []);
+      
+      const results = (data || []).map((s: any) => ({
+        ...s,
+        inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
+        branches: Array.isArray(s.branches) ? s.branches[0] : s.branches
+      }));
+      setSales(results);
     } catch (err) {
       console.error("Fetch Sales Error:", err);
     } finally {
@@ -125,15 +191,53 @@ export default function AdminSalesPage() {
     }
   }
 
-  const handleItemSelect = (itemId: string) => {
+  const handleItemSelect = async (itemId: string) => {
     const item = inventory.find(i => i.id === itemId);
     if (item) {
+      if (item.quantity <= 0) {
+        alert("Out of stock");
+        setSaleFormulationLog(null);
+        return;
+      }
+
       setCurrentSale(prev => ({
         ...prev,
         item_id: itemId,
         unit_price: item.price,
         branch_id: item.branch_id
       }));
+
+      // Automatically fetch mix details if it's a formulated asset
+      if (item.product_name.startsWith('[MIX]')) {
+         setFetchingFormulation(true);
+         setSaleFormulationLog(null);
+         try {
+           const { data, error } = await supabase
+             .from('transactions')
+             .select('remarks')
+             .eq('item_id', item.id)
+             .or('remarks.ilike.Formulated Asset Output%,remarks.ilike.Batch Production Output%')
+             .order('timestamp', { ascending: false })
+             .limit(1);
+             
+           if (data && data.length > 0) {
+             const cleanLog = data[0].remarks
+               .replace("Formulated Asset Output.\n\n", "")
+               .replace("Batch Production Output.\n\n", "");
+             setSaleFormulationLog(cleanLog);
+           } else {
+             setSaleFormulationLog("No formulation history found.");
+           }
+         } catch(e) {
+           setSaleFormulationLog("Failed to load formulation logs.");
+         } finally {
+           setFetchingFormulation(false);
+         }
+      } else {
+         setSaleFormulationLog(null);
+      }
+    } else {
+      setSaleFormulationLog(null);
     }
   };
 
@@ -157,6 +261,7 @@ export default function AdminSalesPage() {
         .from('sales')
         .insert([{
           ...currentSale,
+          unit_cost: selectedItem.cost || 0,
           total_amount,
           performed_by: session?.user?.email || 'Anonymous'
         }])
@@ -467,7 +572,11 @@ export default function AdminSalesPage() {
                 </tr>
               ) : (
                 filteredSales.map((sale) => (
-                  <tr key={sale.id} className={`hover:bg-slate-50/50 transition-colors group ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/30' : ''}`}>
+                  <React.Fragment key={sale.id}>
+                  <tr 
+                    onClick={() => toggleExpandSale(sale)}
+                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === sale.id ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/30' : ''}`}
+                  >
                     {role === 'developer' && (
                       <td className="px-6 py-4">
                         <input 
@@ -497,7 +606,11 @@ export default function AdminSalesPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
                         <span className="text-sm font-extrabold text-[#1a1b20]">₱{sale.total_amount.toLocaleString()}</span>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider">{sale.payment_type}</span>
+                        <div className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                          <span>Cost: ₱{(sale.unit_cost * sale.quantity).toLocaleString()}</span>
+                          <span className="opacity-50">|</span>
+                          <span>{sale.payment_type}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -509,7 +622,7 @@ export default function AdminSalesPage() {
                       </div>
                     </td>
                     {role === 'developer' && (
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button 
                           onClick={() => handleDeleteSale(sale.id)}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
@@ -520,6 +633,29 @@ export default function AdminSalesPage() {
                       </td>
                     )}
                   </tr>
+
+                  {/* Expandable Mix Details Row */}
+                  {expandedSaleId === sale.id && sale.inventory?.product_name?.startsWith('[MIX]') && (
+                    <tr className="bg-slate-50 shadow-inner relative border-t-0">
+                      <td colSpan={role === 'developer' ? 7 : 6} className="px-8 pb-8 pt-4">
+                         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-2">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-[#1e40af] mb-4 flex items-center gap-2">
+                              <Beaker className="w-4 h-4 text-blue-500"/> Batch Formulation Details
+                            </h4>
+                            {mixLoading ? (
+                              <div className="flex items-center gap-3 text-sm text-slate-400 font-medium">
+                                 <Loader2 className="w-5 h-5 text-blue-500 animate-spin"/> Loading breakdown history from secure ledger...
+                              </div>
+                            ) : (
+                              <pre className="text-sm font-medium text-slate-600 whitespace-pre-wrap font-sans leading-relaxed tracking-wide bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                 {mixBreakdown}
+                              </pre>
+                            )}
+                         </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -611,13 +747,36 @@ export default function AdminSalesPage() {
                     onChange={(e) => handleItemSelect(e.target.value)}
                   >
                     <option value="">Select Item from Inventory...</option>
-                    {inventory.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.product_name} ({item.sku}) - {item.branches?.name} | Stock: {item.quantity}L
-                      </option>
-                    ))}
+                      {inventory.map((item) => (
+                        <option 
+                          key={item.id} 
+                          value={item.id} 
+                          disabled={item.quantity <= 0}
+                          className={item.quantity <= 0 ? 'text-red-500 bg-red-50 italic line-through' : ''}
+                        >
+                          {item.product_name} {item.quantity <= 0 ? '(OUT OF STOCK)' : `(${item.sku})`} - {item.branches?.name} | {item.quantity <= 0 ? 'Unavailable' : `Stock: ${item.quantity}${item.unit || ''}`}
+                        </option>
+                      ))}
                   </select>
                 </div>
+
+                {/* Formulation Log Preview for Checkout */}
+                {saleFormulationLog && (
+                   <div className="mt-4 p-4 bg-[#eef2ff] border border-[#c7d2fe] rounded-xl animate-in fade-in zoom-in-95 duration-200 shadow-sm">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-[#3730a3] mb-2 flex items-center gap-1.5">
+                        <Beaker className="w-3 h-3"/> Active Formulation Contents
+                      </h4>
+                      <pre className="text-sm font-semibold text-[#312e81] whitespace-pre-wrap font-sans leading-relaxed">
+                         {saleFormulationLog}
+                      </pre>
+                   </div>
+                )}
+                {fetchingFormulation && (
+                   <div className="mt-4 p-3 flex items-center gap-2 text-xs font-medium text-slate-400">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#3730a3]"/> Pulling secure mixture logs...
+                   </div>
+                )}
+
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -627,10 +786,11 @@ export default function AdminSalesPage() {
                   <input
                     type="number"
                     required
-                    min="1"
+                    min="0.01"
+                    step="0.01"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
-                    value={currentSale.quantity}
-                    onChange={(e) => setCurrentSale({...currentSale, quantity: parseInt(e.target.value) || 0})}
+                    value={currentSale.quantity === 0 ? '' : currentSale.quantity}
+                    onChange={(e) => setCurrentSale({...currentSale, quantity: parseFloat(e.target.value) || 0})}
                   />
                 </div>
 
@@ -640,9 +800,10 @@ export default function AdminSalesPage() {
                   <input
                     type="number"
                     required
+                    step="0.01"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium font-bold text-[#1a1b20]"
-                    value={currentSale.unit_price}
-                    onChange={(e) => setCurrentSale({...currentSale, unit_price: parseInt(e.target.value) || 0})}
+                    value={currentSale.unit_price === 0 ? '' : currentSale.unit_price}
+                    onChange={(e) => setCurrentSale({...currentSale, unit_price: parseFloat(e.target.value) || 0})}
                   />
                 </div>
 
@@ -664,7 +825,7 @@ export default function AdminSalesPage() {
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total Receivable</p>
-                  <p className="text-2xl font-extrabold text-[#1a1b20]">₱{(currentSale.quantity * currentSale.unit_price).toLocaleString()}</p>
+                  <p className="text-2xl font-extrabold text-[#1a1b20]">₱{(currentSale.quantity * currentSale.unit_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="flex gap-3">
                   <button
