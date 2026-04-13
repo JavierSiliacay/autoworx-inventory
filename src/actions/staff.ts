@@ -18,7 +18,7 @@ export async function getStaffStats(email: string, role: string, userId?: string
     // 1. Fetch Sales Stats
     let salesQuery = supabase
       .from('sales')
-      .select('total_amount, created_at, quantity');
+      .select('total_amount, created_at, quantity, inventory(product_name)');
     
     if (userId) {
       salesQuery = salesQuery.or(`performed_by.eq.${email},performed_by.eq.${userId}`);
@@ -48,11 +48,13 @@ export async function getStaffStats(email: string, role: string, userId?: string
     };
 
     // Combine for a unified activity feed
-    const salesActivity = (sales || []).map(s => ({
+    const salesActivity = (sales || []).map((s: any) => ({
       type: 'sale',
       amount: s.total_amount,
       date: s.created_at,
-      description: `Processed sale of ${s.quantity} items`
+      productName: s.inventory?.product_name,
+      quantity: s.quantity,
+      description: `Processed sale of ${s.quantity} x ${s.inventory?.product_name || 'items'}`
     }));
 
     const inventoryActivity = (inventory || []).map(i => ({

@@ -393,7 +393,23 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
                                 {act.type === 'sale' ? <TrendingUp className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                              </div>
                              <div className="flex-1">
-                                <p className="text-sm font-bold text-slate-900 leading-tight mb-1">{act.description}</p>
+                                <div className="flex flex-col gap-0.5 mb-1">
+                                   <p className="text-sm font-bold text-slate-900 leading-tight">
+                                      {act.type === 'sale' ? (
+                                         <span className="flex items-center gap-2">
+                                            <span className="bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-widest font-black">Sale</span>
+                                            {act.productName || 'Unknown Product'}
+                                         </span>
+                                      ) : (
+                                         act.description
+                                      )}
+                                   </p>
+                                   {act.type === 'sale' && (
+                                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                         Volume: {act.quantity} Units Sold
+                                      </p>
+                                   )}
+                                </div>
                                 <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                                    <span className="flex items-center gap-1">
                                      <Clock className="w-3 h-3" /> 
