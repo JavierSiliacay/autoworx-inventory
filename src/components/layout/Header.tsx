@@ -47,13 +47,38 @@ export default function Header() {
 
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
+  const userBranchIds = (session?.user as any)?.branch_ids || [];
+
+  const currentBranch = branches.find(b => b.id === selectedBranchId);
+  
+  // Smart naming engine based on user selection
+  let branchTerm = "";
+  if (selectedBranchId === "all") {
+    branchTerm = "All Branch";
+  } else if (currentBranch) {
+    const bName = currentBranch.name;
+    // Apply specific "no suffix" rules
+    if (bName.toLowerCase().includes("main distribution")) {
+       branchTerm = bName; 
+    } else {
+       branchTerm = bName.endsWith("Hub") || bName.endsWith("Branch") ? bName : `${bName} Branch`;
+    }
+  }
 
   let title = "Network Overview";
+  if (selectedBranchId !== "all") {
+    title = branchTerm;
+  } else if (isStaff) {
+    title = "My Assigned Hubs";
+  } else {
+    title = "All Branches Dashboard";
+  }
+
   let badge = role.charAt(0).toUpperCase() + role.slice(1) + " View";
   let subtitle = "";
 
   if (pathname.includes("inventory")) {
-    title = isStaff ? "Branch Inventory" : "Global Inventory";
+    title = selectedBranchId === "all" ? "Global Inventory" : `${branchTerm} Inventory`;
     subtitle = "Real-time stock levels and product catalog.";
     badge = "";
   } else if (pathname.includes("branches")) {
@@ -64,24 +89,21 @@ export default function Header() {
     title = "Team Access";
     subtitle = "Manage staff permissions and assignments.";
     badge = "";
-  } else if (pathname === "/admin") {
-    title = isStaff ? "Branch Performance" : "Main Network Hub";
-    badge = role.charAt(0).toUpperCase() + role.slice(1) + " Mode";
   }
 
   return (
-    <header className="w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-6 bg-transparent">
-      <div className="flex items-center gap-4">
-        <h2 className="font-manrope font-bold text-lg md:text-2xl tracking-tight text-[#1e40af] truncate max-w-[150px] md:max-w-none">
+    <header className="w-full flex justify-between items-center px-4 md:px-12 py-4 md:py-6 bg-transparent gap-4">
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
+        <h2 className="font-manrope font-bold text-lg md:text-2xl tracking-tight text-[#1e40af] truncate max-w-[180px] sm:max-w-xs md:max-w-none">
           {title}
         </h2>
         {badge && (
-          <div className="px-3 py-1 bg-[#1e40af]/10 rounded-full hidden sm:block">
-            <span className="text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{badge}</span>
+          <div className="px-2 md:px-3 py-1 bg-[#1e40af]/10 rounded-full shrink-0">
+            <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{badge}</span>
           </div>
         )}
         {subtitle && (
-          <p className="text-sm text-[#64748b] hidden xl:block">{subtitle}</p>
+          <p className="text-sm text-[#64748b] hidden xl:block truncate">{subtitle}</p>
         )}
       </div>
 
@@ -93,7 +115,10 @@ export default function Header() {
             onChange={(e) => handleBranchChange(e.target.value)}
             className="bg-transparent border-none outline-none py-1.5 md:py-2 pr-6 md:pr-8 text-xs md:text-sm font-semibold text-[#1e40af] appearance-none cursor-pointer"
           >
-            <option value="all">All Network</option>
+            {/* Staff with only 1 branch cannot see "All Network" */}
+            {(!isStaff || userBranchIds.length > 1) && (
+              <option value="all">All Network</option>
+            )}
             {branches.map(b => {
               const parts = b.name.split(" ");
               let label = b.name;
