@@ -11,6 +11,7 @@ interface InventoryItem {
   id: string;
   product_name: string;
   category: string;
+  unit: string;
   sku: string;
   quantity: number;
   cost: number; // Added cost
@@ -50,6 +51,7 @@ export default function AdminInventoryPage() {
   const canViewCost = true; 
 
   const categories = ["Urethane", "Clearcoat", "Primer", "Paint"];
+  const predefinedUnits = ["Gallon", "Liter", "Can", "Piece", "Kilogram", "Meter"];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Partial<InventoryItem> | null>(null);
@@ -123,6 +125,7 @@ export default function AdminInventoryPage() {
     setCurrentProduct(product || {
       product_name: "",
       category: "Paint",
+      unit: "Gallon",
       sku: "",
       quantity: 0,
       cost: 0,
@@ -148,6 +151,7 @@ export default function AdminInventoryPage() {
       const payload = {
         product_name: currentProduct.product_name,
         category: currentProduct.category,
+        unit: currentProduct.unit || "Gallon",
         sku: currentProduct.sku,
         quantity: parseFloat(currentProduct.quantity?.toString() || "0"),
         cost: parseFloat(currentProduct.cost?.toString() || "0"),
@@ -377,7 +381,8 @@ export default function AdminInventoryPage() {
                 <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Product Detail</th>
                 <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Hub</th>
                 <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Category</th>
-                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Stock (L)</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Unit</th>
+                <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400">Stock</th>
                 {canViewCost && (
                   <th className="px-10 py-6 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 text-right">Unit Cost</th>
                 )}
@@ -391,7 +396,7 @@ export default function AdminInventoryPage() {
             <tbody className="divide-y divide-slate-50">
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={canViewCost ? 8 : 6} className="px-10 py-24 text-center">
+                  <td colSpan={canViewCost ? 9 : 7} className="px-10 py-24 text-center">
                     <p className="text-slate-400 font-manrope font-bold mb-1">No Matching Technical Assets Found</p>
                   </td>
                 </tr>
@@ -414,6 +419,9 @@ export default function AdminInventoryPage() {
                       <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${categoryColors[product.category] || "bg-slate-100 text-slate-500"}`}>
                         {product.category}
                       </span>
+                    </td>
+                    <td className="px-10 py-7 text-xs font-bold text-slate-500 uppercase tracking-tight">
+                      {product.unit === 'Piece' ? 'pcs' : product.unit === 'Kilogram' ? 'kg' : product.unit === 'Meter' ? 'm' : product.unit === 'Liter' ? 'L' : product.unit === 'Gallon' ? 'gal' : product.unit === 'Can' ? 'can' : product.unit}
                     </td>
                     <td className="px-10 py-7">
                       <div className="flex items-center gap-3">
@@ -489,7 +497,7 @@ export default function AdminInventoryPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Category</label>
                           <select className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none uppercase" value={currentProduct.category || "Paint"} onChange={(e) => setCurrentProduct({...currentProduct, category: e.target.value})}>
@@ -499,12 +507,53 @@ export default function AdminInventoryPage() {
                               <option value="Primer">Primer</option>
                           </select>
                         </div>
+                        <div className="relative">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Unit</label>
+                          {(!predefinedUnits.includes(currentProduct.unit || "Gallon") || currentProduct.unit === "") ? (
+                            <div className="flex items-center">
+                              <input 
+                                autoFocus
+                                className="w-full px-4 py-4 bg-slate-50 border border-[#16a34a] rounded-2xl text-[10px] font-bold outline-none uppercase" 
+                                placeholder="TYPE CUSTOM UNIT..."
+                                value={currentProduct.unit === "" ? "" : currentProduct.unit} 
+                                onChange={(e) => setCurrentProduct({...currentProduct, unit: e.target.value})} 
+                              />
+                              <button 
+                                onClick={() => setCurrentProduct({...currentProduct, unit: "Gallon"})} 
+                                className="absolute right-4 p-1 text-slate-400 hover:text-red-500 transition-all bg-slate-50"
+                                title="Cancel Custom Unit"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <select 
+                              className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold outline-none uppercase" 
+                              value={currentProduct.unit || "Gallon"} 
+                              onChange={(e) => {
+                                if (e.target.value === "CUSTOM") {
+                                  setCurrentProduct({...currentProduct, unit: ""});
+                                } else {
+                                  setCurrentProduct({...currentProduct, unit: e.target.value});
+                                }
+                              }}
+                            >
+                                <option value="Gallon">Gallon (gal)</option>
+                                <option value="Liter">Liter (L)</option>
+                                <option value="Can">Can (can)</option>
+                                <option value="Piece">Piece (pcs)</option>
+                                <option value="Kilogram">Kilogram (kg)</option>
+                                <option value="Meter">Meter (m)</option>
+                                <option value="CUSTOM" className="text-[#16a34a] font-black tracking-widest">+ TYPE CUSTOM UNIT...</option>
+                            </select>
+                          )}
+                        </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Product Code</label>
                           <input className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-semibold" value={currentProduct.sku || ""} onChange={(e) => setCurrentProduct({...currentProduct, sku: e.target.value})} />
                         </div>
-                        <div className="col-span-2 lg:col-span-1">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock Level (L)</label>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Stock Level</label>
                           <input type="number" step="0.1" className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-[#16a34a]" value={currentProduct.quantity || 0} onChange={(e) => setCurrentProduct({...currentProduct, quantity: parseFloat(e.target.value)})} />
                         </div>
                     </div>
