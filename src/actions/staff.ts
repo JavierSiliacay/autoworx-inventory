@@ -18,7 +18,7 @@ export async function getStaffStats(email: string, role: string, userId?: string
     // 1. Fetch Sales Stats
     let salesQuery = supabase
       .from('sales')
-      .select('total_amount, created_at, quantity, inventory(product_name)');
+      .select('total_amount, created_at, quantity, payment_type, inventory(product_name)');
     
     if (userId) {
       salesQuery = salesQuery.or(`performed_by.eq.${email},performed_by.eq.${userId}`);
@@ -64,6 +64,7 @@ export async function getStaffStats(email: string, role: string, userId?: string
       date: s.created_at,
       productName: s.inventory?.product_name,
       quantity: s.quantity,
+      paymentType: s.payment_type,
       description: `Processed sale of ${s.quantity} x ${s.inventory?.product_name || 'items'}`
     }));
 
