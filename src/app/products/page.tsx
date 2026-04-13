@@ -178,8 +178,8 @@ export default function ProductsPage() {
                       {product.branches.map((b, bi) => (
                         <div key={bi} className="flex justify-between items-center py-3 px-4 bg-slate-50/50 rounded-xl border border-slate-50 group-hover:bg-white group-hover:border-slate-100 transition-all">
                           <span className="text-xs font-bold text-slate-600">{b.name}</span>
-                          <span className={`text-xs font-black tracking-tight ${b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
-                            {b.stock}
+                          <span className={`text-xs font-black tracking-tight ${parseFloat(b.stock) <= 0 ? "text-red-500 italic" : b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                            {parseFloat(b.stock) <= 0 ? "OUT OF STOCK" : b.stock}
                           </span>
                         </div>
                       ))}

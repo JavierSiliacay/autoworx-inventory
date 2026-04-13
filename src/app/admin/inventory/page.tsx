@@ -215,6 +215,10 @@ export default function AdminInventoryPage() {
   }
 
   async function adjustStock(item: InventoryItem, deltaSign: number) {
+    if (deltaSign < 0 && item.quantity <= 0) {
+      alert("Out of stock");
+      return;
+    }
     const mode = deltaSign < 0 ? 'out' : 'in';
     const userInput = window.prompt(`Enter how many products to stock ${mode}:`, "1");
     
@@ -404,7 +408,7 @@ export default function AdminInventoryPage() {
               {filtered.map((product, i) => {
                 const margin = (product.price || 0) - (product.cost || 0);
                 return (
-                  <tr key={i} className="hover:bg-slate-50/80 transition-all group">
+                  <tr key={i} className={`hover:bg-slate-50/80 transition-all group ${product.quantity <= 0 ? 'bg-red-50/50 opacity-80' : ''}`}>
                     <td className="px-10 py-7">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-[#111827] mb-1">{product.product_name}</span>
@@ -427,8 +431,13 @@ export default function AdminInventoryPage() {
                       <div className="flex items-center gap-3">
                         <button 
                           onClick={() => adjustStock(product, -1)}
-                          className="p-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100 active:scale-90"
-                          title="Stock Out (Sales)"
+                          disabled={product.quantity <= 0}
+                          className={`p-1 rounded-lg transition-all shadow-sm border active:scale-90 ${
+                            product.quantity <= 0 
+                              ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed" 
+                              : "bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-red-100"
+                          }`}
+                          title={product.quantity <= 0 ? "Out of stock" : "Stock Out (Sales)"}
                         >
                           <Minus className="w-4 h-4" />
                         </button>
