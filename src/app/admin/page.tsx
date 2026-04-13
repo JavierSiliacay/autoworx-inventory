@@ -105,7 +105,8 @@ export default function AdminDashboardPage() {
         const { data: techLogs } = await supabase
           .from('transactions')
           .select('item_id, quantity')
-          .eq('transaction_type', 'outbound');
+          .eq('transaction_type', 'outbound')
+          .neq('module_type', 'production_mixing');
         if (techLogs) allOutHistory = techLogs;
       } catch (err) { console.warn("Tech Audit logs failed:", err); }
 
@@ -126,6 +127,9 @@ export default function AdminDashboardPage() {
       // Math: (Current Shelf Quantity + (Technical Logs OR Official Invoices)) * Unit Cost
       // Even if one log fails, the other will "catch" the sale and lock the Total Purchase.
       const totalPurchaseValue = (invDocs as any[]).reduce((acc, item) => {
+        // SKip internally produced (mixed) items from Total Purchase metric
+        if (item.metadata?.is_mixed) return acc;
+
         const cost = item.unit_cost ?? item.cost ?? item.unit_price ?? 0;
         const currentQty = Number(item.quantity || 0);
         const itemStrId = String(item.id);
