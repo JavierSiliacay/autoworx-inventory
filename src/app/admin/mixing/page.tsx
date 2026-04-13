@@ -274,8 +274,8 @@ export default function MixingPage() {
     <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto min-h-[calc(100vh-80px)]">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-manrope font-extrabold tracking-tight text-[#111827]">Color Formulation</h1>
-          <p className="text-sm text-slate-500 mt-2 font-medium">Create custom paint mixes and track ingredient consumption automatically.</p>
+          <h1 className="text-2xl md:text-4xl font-manrope font-extrabold tracking-tight text-[#111827]">Color Formulation</h1>
+          <p className="text-[10px] md:text-sm text-slate-500 mt-2 font-medium">Create custom paint mixes and track ingredient consumption automatically.</p>
         </div>
       </div>
 
@@ -289,8 +289,8 @@ export default function MixingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* LEFT PANE: INVENTORY BROWSER */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
-           <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex-1 flex flex-col min-h-[600px]">
+        <div className="lg:col-span-4 flex flex-col gap-4">
+           <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex-1 flex flex-col min-h-[400px] lg:min-h-[600px] max-h-[50vh] lg:max-h-none">
               <div className="flex items-center justify-between mb-6">
                  <div>
                    <h2 className="text-sm font-black uppercase tracking-widest text-[#111827] flex items-center gap-2">
@@ -369,8 +369,8 @@ export default function MixingPage() {
         </div>
 
         {/* RIGHT PANE: MIXING WORKSTATION */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-           <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[600px]">
+        <div className="lg:col-span-8 flex flex-col gap-6">
+           <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[500px] lg:min-h-[600px]">
               
               <div className="p-8 bg-[#1e40af] text-white flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                  <div>
@@ -419,11 +419,11 @@ export default function MixingPage() {
                                         />
                                         <span className="text-[10px] font-bold text-slate-400 uppercase ml-2 select-none w-6 text-left">{item.unit === 'Piece' ? 'pcs' : item.unit === 'Kilogram' ? 'kg' : item.unit === 'Meter' ? 'm' : item.unit === 'Liter' ? 'L' : item.unit === 'Gallon' ? 'gal' : item.unit === 'Can' ? 'can' : item.unit}</span>
                                     </div>
-                                    <div className="flex gap-1.5 mt-2 opacity-70 hover:opacity-100 transition-opacity">
-                                       <button onClick={() => updateIngredientQuantity(item.id, "0.25")} className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200">1/4</button>
-                                       <button onClick={() => updateIngredientQuantity(item.id, "0.33")} className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200">1/3</button>
-                                       <button onClick={() => updateIngredientQuantity(item.id, "0.5")} className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200">1/2</button>
-                                       <button onClick={() => updateIngredientQuantity(item.id, "0.75")} className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200">3/4</button>
+                                    <div className="flex flex-wrap gap-1.5 mt-2 opacity-70 hover:opacity-100 transition-opacity">
+                                       <button onClick={() => updateIngredientQuantity(item.id, "0.25")} className="px-2 py-1 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200 min-w-[32px]">1/4</button>
+                                       <button onClick={() => updateIngredientQuantity(item.id, "0.33")} className="px-2 py-1 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200 min-w-[32px]">1/3</button>
+                                       <button onClick={() => updateIngredientQuantity(item.id, "0.5")} className="px-2 py-1 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200 min-w-[32px]">1/2</button>
+                                       <button onClick={() => updateIngredientQuantity(item.id, "0.75")} className="px-2 py-1 rounded text-[9px] font-bold bg-slate-100 hover:bg-[#16a34a] hover:text-white transition-colors border border-slate-200 min-w-[32px]">3/4</button>
                                     </div>
                                   </div>
                                   <button onClick={() => removeIngredient(item.id)} className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors shrink-0 mt-4">

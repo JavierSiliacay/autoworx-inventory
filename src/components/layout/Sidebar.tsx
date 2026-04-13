@@ -50,14 +50,14 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`h-screen relative flex flex-col bg-white border-r border-[#e2e8f0] transition-all duration-300 ease-in-out z-40 ${
+      className={`h-screen relative flex flex-col bg-white border-r border-[#e2e8f0] transition-all duration-300 ease-in-out z-40 lg:flex ${
         isCollapsed ? "w-20" : "w-72"
-      }`}
+      } ${mounted ? "flex" : "hidden lg:flex"}`}
     >
       {/* Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="absolute -right-3 top-24 w-6 h-6 bg-white border border-[#e2e8f0] rounded-full flex items-center justify-center text-[#64748b] hover:text-[#16a34a] hover:border-[#16a34a] transition-all z-50 shadow-sm"
+        className="absolute -right-3 top-24 w-6 h-6 bg-white border border-[#e2e8f0] rounded-full hidden lg:flex items-center justify-center text-[#64748b] hover:text-[#16a34a] hover:border-[#16a34a] transition-all z-50 shadow-sm"
       >
         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>

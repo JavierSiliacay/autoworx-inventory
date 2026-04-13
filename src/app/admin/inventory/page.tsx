@@ -301,8 +301,8 @@ export default function AdminInventoryPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-12">
         <div>
-          <h1 className="text-3xl md:text-5xl font-manrope font-extrabold tracking-tight text-[#1e40af] mb-2">Inventory Assets</h1>
-          <p className="text-sm md:text-base text-[#64748b] font-medium tracking-tight">Technical control across the regional network.</p>
+          <h1 className="text-2xl md:text-5xl font-manrope font-extrabold tracking-tight text-[#1e40af] mb-2">Inventory Assets</h1>
+          <p className="text-[10px] md:text-base text-[#64748b] font-medium tracking-tight">Technical control across the regional network.</p>
         </div>
         <button 
           onClick={() => openModal()}
@@ -315,7 +315,7 @@ export default function AdminInventoryPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mb-8 md:mb-12">
-        <div className="col-span-1 md:col-span-8 bg-white p-6 md:p-8 rounded-3xl flex flex-col justify-between min-h-[140px] md:min-h-[160px] border border-slate-100 shadow-sm relative overflow-hidden group">
+        <div className="col-span-1 md:col-span-7 lg:col-span-8 bg-white p-6 md:p-8 rounded-3xl flex flex-col justify-between min-h-[140px] md:min-h-[160px] border border-slate-100 shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-white to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative z-10">
             <div className="flex justify-between items-start">
@@ -323,12 +323,12 @@ export default function AdminInventoryPage() {
               <TrendingUp className="w-5 h-5 text-[#16a34a]" />
             </div>
             <div className="mt-4">
-              <span className="text-4xl md:text-5xl font-manrope font-extrabold text-[#111827]">{items.length}</span>
+              <span className="text-3xl md:text-5xl font-manrope font-extrabold text-[#111827]">{items.length}</span>
               <p className="text-[10px] md:text-sm text-[#16a34a] font-bold mt-1 uppercase tracking-tighter">Live Assets Synchronized</p>
             </div>
           </div>
         </div>
-        <div className={`col-span-1 md:col-span-4 p-6 md:p-8 rounded-3xl flex flex-col justify-between min-h-[140px] md:min-h-[160px] shadow-xl transition-all ${lowStockCount > 0 ? "bg-[#ba1a1a] text-white shadow-[#ba1a1a]/20" : "bg-[#1e40af] text-white shadow-[#1e40af]/20"}`}>
+        <div className={`col-span-1 md:col-span-5 lg:col-span-4 p-6 md:p-8 rounded-3xl flex flex-col justify-between min-h-[140px] md:min-h-[160px] shadow-xl transition-all ${lowStockCount > 0 ? "bg-[#ba1a1a] text-white shadow-[#ba1a1a]/20" : "bg-[#1e40af] text-white shadow-[#1e40af]/20"}`}>
           <div className="flex justify-between items-start">
             <span className="text-[9px] md:text-[10px] font-manrope font-bold uppercase tracking-widest opacity-70">Critical Stock</span>
             <AlertTriangle className="w-5 h-5 opacity-70" />

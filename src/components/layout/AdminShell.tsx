@@ -21,9 +21,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Sidebar - Persistent on desktop, drawer on mobile */}
       <div className={`
         fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
+        ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
       `}>
-          <Sidebar />
+          <div className="relative group">
+            {/* Close button for mobile inside the sidebar tray area */}
+            <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="lg:hidden absolute top-6 right-[-48px] p-2 bg-white text-slate-800 rounded-full shadow-lg border border-slate-100 transition-transform active:scale-90"
+            >
+                <X className="w-5 h-5" />
+            </button>
+            <Sidebar />
+          </div>
       </div>
       
       <div className="flex-1 flex flex-col overflow-hidden w-full relative">
