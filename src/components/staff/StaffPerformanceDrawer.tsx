@@ -361,7 +361,20 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
                                 <GitCommit className="w-4 h-4" />
                              </div>
                              <div className="flex-1">
-                                <p className="text-sm font-bold text-slate-900 leading-tight mb-1">{commit.subject}</p>
+                                <div className="flex flex-col gap-1.5 mb-1.5">
+                                   <div className="flex items-center gap-2">
+                                      <span className={`text-[8px] px-1.5 py-0.5 rounded border uppercase tracking-widest font-black whitespace-nowrap ${
+                                         commit.system === 'APC Inventory' 
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                                          : "bg-blue-50 text-blue-700 border-blue-100"
+                                      }`}>
+                                         {commit.system || 'Core System'}
+                                      </span>
+                                      <p className="text-[13px] font-bold text-slate-900 leading-tight">
+                                         {commit.subject}
+                                      </p>
+                                   </div>
+                                </div>
                                 <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                                    <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100 font-mono">{commit.hash}</span>
                                    <span className="flex items-center gap-1">

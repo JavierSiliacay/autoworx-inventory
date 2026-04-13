@@ -92,52 +92,91 @@ export async function getDeveloperStats(email: string) {
   const lowercaseEmail = email.toLowerCase();
   
   try {
-    // Attempt 1: Local Git Log (Development/VPS)
-    const { stdout } = await execPromise(
-      `git log --author="${lowercaseEmail}" --pretty=format:"%h|%s|%ad" --date=iso-strict -n 50`
-    );
+    const allCommits: any[] = [];
 
-    if (stdout) {
-      const commits = stdout.split('\n').map(line => {
-        const [hash, subject, date] = line.split('|');
-        return { hash, subject, date };
-      });
-      return formatDevStats(commits);
+    // Attempt 1: Local Git Log (Current Repo)
+    try {
+      const { stdout } = await execPromise(
+        `git log -i --author="${lowercaseEmail}" --pretty=format:"%h|%s|%ad" --date=iso-strict -n 100`
+      );
+      if (stdout) {
+        const lines = stdout.trim().split('\n');
+        lines.filter(line => line.includes('|')).forEach(line => {
+          const [hash, subject, date] = line.split('|');
+          allCommits.push({ 
+            hash, 
+            subject, 
+            date,
+            system: 'APC Inventory'
+          });
+        });
+      }
+    } catch (localError) {
+      console.warn("Local git failed or not in a git repo");
     }
-  } catch (localError) {
-    console.warn("Local git failed, attempting GitHub API fallback...");
-  }
 
-  try {
-    // Attempt 2: GitHub API Fallback (Production/Vercel)
-    // We use the known repo: JavierSiliacay/autoworx-inventory
-    const token = process.env.GITHUB_TOKEN;
-    const headers: any = { "Accept": "application/vnd.github.v3+json" };
-    if (token) headers["Authorization"] = `token ${token}`;
+    // Attempt 2: GitHub API (Multi-repo unified view)
+    try {
+      const token = process.env.GITHUB_TOKEN;
+      const headers: any = { "Accept": "application/vnd.github.v3+json" };
+      if (token) headers["Authorization"] = `token ${token}`;
 
-    const url = `https://api.github.com/repos/JavierSiliacay/autoworx-inventory/commits?author=${lowercaseEmail}&per_page=50`;
-    const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+      const externalRepos = [
+        { id: "JavierSiliacay/autoworx-system", name: "Autoworx Repairs" }
+      ];
+
+      // If local git failed, also fetch inventory from GitHub
+      if (allCommits.length === 0) {
+        externalRepos.push({ id: "JavierSiliacay/autoworx-inventory", name: "APC Inventory" });
+      }
+
+      const remotePromises = externalRepos.map(async (repo) => {
+        let allRepoCommits: any[] = [];
+        // Fetch up to 3 pages (300 commits) to handle larger repositories like Repairs
+        for (let page = 1; page <= 3; page++) {
+          const url = `https://api.github.com/repos/${repo.id}/commits?author=${lowercaseEmail}&per_page=100&page=${page}`;
+          const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+          if (!res.ok) break;
+          const data = await res.json();
+          if (!data || data.length === 0) break;
+          
+          const mapped = data.map((c: any) => ({
+            hash: c.sha.substring(0, 7),
+            subject: c.commit.message.split('\n')[0],
+            date: c.commit.author.date,
+            system: repo.name
+          }));
+          allRepoCommits = [...allRepoCommits, ...mapped];
+          if (data.length < 100) break; // Last page reached
+        }
+        return allRepoCommits;
+      });
+
+      const remoteResults = await Promise.all(remotePromises);
+      remoteResults.flat().forEach(c => allCommits.push(c));
+    } catch (remoteError) {
+      console.error("GitHub API fetch failed:", remoteError);
+    }
+
+    // Deduplicate by hash and sort by date
+    const uniqueCommits = Array.from(new Map(allCommits.map(c => [c.hash, c])).values())
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    if (uniqueCommits.length > 0) {
+      return formatDevStats(uniqueCommits);
+    }
     
-    if (!res.ok) throw new Error(`GitHub API error: ${res.statusText}`);
-    
-    const data = await res.json();
-    const commits = data.map((c: any) => ({
-      hash: c.sha.substring(0, 7),
-      subject: c.commit.message.split('\n')[0],
-      date: c.commit.author.date
-    }));
-
-    return formatDevStats(commits);
+    return { success: false, error: "No development activity detected across systems" };
   } catch (error) {
-    console.error("Error fetching git/github stats:", error);
-    return { success: false, error: "Failed to access code metrics" };
+    console.error("Global stats error:", error);
+    return { success: false, error: "System failure accessing metrics" };
   }
 }
 
 function formatDevStats(commits: any[]) {
   const analysis = {
     feat: commits.filter(c => c.subject.toLowerCase().includes('feat')).length,
-    fix: commits.filter(c => c.subject.toLowerCase().includes('fix')).length,
+    fix: commits.filter(c => c.subject.toLowerCase().includes('fix') || c.subject.toLowerCase().includes('fixing')).length,
     refactor: commits.filter(c => c.subject.toLowerCase().includes('refactor')).length,
   };
 
