@@ -252,7 +252,9 @@ export default function AdminInventoryPage() {
           transaction_type: delta < 0 ? 'outbound' : 'inbound',
           quantity: Math.abs(delta),
           performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
-          remarks: delta < 0 ? `Stock Out: ${inputQty} units` : `Stock In: ${inputQty} units`
+          remarks: delta < 0 
+            ? `Stock Out: ${inputQty} units of ${item.product_name} (by ${session?.user?.email})` 
+            : `Stock In: ${inputQty} units of ${item.product_name} (by ${session?.user?.email})`
         }]);
 
       if (txError) throw txError;

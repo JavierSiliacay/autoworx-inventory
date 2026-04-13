@@ -128,7 +128,7 @@ export default function Sidebar() {
            }`}
         >
           <div className="w-10 h-10 rounded-full bg-[#1e40af] flex items-center justify-center text-white ring-4 ring-[#1e40af]/10 shadow-lg shadow-[#1e40af]/20 shrink-0 overflow-hidden">
-             {session?.user?.image ? (
+             {mounted && session?.user?.image ? (
                <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
              ) : (
                <User className="w-5 h-5" />
@@ -136,8 +136,12 @@ export default function Sidebar() {
           </div>
           {!isCollapsed && (
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-[#1a1b20] whitespace-nowrap truncate">{session?.user?.name || "Admin Owner"}</p>
-              <p className="text-[10px] text-[#64748b] font-medium whitespace-nowrap truncate">{session?.user?.email || "Full Privileges"}</p>
+              <p className="text-xs font-bold text-[#1a1b20] whitespace-nowrap truncate">
+                {mounted && session?.user?.name ? session.user.name : "Admin User"}
+              </p>
+              <p className="text-[10px] text-[#64748b] font-medium whitespace-nowrap truncate">
+                {mounted && session?.user?.email ? session.user.email : "Accessing System..."}
+              </p>
             </div>
           )}
         </div>

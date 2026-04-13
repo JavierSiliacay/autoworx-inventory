@@ -400,15 +400,24 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
                                             <span className="bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-widest font-black">Sale</span>
                                             {act.productName || 'Unknown Product'}
                                          </span>
+                                      ) : act.type === 'inventory' ? (
+                                         <span className="flex items-center gap-2">
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded border uppercase tracking-widest font-black ${
+                                               !act.isManual && act.description?.includes('Sale') ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                               act.transactionType === 'inbound' ? "bg-blue-50 text-[#1e40af] border-blue-100" : "bg-orange-50 text-orange-700 border-orange-100"
+                                            }`}>
+                                               {!act.isManual && act.description?.includes('Sale') ? 'Sale' : 
+                                                act.transactionType === 'inbound' ? 'Stock In' : 'Stock Out'}
+                                            </span>
+                                            {act.productName || 'Unknown Product'}
+                                         </span>
                                       ) : (
                                          act.description
                                       )}
                                    </p>
-                                   {act.type === 'sale' && (
-                                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                         Volume: {act.quantity} Units Sold
-                                      </p>
-                                   )}
+                                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                      {act.type === 'sale' || (!act.isManual && act.description?.includes('Sale')) ? `Volume: ${act.quantity} Units Sold` : `Volume: ${act.quantity} Units Transferred`}
+                                   </p>
                                 </div>
                                 <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                                    <span className="flex items-center gap-1">

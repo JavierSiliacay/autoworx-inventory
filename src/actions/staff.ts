@@ -27,22 +27,32 @@ export async function getStaffStats(email: string, role: string, userId?: string
     }
     const { data: sales, error: salesError } = await salesQuery;
 
-    // 2. Fetch Inventory Stats (Actions)
-    let invQuery = supabase
-      .from('inventory')
-      .select('updated_at, product_name');
-
+    // 2. Fetch Inventory Stats (Actual Transactions)
+    // We query transactions directly and manually map product names to avoid schema join issues
+    let invTxQuery = supabase
+      .from('transactions')
+      .select('timestamp, quantity, transaction_type, remarks, item_id')
+      .order('timestamp', { ascending: false });
+    
     if (userId) {
-      invQuery = invQuery.or(`last_modified_by.eq.${email},last_modified_by.eq.${userId}`);
+      invTxQuery = invTxQuery.or(`performed_by.eq.${userId},remarks.ilike.%${email}%`);
     } else {
-      invQuery = invQuery.eq('last_modified_by', email);
+      invTxQuery = invTxQuery.ilike('remarks', `%${email}%`);
     }
-    const { data: inventory, error: invError } = await invQuery;
+    const { data: invTransactions, error: invTxError } = await invTxQuery;
+
+    // Fetch product names for these transactions
+    const itemIds = [...new Set((invTransactions || []).map(t => t.item_id))];
+    const { data: items } = itemIds.length > 0 
+      ? await supabase.from('inventory').select('id, product_name').in('id', itemIds)
+      : { data: [] };
+
+    const itemMap = Object.fromEntries((items || []).map(i => [i.id, i.product_name]));
 
     const stats = {
       salesCount: sales?.length || 0,
       totalVolume: sales?.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0) || 0,
-      inventoryActions: inventory?.length || 0,
+      inventoryActions: invTransactions?.length || 0,
       activity: [] as any[],
       status: userData?.status || 'Active'
     };
@@ -57,10 +67,14 @@ export async function getStaffStats(email: string, role: string, userId?: string
       description: `Processed sale of ${s.quantity} x ${s.inventory?.product_name || 'items'}`
     }));
 
-    const inventoryActivity = (inventory || []).map(i => ({
+    const inventoryActivity = (invTransactions || []).map((t: any) => ({
       type: 'inventory',
-      date: i.updated_at,
-      description: `Updated stock/details for ${i.product_name}`
+      date: t.timestamp,
+      transactionType: t.transaction_type,
+      isManual: t.remarks?.includes('Stock In') || t.remarks?.includes('Stock Out'),
+      quantity: t.quantity,
+      productName: itemMap[t.item_id] || 'Inventory Item',
+      description: t.remarks || `Stock ${t.transaction_type}: ${t.quantity} units`
     }));
 
     stats.activity = [...salesActivity, ...inventoryActivity].sort((a, b) => 

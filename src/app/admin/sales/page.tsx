@@ -180,7 +180,7 @@ export default function AdminSalesPage() {
         transaction_type: 'outbound',
         module_type: 'paints',
         performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
-        notes: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
+        remarks: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
       }]);
 
       setIsModalOpen(false);
