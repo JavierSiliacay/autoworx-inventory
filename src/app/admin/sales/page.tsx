@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useNetwork } from "@/context/NetworkContext";
+import SalesReportPrint from "@/components/sales/SalesReportPrint";
 
 interface SaleEntry {
   id: string;
@@ -18,7 +19,7 @@ interface SaleEntry {
   unit_cost: number;
   total_amount: number;
   branch_id: string;
-  payment_type: "Cash" | "Debt" | "Charge"; // Charge for legacy support
+  payment_type: "Cash" | "Charge";
   performed_by: string;
   created_at: string;
   inventory?: {
@@ -58,11 +59,14 @@ export default function AdminSalesPage() {
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
     customer_name: "",
-    item_id: "",
-    quantity: 1,
-    unit_price: 0,
-    payment_type: "Cash" as "Cash" | "Debt",
-    branch_id: ""
+    payment_type: "Cash" as "Cash" | "Charge",
+    branch_id: "",
+    items: Array(10).fill(null).map(() => ({
+      item_id: "",
+      quantity: 1,
+      unit_price: 0,
+      subtotal: 0
+    }))
   });
 
   const [saving, setSaving] = useState(false);
@@ -74,34 +78,102 @@ export default function AdminSalesPage() {
   const [fetchingFormulation, setFetchingFormulation] = useState(false);
   
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
-  const [mixBreakdown, setMixBreakdown] = useState<string | null>(null);
+  const [mixBreakdownMap, setMixBreakdownMap] = useState<Record<string, string>>({});
   const [mixLoading, setMixLoading] = useState(false);
 
-  const toggleExpandSale = async (sale: SaleEntry) => {
-    if (expandedSaleId === sale.id) {
+  // Print Report States
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printType, setPrintType] = useState<'monthly' | 'daily'>('monthly');
+  const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
+  const [printMonth, setPrintMonth] = useState(new Date().getMonth() + 1);
+  const [printYear, setPrintYear] = useState(new Date().getFullYear());
+  const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
+  const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
+
+  const toggleExpandSale = async (invoiceNo: string) => {
+    if (expandedSaleId === invoiceNo) {
       setExpandedSaleId(null);
+      setMixBreakdownMap({});
       return;
     }
-    setExpandedSaleId(sale.id);
-    setMixBreakdown(null);
     
-    if (sale.inventory?.product_name?.startsWith('[MIX]')) {
+    setExpandedSaleId(invoiceNo);
+    const invoice = groupedSales.find(g => g.invoice_no === invoiceNo);
+    const mixItems = invoice?.items.filter((item: any) => item.inventory?.product_name?.startsWith('[MIX]')) || [];
+    
+    if (mixItems.length > 0) {
       setMixLoading(true);
+      const newMap: Record<string, string> = {};
+      
       try {
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('remarks')
-          .eq('item_id', sale.item_id)
-          .or('remarks.ilike.Formulated Asset Output%,remarks.ilike.Batch Production Output%')
-          .order('timestamp', { ascending: false })
-          .limit(1);
-        if (data && data.length > 0) {
-          setMixBreakdown(data[0].remarks);
-        } else {
-          setMixBreakdown("No formulation history found.");
+        for (const mixItem of mixItems) {
+          // Attempt 1: Production Signature ([FORMULA_TRACE]) - Most Reliable
+          let targetItemId = mixItem.item_id || mixItem.inventory?.id;
+          
+          let { data } = await supabase
+            .from('transactions')
+            .select('remarks')
+            .eq('item_id', targetItemId)
+            .eq('transaction_type', 'inbound')
+            .ilike('remarks', '%FORMULA_TRACE%')
+            .order('timestamp', { ascending: false })
+            .limit(1);
+            
+          // Attempt 2: Flexible Inbound Scan (for non-tagged or legacy items)
+          if (!data || data.length === 0) {
+            const { data: fallbackData } = await supabase
+              .from('transactions')
+              .select('remarks')
+              .eq('item_id', targetItemId)
+              .eq('transaction_type', 'inbound')
+              .or('remarks.ilike.%Formulation%,remarks.ilike.%Breakdown%')
+              .order('timestamp', { ascending: false })
+              .limit(1);
+            
+            data = fallbackData;
+          }
+
+          // Attempt 3: Global Name Match (Emergency Fallback)
+          if ((!data || data.length === 0) && mixItem.inventory?.product_name) {
+            const strippedName = mixItem.inventory.product_name.replace(/\[MIX\]\s*/i, '').trim();
+
+            const { data: globalData } = await supabase
+              .from('transactions')
+              .select('remarks')
+              .eq('transaction_type', 'inbound')
+              .or(`remarks.ilike.%${strippedName}%,remarks.ilike.%${mixItem.inventory?.sku}%`)
+              .ilike('remarks', '%Breakdown%')
+              .order('timestamp', { ascending: false })
+              .limit(1);
+            
+            data = globalData;
+          }
+
+          if (data && data.length > 0) {
+            let logContent = data[0].remarks;
+            
+            // Extract ingredient block using multi-marker identification
+            let breakdownStart = logContent.indexOf('Formulation Breakdown:');
+            if (breakdownStart === -1) breakdownStart = logContent.indexOf('Breakdown:');
+            if (breakdownStart === -1) breakdownStart = logContent.indexOf('\n- '); 
+            
+            let finalOutput = breakdownStart !== -1 ? logContent.substring(breakdownStart) : logContent;
+
+            let cleanLog = finalOutput
+              .replace(/\[FORMULA_TRACE\].*?\n/gi, "")
+              .replace(/Formulation Breakdown\:\n/gi, "")
+              .replace(/Breakdown\:\n/gi, "")
+              .replace(/Unit Production Cost:\s*₱.*/gi, "")
+              .trim();
+            
+            newMap[mixItem.id] = cleanLog || "Details preserved in archive.";
+          } else {
+            newMap[mixItem.id] = `Composition trace unavailable for ${mixItem.inventory?.sku || 'batch'}. Please check production history.`;
+          }
         }
+        setMixBreakdownMap(newMap);
       } catch (err) {
-        setMixBreakdown("Error loading breakdown.");
+        console.error("Composition Trace Logic Error:", err);
       } finally {
         setMixLoading(false);
       }
@@ -160,7 +232,7 @@ export default function AdminSalesPage() {
       setLoading(true);
       let query = supabase
         .from('sales')
-        .select(`*, inventory(product_name, sku), branches(name)`)
+        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
         .order('created_at', { ascending: false });
 
       if (filterBranch) {
@@ -191,129 +263,170 @@ export default function AdminSalesPage() {
     }
   }
 
-  const handleItemSelect = async (itemId: string) => {
-    const item = inventory.find(i => i.id === itemId);
-    if (item) {
-      if (item.quantity <= 0) {
-        alert("Out of stock");
-        setSaleFormulationLog(null);
-        return;
-      }
-
-      setCurrentSale(prev => ({
-        ...prev,
-        item_id: itemId,
-        unit_price: item.price,
-        branch_id: item.branch_id
-      }));
-
-      // Automatically fetch mix details if it's a formulated asset
-      if (item.product_name.startsWith('[MIX]')) {
-         setFetchingFormulation(true);
-         setSaleFormulationLog(null);
-         try {
-           const { data, error } = await supabase
-             .from('transactions')
-             .select('remarks')
-             .eq('item_id', item.id)
-             .or('remarks.ilike.Formulated Asset Output%,remarks.ilike.Batch Production Output%')
-             .order('timestamp', { ascending: false })
-             .limit(1);
-             
-           if (data && data.length > 0) {
-             const cleanLog = data[0].remarks
-               .replace("Formulated Asset Output.\n\n", "")
-               .replace("Batch Production Output.\n\n", "");
-             setSaleFormulationLog(cleanLog);
-           } else {
-             setSaleFormulationLog("No formulation history found.");
-           }
-         } catch(e) {
-           setSaleFormulationLog("Failed to load formulation logs.");
-         } finally {
-           setFetchingFormulation(false);
-         }
+  const handleRowChange = (index: number, field: string, value: any) => {
+    const newItems = [...currentSale.items];
+    const item = { ...newItems[index], [field]: value };
+    
+    if (field === 'item_id') {
+      const invItem = inventory.find(i => i.id === value);
+      if (invItem) {
+        item.unit_price = invItem.price;
+        item.subtotal = Number(item.quantity || 0) * Number(invItem.price || 0);
+        
+        // Set branch_id based on the first item selected if not already set
+        if (!currentSale.branch_id) {
+          setCurrentSale(prev => ({ ...prev, branch_id: invItem.branch_id }));
+        }
       } else {
-         setSaleFormulationLog(null);
+        item.unit_price = 0;
+        item.subtotal = 0;
       }
-    } else {
-      setSaleFormulationLog(null);
     }
+    
+    if (field === 'quantity' || field === 'unit_price') {
+      const q = Number(field === 'quantity' ? value : item.quantity || 0);
+      const p = Number(field === 'unit_price' ? value : item.unit_price || 0);
+      item.subtotal = q * p;
+    }
+
+    newItems[index] = item;
+    setCurrentSale({ ...currentSale, items: newItems });
+  };
+
+  const addRow = () => {
+    setCurrentSale({
+      ...currentSale,
+      items: [...currentSale.items, { item_id: "", quantity: 1, unit_price: 0, subtotal: 0 }]
+    });
+  };
+
+  const removeRow = (index: number) => {
+    if (currentSale.items.length <= 1) return;
+    const newItems = currentSale.items.filter((_, i) => i !== index);
+    setCurrentSale({ ...currentSale, items: newItems });
+  };
+
+  const calculateTotal = () => {
+    return currentSale.items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
   };
 
   const handleSaveSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentSale.item_id || !currentSale.invoice_no) return;
+    
+    // Filter out rows that don't have an item selected
+    const validItems = currentSale.items.filter(item => item.item_id && item.quantity > 0);
+    
+    if (validItems.length === 0 || !currentSale.invoice_no) {
+      alert("Please add at least one valid item and an invoice number.");
+      return;
+    }
 
     try {
       setSaving(true);
-      const total_amount = currentSale.quantity * currentSale.unit_price;
-      const selectedItem = inventory.find(i => i.id === currentSale.item_id);
-      if (!selectedItem) {
-        alert("Product record not found. Please refresh and try again.");
+      const grandTotal = calculateTotal();
+
+      if (currentSale.payment_type === "Charge" && !currentSale.customer_name.trim()) {
+        alert("Customer Name is required for Charge transactions.");
+        setSaving(false);
         return;
       }
 
-      if (currentSale.payment_type === "Debt" && !currentSale.customer_name.trim()) {
-        alert("Customer Name is required for Debt transactions.");
-        return;
+      // 1. Validate Stock first for all items
+      for (const item of validItems) {
+        const invItem = inventory.find(i => i.id === item.item_id);
+        if (!invItem || invItem.quantity < item.quantity) {
+          alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available: ${invItem?.quantity || 0}`);
+          setSaving(false);
+          return;
+        }
       }
 
-      // 1. Record the Official Sale
-      const { data: saleData, error: saleError } = await supabase
-        .from('sales')
-        .insert([{
-          ...currentSale,
-          unit_cost: selectedItem.cost || 0,
-          total_amount,
-          performed_by: session?.user?.email || 'Anonymous'
-        }])
-        .select()
-        .single();
+      // 2. Insert into Sales
+      const salesBatch = validItems.map(item => {
+        const invItem = inventory.find(i => i.id === item.item_id);
+        const sellingPrice = Number(item.unit_price || 0);
+        const sellingQty = Number(item.quantity || 0);
+        const resolvedCost = Number(invItem?.cost || 0);
+        const subtotal = sellingPrice * sellingQty;
 
-      if (saleError) throw saleError;
-
-      // 1.1 Create Payable record if it's a debt
-      if (currentSale.payment_type === "Debt") {
-        await supabase.from('payables').insert([{
-          sale_id: saleData.id,
+        return {
+          date: currentSale.date,
+          invoice_no: currentSale.invoice_no,
           customer_name: currentSale.customer_name,
-          total_amount: total_amount,
-          balance: total_amount,
+          payment_type: currentSale.payment_type,
+          branch_id: currentSale.branch_id || invItem?.branch_id,
+          item_id: item.item_id,
+          quantity: sellingQty,
+          unit_price: sellingPrice,
+          unit_cost: resolvedCost,
+          total_amount: subtotal,
+          performed_by: session?.user?.email || 'Anonymous'
+        };
+      });
+
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .insert(salesBatch)
+        .select();
+
+      if (salesError) throw salesError;
+
+      // 3. Create Payable record if it's a debt (one for the whole invoice)
+      if (currentSale.payment_type === "Charge" && salesData && salesData.length > 0) {
+        await supabase.from('payables').insert([{
+          sale_id: salesData[0].id, // Link to the first record of the batch
+          customer_name: currentSale.customer_name,
+          total_amount: grandTotal,
+          balance: grandTotal,
           paid_amount: 0,
           status: 'Unpaid',
-          branch_id: currentSale.branch_id
+          branch_id: currentSale.branch_id || salesBatch[0].branch_id
         }]);
       }
 
-      // 2. Deduct from Inventory
-      const { error: invError } = await supabase
-        .from('inventory')
-        .update({ quantity: selectedItem.quantity - currentSale.quantity })
-        .eq('id', currentSale.item_id);
+      // 4. Update Inventory & Log Transactions for each item
+      // Consolidate deductions by item_id to avoid stale state issues if same product is in multiple rows
+      const consolidatedDeductions: Record<string, number> = {};
+      validItems.forEach(item => {
+        consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
+      });
 
-      if (invError) throw invError;
+      for (const itemId in consolidatedDeductions) {
+        const totalDeduction = consolidatedDeductions[itemId];
+        const invItem = inventory.find(i => i.id === itemId)!;
+        
+        // Deduct from Inventory
+        await supabase
+          .from('inventory')
+          .update({ quantity: invItem.quantity - totalDeduction })
+          .eq('id', itemId);
+      }
 
-      // 3. Log as Outbound Transaction for Audit/Dashboard Monitoring
-      await supabase.from('transactions').insert([{
-        item_id: currentSale.item_id,
-        quantity: currentSale.quantity,
-        transaction_type: 'outbound',
-        module_type: 'paints',
-        performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
-        remarks: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
-      }]);
+      // Log Transactions for each row (for audit granularity)
+      for (const item of validItems) {
+        await supabase.from('transactions').insert([{
+          item_id: item.item_id,
+          quantity: item.quantity,
+          transaction_type: 'outbound',
+          module_type: 'paints',
+          performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
+          remarks: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
+        }]);
+      }
 
       setIsModalOpen(false);
       setCurrentSale({
         date: new Date().toISOString().split('T')[0],
         invoice_no: "",
         customer_name: "",
-        item_id: "",
-        quantity: 1,
-        unit_price: 0,
         payment_type: "Cash",
-        branch_id: ""
+        branch_id: "",
+        items: Array(10).fill(null).map(() => ({
+          item_id: "",
+          quantity: 1,
+          unit_price: 0,
+          subtotal: 0
+        }))
       });
       fetchSales();
       fetchInventory();
@@ -384,54 +497,52 @@ export default function AdminSalesPage() {
 
   const handleBulkDelete = async () => {
     if (role !== 'developer' || selectedSaleIds.length === 0) return;
-    if (!confirm(`DEVELOPER ONLY: Are you sure you want to delete ${selectedSaleIds.length} test sale records and revert their inventory stock?`)) return;
+    if (!confirm(`DEVELOPER ONLY: Are you sure you want to delete ${selectedSaleIds.length} test invoices (all items) and revert their inventory stock?`)) return;
 
     try {
       setLoading(true);
       
-      for (const id of selectedSaleIds) {
-        // We reuse the logic from single delete but in a loop
-        // To be more efficient, we could do this in fewer queries, but for testing records this is fine
-        const { data: sale } = await supabase
+      for (const invNo of selectedSaleIds) {
+        // Fetch items for this invoice to revert inventory
+        const { data: sales } = await supabase
           .from('sales')
           .select('*')
-          .eq('id', id)
-          .single();
+          .eq('invoice_no', invNo);
         
-        if (sale) {
-          // Revert Inventory
-          const { data: item } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('id', sale.item_id)
-            .single();
-          
-          if (item) {
-            await supabase
-              .from('inventory')
-              .update({ quantity: item.quantity + sale.quantity })
-              .eq('id', sale.item_id);
+        if (sales && sales.length > 0) {
+          for (const sale of sales) {
+             // Revert Inventory
+             const { data: item } = await supabase
+               .from('inventory')
+               .select('quantity')
+               .eq('id', sale.item_id)
+               .single();
+             
+             if (item) {
+               await supabase
+                 .from('inventory')
+                 .update({ quantity: item.quantity + sale.quantity })
+                 .eq('id', sale.item_id);
+             }
+
+             // Delete from transactions
+             await supabase
+               .from('transactions')
+               .delete()
+               .eq('item_id', sale.item_id)
+               .eq('transaction_type', 'outbound')
+               .ilike('remarks', `%Inv: ${sale.invoice_no}%`);
           }
 
-          // Delete from transactions
+          // Delete all sales for this invoice
           await supabase
-            .from('transactions')
+            .from('sales')
             .delete()
-            .eq('item_id', sale.item_id)
-            .eq('transaction_type', 'outbound')
-            .ilike('notes', `%Inv: ${sale.invoice_no}%`);
+            .eq('invoice_no', invNo);
         }
       }
 
-      // Delete all selected sales
-      const { error } = await supabase
-        .from('sales')
-        .delete()
-        .in('id', selectedSaleIds);
-
-      if (error) throw error;
-
-      alert(`${selectedSaleIds.length} record(s) deleted and inventory reverted.`);
+      alert(`${selectedSaleIds.length} invoice(s) purged and inventory reverted.`);
       setSelectedSaleIds([]);
       fetchSales();
       fetchInventory();
@@ -441,26 +552,52 @@ export default function AdminSalesPage() {
       setLoading(false);
     }
   };
+  const filteredSales = (sales || []).filter(s => 
+    s.invoice_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.inventory?.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const groupedSales = React.useMemo(() => {
+    const groups: Record<string, any> = {};
+    
+    filteredSales.forEach(sale => {
+      const key = sale.invoice_no;
+      if (!groups[key]) {
+        groups[key] = {
+          invoice_no: sale.invoice_no,
+          customer_name: sale.customer_name,
+          date: sale.created_at || sale.date,
+          payment_type: sale.payment_type,
+          branch_name: sale.branches?.name,
+          total_amount: 0,
+          items: []
+        };
+      }
+      groups[key].total_amount += sale.total_amount;
+      groups[key].items.push(sale);
+    });
+    
+    return Object.values(groups).sort((a: any, b: any) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [filteredSales]);
 
   const toggleSelectAll = () => {
-    if (selectedSaleIds.length === filteredSales.length) {
+    if (selectedSaleIds.length === groupedSales.length) {
       setSelectedSaleIds([]);
     } else {
-      setSelectedSaleIds(filteredSales.map(s => s.id));
+      setSelectedSaleIds(groupedSales.map(g => g.invoice_no));
     }
   };
 
-  const toggleSelectSale = (id: string) => {
+  const toggleSelectInvoice = (invoiceNo: string) => {
     setSelectedSaleIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(invoiceNo) ? prev.filter(i => i !== invoiceNo) : [...prev, invoiceNo]
     );
   };
 
-  const filteredSales = sales.filter(s => 
-    s.invoice_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.inventory?.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
 
   if (showSetupAlert) {
     return (
@@ -493,7 +630,8 @@ export default function AdminSalesPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+    <>
+    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 print:hidden">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
@@ -516,6 +654,13 @@ export default function AdminSalesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold hover:bg-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+          >
+            <FileText className="w-4 h-4" />
+            Print Report
+          </button>
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center justify-center gap-2 bg-[#1a1b20] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#16a34a] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-slate-200 shrink-0"
@@ -557,75 +702,72 @@ export default function AdminSalesPage() {
                     <input 
                       type="checkbox" 
                       className="w-4 h-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#16a34a]"
-                      checked={selectedSaleIds.length === filteredSales.length && filteredSales.length > 0}
+                      checked={selectedSaleIds.length === groupedSales.length && groupedSales.length > 0}
                       onChange={toggleSelectAll}
                     />
                   </th>
                 )}
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">Date/Invoice</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">Customer</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">Item</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Qty</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Total</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Items</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Total Amount</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Status</th>
-                {role === 'developer' && <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Actions</th>}
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={role === 'developer' ? 7 : 6} className="px-6 py-20 text-center">
                     <Loader2 className="w-8 h-8 text-[#16a34a] animate-spin mx-auto mb-2" />
                     <span className="text-sm text-slate-400 font-medium">Loading ledger...</span>
                   </td>
                 </tr>
-              ) : filteredSales.length === 0 ? (
+              ) : groupedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center text-slate-400">
+                  <td colSpan={role === 'developer' ? 7 : 6} className="px-6 py-20 text-center text-slate-400">
                     <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="font-medium italic">No sales records found.</p>
                   </td>
                 </tr>
               ) : (
-                filteredSales.map((sale) => (
-                  <React.Fragment key={sale.id}>
+                groupedSales.map((invoice: any) => (
+                  <React.Fragment key={invoice.invoice_no}>
                   <tr 
-                    onClick={() => toggleExpandSale(sale)}
-                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === sale.id ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/30' : ''}`}
+                    onClick={() => toggleExpandSale(invoice.invoice_no)}
+                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''}`}
                   >
                     {role === 'developer' && (
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
                           className="w-4 h-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#16a34a]"
-                          checked={selectedSaleIds.includes(sale.id)}
-                          onChange={() => toggleSelectSale(sale.id)}
+                          checked={selectedSaleIds.includes(invoice.invoice_no)}
+                          onChange={() => toggleSelectInvoice(invoice.invoice_no)}
                         />
                       </td>
                     )}
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#1a1b20]">{sale.invoice_no}</span>
+                        <span className="text-sm font-bold text-[#1a1b20]">{invoice.invoice_no}</span>
                         <span className="text-[10px] text-slate-400 font-medium">
-                          {new Date(sale.created_at || sale.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(invoice.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-sm text-[#334155]">{sale.customer_name}</td>
-                    <td className="px-6 py-4 font-medium text-sm text-slate-600">
-                      <div className="flex flex-col">
-                        <span>{sale.inventory?.product_name || "Unknown Item"}</span>
-                        <span className="text-[10px] text-slate-400">{sale.branches?.name}</span>
-                      </div>
+                    <td className="px-6 py-4 font-bold text-sm text-[#334155]">{invoice.customer_name}</td>
+                    <td className="px-6 py-4 text-center">
+                       <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase tracking-tight">
+                         {invoice.items.length} Product{invoice.items.length > 1 ? 's' : ''}
+                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center font-bold text-sm text-[#1e40af] bg-blue-50/30">{sale.quantity}L</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
-                        <span className="text-sm font-extrabold text-[#1a1b20]">₱{sale.total_amount.toLocaleString()}</span>
+                        <span className="text-sm font-extrabold text-[#1a1b20]">₱{invoice.total_amount.toLocaleString()}</span>
                         <div className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                          <span>Cost: ₱{(sale.unit_cost * sale.quantity).toLocaleString()}</span>
+                          <span>{invoice.payment_type}</span>
                           <span className="opacity-50">|</span>
-                          <span>{sale.payment_type === 'Charge' ? 'Debt' : sale.payment_type}</span>
+                          <span>{invoice.branch_name}</span>
                         </div>
                       </div>
                     </td>
@@ -637,36 +779,101 @@ export default function AdminSalesPage() {
                         </span>
                       </div>
                     </td>
-                    {role === 'developer' && (
-                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button 
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="Delete Test Record"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    )}
+                    <td className="px-6 py-4 text-right">
+                       {expandedSaleId === invoice.invoice_no ? <ChevronUp className="w-4 h-4 text-slate-300 ml-auto"/> : <ChevronDown className="w-4 h-4 text-slate-300 ml-auto"/>}
+                    </td>
                   </tr>
 
-                  {/* Expandable Mix Details Row */}
-                  {expandedSaleId === sale.id && sale.inventory?.product_name?.startsWith('[MIX]') && (
-                    <tr className="bg-slate-50 shadow-inner relative border-t-0">
-                      <td colSpan={role === 'developer' ? 7 : 6} className="px-8 pb-8 pt-4">
-                         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-2">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-[#1e40af] mb-4 flex items-center gap-2">
-                              <Beaker className="w-4 h-4 text-blue-500"/> Batch Formulation Details
-                            </h4>
-                            {mixLoading ? (
-                              <div className="flex items-center gap-3 text-sm text-slate-400 font-medium">
-                                 <Loader2 className="w-5 h-5 text-blue-500 animate-spin"/> Loading breakdown history from secure ledger...
-                              </div>
-                            ) : (
-                              <pre className="text-sm font-medium text-slate-600 whitespace-pre-wrap font-sans leading-relaxed tracking-wide bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                 {mixBreakdown}
-                              </pre>
-                            )}
+                  {/* Expanded Item Details */}
+                  {expandedSaleId === invoice.invoice_no && (
+                    <tr className="bg-slate-50 shadow-inner border-t-0">
+                      <td colSpan={role === 'developer' ? 7 : 6} className="px-8 py-4">
+                         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in slide-in-from-top-2 duration-300">
+                            <div className="bg-slate-50/50 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Breakdown</span>
+                               <span className="text-[9px] font-black text-emerald-600 uppercase">Grand Total: ₱{invoice.total_amount.toLocaleString()}</span>
+                            </div>
+                            <table className="w-full text-left text-xs">
+                               <thead>
+                                  <tr className="text-slate-400 font-bold border-b border-slate-50">
+                                     <th className="px-4 py-2">Item Name</th>
+                                     <th className="px-4 py-2 text-center">Qty</th>
+                                     <th className="px-4 py-2 text-right">Price</th>
+                                     <th className="px-4 py-2 text-right">Subtotal</th>
+                                     {role === 'developer' && <th className="px-4 py-2 text-right"></th>}
+                                  </tr>
+                               </thead>
+                               <tbody className="divide-y divide-slate-50">
+                                  {invoice.items.map((item: any) => (
+                                     <React.Fragment key={item.id}>
+                                     <tr className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-slate-700">
+                                           <div className="flex flex-col">
+                                              <div className="flex items-center gap-2">
+                                                <span>{item.inventory?.product_name || "Unknown"}</span>
+                                                {item.inventory?.product_name?.startsWith('[MIX]') && (
+                                                   <span className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-widest">Mixed Product</span>
+                                                )}
+                                              </div>
+                                              <span className="text-[9px] text-slate-400 font-medium font-mono">{item.inventory?.sku || 'NO-SKU'}</span>
+                                           </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center font-black text-blue-600 italic">{item.quantity}L</td>
+                                        <td className="px-4 py-3 text-right font-medium">₱{item.unit_price.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right">
+                                           <div className="flex flex-col items-end">
+                                              <span className="font-bold text-slate-900">₱{item.total_amount.toLocaleString()}</span>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                 <span className="text-[8px] text-slate-400 font-medium">Cost Ref: ₱{(item.unit_cost * item.quantity).toLocaleString()}</span>
+                                                 {(item.total_amount - (item.unit_cost * item.quantity)) > 0 ? (
+                                                   <span className="text-[8px] bg-emerald-50 text-emerald-600 px-1 rounded font-black">+₱{(item.total_amount - (item.unit_cost * item.quantity)).toLocaleString()}</span>
+                                                 ) : (
+                                                   <span className="text-[8px] bg-red-50 text-red-600 px-1 rounded font-black">₱{(item.total_amount - (item.unit_cost * item.quantity)).toLocaleString()}</span>
+                                                 )}
+                                              </div>
+                                           </div>
+                                        </td>
+                                        {role === 'developer' && (
+                                          <td className="px-4 py-3 text-right">
+                                             <button 
+                                               disabled={loading}
+                                               onClick={() => handleDeleteSale(item.id)}
+                                               className="p-1 text-slate-300 hover:text-red-500 transition-all"
+                                             >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                             </button>
+                                          </td>
+                                        )}
+                                     </tr>
+                                     {/* Inline Formula for Mixed Items */}
+                                     {item.inventory?.product_name?.startsWith('[MIX]') && (expandedSaleId === invoice.invoice_no) && (
+                                       <tr className="bg-slate-50/50">
+                                          <td colSpan={role === 'developer' ? 5 : 4} className="px-6 py-2">
+                                             <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-4 animate-in fade-in duration-300">
+                                                <h5 className="text-[9px] font-black uppercase text-indigo-700 mb-2 flex items-center gap-2">
+                                                   <Beaker className="w-3 h-3"/> Production Audit (Ingredient Costs & Quantities)
+                                                </h5>
+                                                {mixLoading ? (
+                                                   <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold italic">
+                                                      <Loader2 className="w-3 h-3 animate-spin text-indigo-500"/> Retriving mixture audit...
+                                                   </div>
+                                                ) : mixBreakdownMap[item.id] ? (
+                                                   <pre className="text-[11px] font-bold text-indigo-900 whitespace-pre-wrap font-sans leading-relaxed">
+                                                      {mixBreakdownMap[item.id]}
+                                                   </pre>
+                                                ) : (
+                                                   <div className="text-[10px] text-slate-400 font-bold italic">
+                                                      Awaiting formulation data from secure ledger...
+                                                   </div>
+                                                )}
+                                             </div>
+                                          </td>
+                                       </tr>
+                                     )}
+                                     </React.Fragment>
+                                  ))}
+                               </tbody>
+                            </table>
                          </div>
                       </td>
                     </tr>
@@ -682,7 +889,7 @@ export default function AdminSalesPage() {
       {/* Sale Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
             <div className="px-8 pt-8 pb-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
@@ -702,7 +909,7 @@ export default function AdminSalesPage() {
             </div>
 
             <form onSubmit={handleSaveSale} className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-4 gap-4">
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sale Date</label>
@@ -711,7 +918,7 @@ export default function AdminSalesPage() {
                     <input
                       type="date"
                       required
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
                       value={currentSale.date}
                       onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
                     />
@@ -727,113 +934,126 @@ export default function AdminSalesPage() {
                       type="text"
                       required
                       placeholder="e.g. 00123"
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
                       value={currentSale.invoice_no}
                       onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Customer Name */}
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Search or Enter Customer Name..."
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
-                    value={currentSale.customer_name}
-                    onChange={(e) => setCurrentSale({...currentSale, customer_name: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              {/* Item Selection */}
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sold Item</label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-2/2 translate-y-3.5 w-4 h-4 text-slate-400 z-10" />
-                  <select
-                    required
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium appearance-none"
-                    value={currentSale.item_id}
-                    onChange={(e) => handleItemSelect(e.target.value)}
-                  >
-                    <option value="">Select Item from Inventory...</option>
-                      {inventory.map((item) => (
-                        <option 
-                          key={item.id} 
-                          value={item.id} 
-                          disabled={item.quantity <= 0}
-                          className={item.quantity <= 0 ? 'text-red-500 bg-red-50 italic line-through' : ''}
-                        >
-                          {item.product_name} {item.quantity <= 0 ? '(OUT OF STOCK)' : `(${item.sku})`} - {item.branches?.name} | {item.quantity <= 0 ? 'Unavailable' : `Stock: ${item.quantity}${item.unit || ''}`}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Formulation Log Preview for Checkout */}
-                {saleFormulationLog && (
-                   <div className="mt-4 p-4 bg-[#eef2ff] border border-[#c7d2fe] rounded-xl animate-in fade-in zoom-in-95 duration-200 shadow-sm">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-[#3730a3] mb-2 flex items-center gap-1.5">
-                        <Beaker className="w-3 h-3"/> Active Formulation Contents
-                      </h4>
-                      <pre className="text-sm font-semibold text-[#312e81] whitespace-pre-wrap font-sans leading-relaxed">
-                         {saleFormulationLog}
-                      </pre>
-                   </div>
-                )}
-                {fetchingFormulation && (
-                   <div className="mt-4 p-3 flex items-center gap-2 text-xs font-medium text-slate-400">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#3730a3]"/> Pulling secure mixture logs...
-                   </div>
-                )}
-
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                {/* Quantity */}
+                {/* Customer Selection */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Quantity</label>
-                  <input
-                    type="number"
-                    required
-                    min="0.01"
-                    step="0.01"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
-                    value={currentSale.quantity === 0 ? '' : currentSale.quantity}
-                    onChange={(e) => setCurrentSale({...currentSale, quantity: parseFloat(e.target.value) || 0})}
-                  />
-                </div>
-
-                {/* Unit Price */}
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Unit Price</label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium font-bold text-[#1a1b20]"
-                    value={currentSale.unit_price === 0 ? '' : currentSale.unit_price}
-                    onChange={(e) => setCurrentSale({...currentSale, unit_price: parseFloat(e.target.value) || 0})}
-                  />
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter Name..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                      value={currentSale.customer_name}
+                      onChange={(e) => setCurrentSale({...currentSale, customer_name: e.target.value})}
+                    />
+                  </div>
                 </div>
 
                 {/* Payment Type */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Type</label>
                   <select
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-bold"
+                    className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-bold"
                     value={currentSale.payment_type}
                     onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
                   >
                     <option value="Cash">Cash</option>
-                    <option value="Debt">Debt</option>
+                    <option value="Charge">Charge (Receivable)</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Multi-Item Table Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-[#1a1b20] uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Package className="w-4 h-4 text-emerald-600" />
+                    Sold Items Ledger
+                  </label>
+                  <button 
+                    type="button"
+                    onClick={addRow}
+                    className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Entry
+                  </button>
+                </div>
+
+                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
+                  <div className="max-h-[300px] overflow-y-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="sticky top-0 z-10 bg-slate-100">
+                        <tr>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32">Unit Price</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {currentSale.items.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-white transition-colors group">
+                            <td className="px-4 py-3 text-[10px] font-bold text-slate-400">{idx + 1}</td>
+                            <td className="px-2 py-2">
+                              <select
+                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm focus:ring-0 focus:bg-white font-medium"
+                                value={item.item_id}
+                                onChange={(e) => handleRowChange(idx, 'item_id', e.target.value)}
+                              >
+                                <option value="">- Select Product -</option>
+                                {inventory.map((inv) => (
+                                  <option key={inv.id} value={inv.id} disabled={inv.quantity <= 0}>
+                                    {inv.product_name} ({inv.sku}) | Stock: {inv.quantity}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                min="0.01" step="0.01"
+                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
+                                value={item.quantity}
+                                onChange={(e) => handleRowChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
+                                value={item.unit_price}
+                                onChange={(e) => handleRowChange(idx, 'unit_price', parseFloat(e.target.value) || 0)}
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-right text-sm font-bold text-[#1a1b20]">
+                              ₱{(item.subtotal || 0).toLocaleString()}
+                            </td>
+                            <td className="px-2 py-2 text-right">
+                              <button 
+                                type="button"
+                                onClick={() => removeRow(idx)}
+                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
@@ -841,7 +1061,7 @@ export default function AdminSalesPage() {
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total Receivable</p>
-                  <p className="text-2xl font-extrabold text-[#1a1b20]">₱{(currentSale.quantity * currentSale.unit_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-2xl font-extrabold text-[#1a1b20]">₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -865,6 +1085,153 @@ export default function AdminSalesPage() {
           </div>
         </div>
       )}
+      {/* Print Report Modal */}
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
+            <div className="px-6 pt-6 pb-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-manrope font-extrabold text-[#1a1b20]">Export Report</h3>
+                  <p className="text-xs text-slate-500 font-medium">Configure report settings.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsPrintModalOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4">
+                <button
+                  onClick={() => setPrintType('monthly')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setPrintType('daily')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Daily
+                </button>
+              </div>
+
+              {printType === 'monthly' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Month</label>
+                    <select
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                      value={printMonth}
+                      onChange={(e) => setPrintMonth(Number(e.target.value))}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                        <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString('default', { month: 'short' })}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Year</label>
+                    <select
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                      value={printYear}
+                      onChange={(e) => setPrintYear(Number(e.target.value))}
+                    >
+                      {[2024, 2025, 2026, 2027, 2028].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                    value={printDate}
+                    onChange={(e) => setPrintDate(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Transmittal Config */}
+              {printType === 'daily' && (
+                <div className="pt-4 border-t border-slate-100 mt-4">
+                  <h4 className="text-sm font-bold mb-3">Transmittal Configuration</h4>
+                  <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-2">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                        <span>Check Payments</span>
+                        <button onClick={() => setTransmittalChecks([...transmittalChecks, { name: '', ref: '', amount: '', bank: '' }])} className="text-indigo-600 hover:text-indigo-700">Add Check</button>
+                      </label>
+                      {transmittalChecks.map((check, i) => (
+                        <div key={i} className="flex flex-col gap-1 mb-2 bg-slate-50 p-2 rounded-lg">
+                          <div className="grid grid-cols-4 gap-2">
+                            <input type="text" placeholder="Customer Name" value={check.name} onChange={e => { const n = [...transmittalChecks]; n[i].name = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                            <input type="text" placeholder="Invoice/Ref" value={check.ref} onChange={e => { const n = [...transmittalChecks]; n[i].ref = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                            <input 
+                              type="text" 
+                              placeholder="Amount" 
+                              value={check.amount} 
+                              onChange={e => { 
+                                const val = e.target.value.replace(/[^0-9.]/g, '');
+                                const parts = val.split('.');
+                                let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                if (parts.length > 1) {
+                                  // limit strictly to 1 decimal dot naturally reconstructing string
+                                  formatted += '.' + parts[1];
+                                }
+                                const n = [...transmittalChecks]; 
+                                n[i].amount = formatted; 
+                                setTransmittalChecks(n); 
+                              }} 
+                              className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
+                            />
+                            <input type="text" placeholder="Bank" value={check.bank} onChange={e => { const n = [...transmittalChecks]; n[i].bank = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                          </div>
+                          {transmittalChecks.length > 1 && <div className="text-right"><button onClick={() => setTransmittalChecks(transmittalChecks.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline">REMOVE</button></div>}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                        <span>Full-width Notes</span>
+                        <button onClick={() => setTransmittalNotes([...transmittalNotes, ''])} className="text-indigo-600 hover:text-indigo-700">Add Note</button>
+                      </label>
+                      {transmittalNotes.map((note, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input type="text" placeholder="Write spanning note..." value={note} onChange={e => { const n = [...transmittalNotes]; n[i] = e.target.value; setTransmittalNotes(n); }} className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs" />
+                          {transmittalNotes.length > 1 && <button onClick={() => setTransmittalNotes(transmittalNotes.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline px-2">REM</button>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  setIsPrintModalOpen(false);
+                  setTimeout(() => window.print(), 300);
+                }}
+                className="w-full bg-[#1a1b20] text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2"
+              >
+                Generate Print View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
+    <SalesReportPrint sales={groupedSales as any} month={printMonth} year={printYear} reportType={printType} printDate={printDate} transmittalChecks={transmittalChecks} transmittalNotes={transmittalNotes} />
+    </>
   );
 }
