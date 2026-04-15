@@ -91,19 +91,28 @@ export default function Header() {
     badge = "";
   }
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Stable fallbacks for SSR
+  const displayTitle = mounted ? title : "Network Overview";
+  const displayBadge = mounted ? badge : "";
+  const displaySubtitle = mounted ? subtitle : "";
+  const displayName = mounted ? (session?.user?.name || "Admin Owner") : "Loading...";
+
   return (
     <header className="w-full flex justify-between items-center px-4 md:px-12 py-4 md:py-6 bg-transparent gap-4">
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <h2 className="font-manrope font-bold text-lg md:text-2xl tracking-tight text-[#1e40af] truncate max-w-[180px] sm:max-w-xs md:max-w-none">
-          {title}
+          {displayTitle}
         </h2>
-        {badge && (
+        {mounted && displayBadge && (
           <div className="px-2 md:px-3 py-1 bg-[#1e40af]/10 rounded-full shrink-0">
-            <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{badge}</span>
+            <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{displayBadge}</span>
           </div>
         )}
-        {subtitle && (
-          <p className="text-sm text-[#64748b] hidden xl:block truncate">{subtitle}</p>
+        {mounted && displaySubtitle && (
+          <p className="text-sm text-[#64748b] hidden xl:block truncate">{displaySubtitle}</p>
         )}
       </div>
 
@@ -119,10 +128,9 @@ export default function Header() {
             {(!isStaff || userBranchIds.length > 1) && (
               <option value="all">All Network</option>
             )}
-            {branches.map(b => {
+            {mounted && branches.map(b => {
               const parts = b.name.split(" ");
               let label = b.name;
-              // If it's too long, shorten the prefix
               if (b.name.length > 15 && parts[0].toLowerCase() === "valencia") {
                 label = `Valencia ${parts[1]}`;
               } else if (b.name.length > 15 && parts[0].toLowerCase() === "main") {
@@ -150,14 +158,14 @@ export default function Header() {
 
           <button className="flex items-center gap-3 pr-2 pl-1 hover:bg-slate-50 rounded-full transition-all active:scale-95 group">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-white ring-1 ring-slate-200 group-hover:ring-[#1e40af]/30 transition-all shadow-sm">
-                {session?.user?.image ? (
+                {mounted && session?.user?.image ? (
                   <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <UserCircle className="w-5 md:w-6 h-5 md:h-6 text-[#64748b]" />
                 )}
             </div>
             <div className="hidden xl:flex flex-col items-start pr-2">
-               <span className="text-[11px] font-bold text-slate-800 leading-none">{session?.user?.name || "Admin Owner"}</span>
+               <span className="text-[11px] font-bold text-slate-800 leading-none">{displayName}</span>
                <span className="text-[9px] font-bold text-[#16a34a] uppercase tracking-widest mt-0.5">Verified Account</span>
             </div>
           </button>
