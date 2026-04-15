@@ -209,7 +209,7 @@ export default function MixingPage() {
           .from('transactions')
           .insert([{
             item_id: item.id,
-            module_type: 'production_mixing',
+            module_type: 'paints',
             transaction_type: 'outbound',
             quantity: item.quantityUsed,
             performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
@@ -217,36 +217,73 @@ export default function MixingPage() {
           }]);
       }
 
-      // 2. Create the Production Output in Inventory
-      const { data: newProd, error: newProdErr } = await supabase
-        .from('inventory')
-        .insert([{
-          product_name: `[MIX] ${outputName}`,
-          category: outputCategory,
-          unit: outputUnit,
-          sku: `MIX-${Math.floor(Math.random() * 10000)}`,
-          quantity: outputQuantity, 
-          cost: (totalCostEstimate / outputQuantity) || 0,
-          price: Number(outputPrice),
-          branch_id: branchIdTarget,
-          last_modified_by: session?.user?.email || 'System',
-          metadata: { is_mixed: true }
-        }])
-        .select()
-        .single();
+      // 2. Resolve Production Output (Smart Restocking)
+      const mixPrefixedName = `[MIX] ${outputName}`;
       
-      if (newProdErr) throw newProdErr;
+      // Check if this formulation already exists in this branch
+      const { data: existingProd } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('product_name', mixPrefixedName)
+        .eq('branch_id', branchIdTarget)
+        .maybeSingle();
 
-      // 3. Log the Inbound Production Transaction
+      let targetItemId = "";
+      let finalAvgCost = (totalCostEstimate / outputQuantity) || 0;
+
+      if (existingProd) {
+        // Update existing row (Weighted Average Cost)
+        const currentTotalCost = existingProd.quantity * existingProd.cost;
+        const newBatchTotalCost = totalCostEstimate;
+        const newTotalQty = existingProd.quantity + outputQuantity;
+        finalAvgCost = (currentTotalCost + newBatchTotalCost) / newTotalQty;
+
+        const { error: updateErr } = await supabase
+          .from('inventory')
+          .update({
+            quantity: newTotalQty,
+            cost: finalAvgCost,
+            price: Number(outputPrice), // Use latest price
+            last_modified_by: session?.user?.email || 'System'
+          })
+          .eq('id', existingProd.id);
+        
+        if (updateErr) throw updateErr;
+        targetItemId = existingProd.id;
+      } else {
+        // Create new item
+        const { data: newProd, error: newProdErr } = await supabase
+          .from('inventory')
+          .insert([{
+            product_name: mixPrefixedName,
+            category: outputCategory,
+            unit: outputUnit,
+            sku: `MIX-${Math.floor(Math.random() * 10000)}`,
+            quantity: outputQuantity, 
+            cost: finalAvgCost,
+            price: Number(outputPrice),
+            branch_id: branchIdTarget,
+            last_modified_by: session?.user?.email || 'System',
+            metadata: { is_mixed: true }
+          }])
+          .select()
+          .single();
+        
+        if (newProdErr) throw newProdErr;
+        targetItemId = newProd.id;
+      }
+
+      // 3. Log the Inbound Production Transaction with Unique Handshake Signature
       const breakdownText = ingredients.map(i => {
          const proportion = ((Number(i.cost) || 0) * i.quantityUsed).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
          return `- ${i.product_name}: ₱${Number(i.cost).toLocaleString()}/${i.unit} × ${i.quantityUsed}${i.unit} = ₱${proportion}`;
       }).join('\n');
-      const finalRemarks = `Batch Production Output.\n\nFormulation Breakdown:\n${breakdownText}`;
+      
+      const finalRemarks = `[FORMULA_TRACE] Batch Production for: ${mixPrefixedName} (SKU: ${existingProd?.sku || 'NEW'})\n\nFormulation Breakdown:\n${breakdownText}\nUnit Production Cost: ₱${finalAvgCost.toFixed(2)}`;
 
       await supabase.from('transactions').insert([{
-          item_id: newProd.id,
-          module_type: 'production_mixing',
+          item_id: targetItemId,
+          module_type: 'paints',
           transaction_type: 'inbound',
           quantity: outputQuantity,
           performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
