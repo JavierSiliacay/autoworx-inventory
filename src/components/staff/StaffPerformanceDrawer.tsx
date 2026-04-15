@@ -412,7 +412,7 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
                                          <span className="flex items-center gap-2">
                                             <span className="bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-widest font-black">Sale</span>
                                             {(act.paymentType === 'Debt' || act.paymentType === 'Charge') && (
-                                               <span className="bg-orange-50 text-orange-700 text-[9px] px-1.5 py-0.5 rounded border border-orange-100 uppercase tracking-widest font-black">Debt</span>
+                                               <span className="bg-orange-50 text-orange-700 text-[9px] px-1.5 py-0.5 rounded border border-orange-100 uppercase tracking-widest font-black">Charge</span>
                                             )}
                                             {act.productName || 'Unknown Product'}
                                          </span>
