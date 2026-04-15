@@ -40,7 +40,7 @@ export default function Sidebar() {
     { name: "Inventory", href: "/admin/inventory", icon: Package },
     { name: "Mixing", href: "/admin/mixing", icon: Beaker },
     { name: "Sales", href: "/admin/sales", icon: TrendingUp },
-    { name: "Payables", href: "/admin/payable", icon: FileText },
+    { name: "Receivables", href: "/admin/receivable", icon: FileText },
     // Only show these to Owners/Developers after mounting or if session is available on server
     ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },
