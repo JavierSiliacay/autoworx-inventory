@@ -105,8 +105,7 @@ export default function AdminDashboardPage() {
         let techQuery = supabase
           .from('transactions')
           .select('item_id, quantity')
-          .eq('transaction_type', 'outbound')
-          .neq('module_type', 'production_mixing');
+          .eq('transaction_type', 'outbound');
         
         if (filterBranch) {
           techQuery = techQuery.eq('branch_id', filterBranch);
@@ -121,7 +120,7 @@ export default function AdminDashboardPage() {
       try {
         let sRowsQuery = supabase
           .from('sales')
-          .select('item_id, quantity');
+          .select('item_id, quantity, unit_cost, total_amount');
           
         if (filterBranch) {
           sRowsQuery = sRowsQuery.eq('branch_id', filterBranch);
@@ -139,31 +138,14 @@ export default function AdminDashboardPage() {
         return acc + (Number(item.quantity || 0) * Number(cost));
       }, 0);
 
-      // 3. Historical Total Purchase (Double-Audit Permanent Ledger)
-      // Math: (Current Shelf Quantity + (Technical Logs OR Official Invoices)) * Unit Cost
-      // Even if one log fails, the other will "catch" the sale and lock the Total Purchase.
-      const totalPurchaseValue = (invDocs as any[]).reduce((acc, item) => {
-        // SKip internally produced (mixed) items from Total Purchase metric
-        if (item.metadata?.is_mixed) return acc;
-
-        const cost = item.unit_cost ?? item.cost ?? item.unit_price ?? 0;
-        const currentQty = Number(item.quantity || 0);
-        const itemStrId = String(item.id);
-
-        // Cross-reference both sources to find Total Outbound
-        const techSoldQty = (allOutHistory || [])
-          .filter(t => String(t.item_id) === itemStrId)
-          .reduce((sum, t) => sum + Number(t.quantity || 0), 0);
-
-        const officialSoldQty = (officialSalesTable || [])
-          .filter(s => String(s.item_id) === itemStrId)
-          .reduce((sum, s) => sum + Number(s.quantity || 0), 0);
-
-        // Use whichever is higher (failsafe)
-        const totalSoldForThisItem = Math.max(techSoldQty, officialSoldQty);
-          
-        return acc + ((currentQty + totalSoldForThisItem) * Number(cost));
+      // 3. Historical Total Purchase (Investment Reconciliation)
+      // Standard Accounting: Initial Investment = Current Assets + Cost of Goods Sold (COGS)
+      // This is 100% stable during mixing because value simply transfers from ingredient assets to mix assets.
+      const totalCOGS = (officialSalesTable || []).reduce((acc, sale) => {
+         return acc + (Number(sale.quantity || 0) * Number(sale.unit_cost || 0));
       }, 0);
+
+      const totalPurchaseValue = currentStockCost + totalCOGS;
 
       const totalVolume = (invDocs as any[]).reduce((acc, item) => acc + (parseFloat(item.quantity) || 0), 0);
       const uniqueProdCount = new Set((invDocs as any[]).map(i => i.product_name)).size;
@@ -182,17 +164,17 @@ export default function AdminDashboardPage() {
           salesQuery = salesQuery.in('branch_id', userBranchIds);
         }
 
-        const { data, error: sErr } = await salesQuery.limit(20);
+      const { data, error: sErr } = await salesQuery;
         
-        // If "sales" table is missing, use "transactions" as a fallback
+        // If "sales" table is missing, use "transactions" as a fallback (SECURITY: Must exclude production internal burns)
         if (sErr && (sErr.message.includes('relation "public.sales" does not exist') || sErr.code === '42P01')) {
            console.warn("Sales table not found. Falling back to stock-out transactions.");
            const { data: transSales } = await supabase
              .from('transactions')
-             .select('*, inventory(product_name, sku, price), branches(name)')
+             .select('*, inventory(product_name, sku, price, cost), branches(name)')
              .eq('transaction_type', 'outbound')
-             .order('id', { ascending: false })
-             .limit(20);
+             .neq('module_type', 'production_mixing') // CRITICAL: Exclude ingredient consumption from Sales KPI
+             .order('id', { ascending: false });
            
            if (transSales) {
              const mapped = transSales.map((t: any) => ({
@@ -214,10 +196,13 @@ export default function AdminDashboardPage() {
           const mapped = salesDocs.map((s: any) => ({
             ...s,
             inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
-            branches: Array.isArray(s.branches) ? s.branches[0] : s.branches
+            branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
+            total_amount: Number(s.total_amount || 0) // Explicit cast to Number
           }));
           setSales(mapped);
-          const totalRev = mapped.reduce((acc: number, s: any) => acc + (parseFloat(s.total_amount || 0)), 0);
+          
+          // SUM ALL matching sales for Gross Revenue
+          const totalRev = mapped.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
           setRevenue(totalRev);
         }
       } catch (err) {
