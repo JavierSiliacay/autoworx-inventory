@@ -211,6 +211,10 @@ export default function AdminSalesPage() {
   async function fetchInventory() {
     let query = supabase.from('inventory').select('id, product_name, sku, quantity, unit, price, cost, branch_id, branches(name)').order('product_name');
     if (filterBranch) {
+      if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+        setInventory([]);
+        return;
+      }
       query = query.eq('branch_id', filterBranch);
     } else if (isStaff && userBranchIds.length > 0) {
       query = query.in('branch_id', userBranchIds);
@@ -236,6 +240,11 @@ export default function AdminSalesPage() {
         .order('created_at', { ascending: false });
 
       if (filterBranch) {
+        if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          setSales([]);
+          setLoading(false);
+          return;
+        }
         query = query.eq('branch_id', filterBranch);
       } else if (isStaff && userBranchIds.length > 0) {
         query = query.in('branch_id', userBranchIds);

@@ -90,6 +90,10 @@ export default function ReceivablesPage() {
         .order('created_at', { ascending: false });
 
       if (filterBranch) {
+        if (role === 'staff' && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          setRecords([]);
+          return;
+        }
         query = query.eq('branch_id', filterBranch);
       } else if (role === 'staff' && userBranchIds.length > 0) {
         query = query.in('branch_id', userBranchIds);

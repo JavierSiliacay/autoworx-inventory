@@ -87,6 +87,10 @@ export default function MixingPage() {
       }
 
       if (filterBranch) {
+        if (role === 'staff' && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          setInventory([]);
+          return;
+        }
         query = query.eq('branch_id', filterBranch);
       }
 

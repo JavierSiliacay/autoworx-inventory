@@ -10,12 +10,17 @@ import {
   Users,
   LogOut, 
   TrendingUp,
-  ChevronLeft, 
+  ChevronLeft,
   ChevronRight,
   User,
   Settings,
   Beaker,
-  FileText
+  FileText,
+  ChevronDown,
+  Building2,
+  PackageCheck,
+  ClipboardList,
+  Truck
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -35,9 +40,21 @@ export default function Sidebar() {
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
 
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory']);
+
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Inventory", href: "/admin/inventory", icon: Package },
+    { 
+      name: "Inventory", 
+      href: "/admin/inventory", 
+      icon: Package,
+      children: [
+        { name: "Master Inventory", href: "/admin/inventory", icon: PackageCheck },
+        { name: "Purchase Orders", href: "/admin/inventory/purchase-orders", icon: ClipboardList },
+        { name: "Stock-In / Receiving", href: "/admin/inventory/stock-in", icon: Truck },
+        { name: "Suppliers", href: "/admin/inventory/suppliers", icon: Building2 },
+      ]
+    },
     { name: "Mixing", href: "/admin/mixing", icon: Beaker },
     { name: "Sales", href: "/admin/sales", icon: TrendingUp },
     { name: "Receivables", href: "/admin/receivable", icon: FileText },
@@ -49,6 +66,13 @@ export default function Sidebar() {
   ];
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const toggleExpand = (itemName: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(i => i !== itemName) 
+        : [...prev, itemName]
+    );
+  };
 
   return (
     <aside 
@@ -89,25 +113,78 @@ export default function Sidebar() {
         </div>
 
         {navigation.map((item) => {
-          const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+          const hasChildren = item.children && item.children.length > 0;
+          const isExpanded = expandedItems.includes(item.name);
+          const isActive = item.href === "/admin" 
+            ? pathname === "/admin" 
+            : hasChildren 
+              ? pathname.startsWith(item.href) && !item.children?.some(child => pathname === child.href)
+              : pathname.startsWith(item.href);
+
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
-                isActive
-                   ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
-                   : "text-[#64748b] font-medium hover:bg-slate-50"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
-              {!isCollapsed && (
-                <span className="whitespace-nowrap opacity-100 transition-opacity duration-300">{item.name}</span>
+            <div key={item.name} className="flex flex-col gap-1">
+              {hasChildren ? (
+                <button
+                  onClick={() => toggleExpand(item.name)}
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
+                    pathname.startsWith(item.href)
+                       ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
+                       : "text-[#64748b] font-medium hover:bg-slate-50"
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 shrink-0 transition-transform ${pathname.startsWith(item.href) ? "scale-110" : "group-hover:scale-110"}`} />
+                  {!isCollapsed && (
+                    <>
+                      <span className="whitespace-nowrap flex-1 text-left">{item.name}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                    </>
+                  )}
+                  {pathname.startsWith(item.href) && !isCollapsed && (
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#16a34a] rounded-l-full" />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
+                    isActive
+                       ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
+                       : "text-[#64748b] font-medium hover:bg-slate-50"
+                  }`}
+                >
+                  <item.icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
+                  {!isCollapsed && (
+                    <span className="whitespace-nowrap opacity-100 transition-opacity duration-300">{item.name}</span>
+                  )}
+                  {isActive && !isCollapsed && (
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#16a34a] rounded-l-full" />
+                  )}
+                </Link>
               )}
-              {isActive && !isCollapsed && (
-                <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#16a34a] rounded-l-full" />
+
+              {/* Sub-navigation items */}
+              {hasChildren && isExpanded && !isCollapsed && (
+                <div className="ml-9 flex flex-col gap-1 mt-1 border-l border-slate-100 pl-3">
+                  {item.children?.map((child) => {
+                    const isChildActive = pathname === child.href;
+                    return (
+                      <Link
+                        key={child.name}
+                        href={child.href}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-manrope text-xs transition-all duration-200 ${
+                          isChildActive
+                            ? "text-[#16a34a] font-bold bg-[#16a34a]/5"
+                            : "text-[#64748b] hover:text-[#16a34a] hover:bg-slate-50"
+                        }`}
+                      >
+                        <child.icon className={`w-4 h-4 shrink-0 ${isChildActive ? "opacity-100" : "opacity-60"}`} />
+                        <span>{child.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            </Link>
+            </div>
           );
         })}
 

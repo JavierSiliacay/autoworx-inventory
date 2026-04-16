@@ -124,24 +124,28 @@ export default function Header() {
             onChange={(e) => handleBranchChange(e.target.value)}
             className="bg-transparent border-none outline-none py-1.5 md:py-2 pr-6 md:pr-8 text-xs md:text-sm font-semibold text-[#1e40af] appearance-none cursor-pointer"
           >
-            {/* Staff with only 1 branch cannot see "All Network" */}
-            {(!isStaff || userBranchIds.length > 1) && (
-              <option value="all">All Network</option>
+            {mounted && (
+              <>
+                {/* Staff with only 1 branch cannot see "All Network" */}
+                {(!isStaff || userBranchIds.length > 1) && (
+                  <option value="all">All Network</option>
+                )}
+                {branches.map(b => {
+                  const parts = b.name.split(" ");
+                  let label = b.name;
+                  if (b.name.length > 15 && parts[0].toLowerCase() === "valencia") {
+                    label = `Valencia ${parts[1]}`;
+                  } else if (b.name.length > 15 && parts[0].toLowerCase() === "main") {
+                    label = `Main ${parts[1]}`;
+                  } else if (b.name.length > 15) {
+                    label = parts.slice(0, 2).join(" ");
+                  }
+                  return (
+                    <option key={b.id} value={b.id}>{label}</option>
+                  );
+                })}
+              </>
             )}
-            {mounted && branches.map(b => {
-              const parts = b.name.split(" ");
-              let label = b.name;
-              if (b.name.length > 15 && parts[0].toLowerCase() === "valencia") {
-                label = `Valencia ${parts[1]}`;
-              } else if (b.name.length > 15 && parts[0].toLowerCase() === "main") {
-                label = `Main ${parts[1]}`;
-              } else if (b.name.length > 15) {
-                label = parts.slice(0, 2).join(" ");
-              }
-              return (
-                <option key={b.id} value={b.id}>{label}</option>
-              );
-            })}
           </select>
           <div className="absolute right-2 md:right-3 pointer-events-none">
              <ChevronDown className="w-3 md:w-4 h-3 md:h-4 text-[#64748b]" />
