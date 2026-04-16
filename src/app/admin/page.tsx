@@ -55,6 +55,12 @@ export default function AdminDashboardPage() {
       let invQuery = supabase.from('inventory').select('*, branches(name)').order('updated_at', { ascending: false });
       
       if (filterBranch) {
+        if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          setDistribution([]);
+          setRecentLogs([]);
+          setStats({ products: 0, stock: 0, value: 0, currentStockValue: 0, branches: 0 });
+          return;
+        }
         invQuery = invQuery.eq('branch_id', filterBranch);
       } else if (isStaff && userBranchIds.length > 0) {
         invQuery = invQuery.in('branch_id', userBranchIds);
@@ -311,11 +317,8 @@ export default function AdminDashboardPage() {
     setSelectedSaleIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const summaryCards = [
-    { title: "Available Stock Value", value: `₱${(stats as any).currentStockValue?.toLocaleString() || 0}`, label: "AVAILABLE STOCK VALUE", icon: Package, iconColor: "text-[#16a34a]", iconBg: "bg-[#16a34a]/10", caption: "AVAILABILITY" },
-    { title: "Total Purchase", value: `₱${stats.value.toLocaleString()}`, label: "Total Purchase", icon: ClipboardList, iconColor: "text-[#1e40af]", iconBg: "bg-[#1e40af]/10", caption: "PURCHASE PERFORMANCE" },
-    { title: isStaff ? "Permissions" : "Network Hubs", value: stats.branches.toString(), label: isStaff ? "Assigned Clusters" : "Active Branch", icon: Map, iconColor: "text-[#64748b]", iconBg: "bg-slate-100", caption: "ACCESS" },
-  ];
+  const formatCurrency = (val: number) =>
+    `₱${val.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (!session && !loading) return <div className="p-20 text-center text-slate-400">Please sign in to view administrative data.</div>;
 
@@ -332,37 +335,97 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Summary Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
-        <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a] shrink-0">
-              <TrendingUp size={20} />
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8 md:mb-12">
+
+        {/* ── Sales Performance ── */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-3 min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a] shrink-0">
+              <TrendingUp size={16} />
             </div>
-            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right ml-2 lg:ml-0">Sales Performance</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
+              Sales<br />Performance
+            </span>
           </div>
-          <div className="mt-4 md:mt-6 overflow-hidden">
-            <p className="text-xl sm:text-2xl md:text-3xl font-manrope font-black text-[#16a34a] truncate" title={`₱${revenue.toLocaleString()}`}>
-              ₱{revenue.toLocaleString()}
+          <div className="min-w-0">
+            <p
+              className="font-manrope font-black text-[#16a34a]"
+              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={`₱${revenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            >
+              ₱{revenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <p className="text-[10px] md:text-sm text-[#64748b] mt-1 font-bold uppercase tracking-tighter opacity-70">Total Sales</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Total Sales</p>
           </div>
         </div>
-        {summaryCards.map((card, i) => (
-          <div key={i} className="bg-white p-5 md:p-6 rounded-2xl border border-[#e2e8f0] shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-lg ${card.iconBg} shrink-0`}>
-                <card.icon className={`w-4 md:w-5 h-4 md:h-5 ${card.iconColor}`} />
-              </div>
-              <span className="text-[9px] md:text-[10px] font-bold text-[#64748b] tracking-tighter uppercase opacity-60 text-right ml-2 lg:ml-0">{card.caption}</span>
+
+        {/* ── Available Stock Value ── */}
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#16a34a]/10 flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4 text-[#16a34a]" />
             </div>
-            <div className="overflow-hidden">
-              <p className="text-xl sm:text-2xl md:text-3xl font-manrope font-extrabold text-[#111827] truncate" title={card.value}>
-                {card.value}
-              </p>
-              <p className="text-[10px] md:text-sm font-bold text-[#64748b] mt-1 uppercase tracking-tighter opacity-70">{card.label}</p>
-            </div>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
+              Availability
+            </span>
           </div>
-        ))}
+          <div className="min-w-0">
+            <p
+              className="font-manrope font-extrabold text-[#111827]"
+              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={formatCurrency((stats as any).currentStockValue ?? 0)}
+            >
+              {formatCurrency((stats as any).currentStockValue ?? 0)}
+            </p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Available Stock Value</p>
+          </div>
+        </div>
+
+        {/* ── Total Purchase ── */}
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1e40af]/10 flex items-center justify-center shrink-0">
+              <ClipboardList className="w-4 h-4 text-[#1e40af]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
+              Purchase<br />Performance
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p
+              className="font-manrope font-extrabold text-[#111827]"
+              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={formatCurrency(stats.value)}
+            >
+              {formatCurrency(stats.value)}
+            </p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Total Purchase</p>
+          </div>
+        </div>
+
+        {/* ── Active Branch / Access ── */}
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+              <Map className="w-4 h-4 text-[#64748b]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
+              Access
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p
+              className="font-manrope font-extrabold text-[#111827]"
+              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            >
+              {stats.branches}
+            </p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+              {isStaff ? 'Assigned Clusters' : 'Active Branch'}
+            </p>
+          </div>
+        </div>
+
       </section>
 
       {/* Stock Distribution Table */}
