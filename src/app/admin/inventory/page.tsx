@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, Minus
+  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -175,31 +175,7 @@ export default function AdminInventoryPage() {
     if (!error) setItems(items.filter(i => i.id !== id));
   }
 
-  async function adjustStock(item: InventoryItem, sign: number) {
-    if (sign < 0 && item.quantity <= 0) { alert("Out of stock"); return; }
-    const raw = window.prompt(`Quantity to stock ${sign < 0 ? "out" : "in"}:`, "1");
-    if (raw === null) return;
-    const qty = parseFloat(raw);
-    if (isNaN(qty) || qty <= 0) { alert("Enter a valid positive number."); return; }
 
-    const delta = sign * qty;
-    const newQty = Math.max(0, parseFloat(item.quantity.toString()) + delta);
-
-    const { error: invErr } = await supabase.from("inventory")
-      .update({ quantity: newQty, last_modified_by: session?.user?.email, updated_at: new Date().toISOString() })
-      .eq("id", item.id);
-    if (invErr) { alert("Failed: " + invErr.message); return; }
-
-    await supabase.from("transactions").insert([{
-      item_id: item.id, module_type: "paints",
-      transaction_type: delta < 0 ? "outbound" : "inbound",
-      quantity: Math.abs(delta),
-      performed_by: (session?.user as any)?.id || "00000000-0000-0000-0000-000000000000",
-      remarks: `${delta < 0 ? "Stock Out" : "Stock In"}: ${qty} × ${item.product_name} (${session?.user?.email})`,
-    }]);
-
-    setItems(items.map(i => i.id === item.id ? { ...i, quantity: newQty } : i));
-  }
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
   const filtered = items.filter(p => {
@@ -332,25 +308,10 @@ export default function AdminInventoryPage() {
                         {product.category}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => adjustStock(product, -1)}
-                          disabled={product.quantity <= 0}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className={`text-sm font-bold min-w-[2.5rem] text-center font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
-                          {parseFloat(product.quantity.toString()).toFixed(1)}
-                        </span>
-                        <button
-                          onClick={() => adjustStock(product, 1)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-green-100 hover:text-[#16a34a] text-slate-400 transition-colors"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                    <td className="px-4 py-4 text-center">
+                      <span className={`text-sm font-bold font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
+                        {parseFloat(product.quantity.toString()).toFixed(1)}
+                      </span>
                       <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>
                     </td>
                     {canViewCost && (
@@ -418,22 +379,12 @@ export default function AdminInventoryPage() {
 
                 {/* Row 2: Stock controls + pricing */}
                 <div className="flex items-center justify-between gap-4">
-                  {/* Stock adjuster */}
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => adjustStock(product, -1)} disabled={product.quantity <= 0}
-                      className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-400 transition-colors disabled:opacity-30">
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="text-center min-w-[3rem]">
-                      <p className={`text-base font-bold font-mono leading-none ${isLow ? "text-red-500" : "text-slate-900"}`}>
-                        {parseFloat(product.quantity.toString()).toFixed(1)}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>
-                    </div>
-                    <button onClick={() => adjustStock(product, 1)}
-                      className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-green-100 hover:text-[#16a34a] text-slate-400 transition-colors">
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Stock Display */}
+                  <div className="text-left">
+                    <p className={`text-base font-bold font-mono leading-none ${isLow ? "text-red-500" : "text-slate-900"}`}>
+                      {parseFloat(product.quantity.toString()).toFixed(1)}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>
                   </div>
 
                   {/* Prices */}

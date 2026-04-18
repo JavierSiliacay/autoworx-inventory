@@ -16,7 +16,7 @@ interface POHeader { id: string; po_number: string; supplier_id: string; items: 
 interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; }
 
 const compressImage = async (file: File): Promise<Blob> => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (e) => {
@@ -31,10 +31,17 @@ const compressImage = async (file: File): Promise<Blob> => {
           else { width *= MAX / height; height = MAX; }
         }
         canvas.width = width; canvas.height = height;
-        canvas.getContext("2d")?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.72);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Failed to get canvas context")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error("Failed to compress image"));
+        }, "image/webp", 0.8);
       };
+      img.onerror = () => reject(new Error("Failed to load image"));
     };
+    reader.onerror = () => reject(new Error("Failed to read file"));
   });
 };
 
@@ -123,9 +130,22 @@ export default function NewStockInPage() {
       let imageUrl = null;
       if (receiptImage) {
         const compressed = await compressImage(receiptImage);
-        const fileName = `receipts/${Date.now()}-${receiptImage.name}`;
-        const { error: upErr } = await supabase.storage.from("inventory-proofs").upload(fileName, compressed);
-        if (upErr) throw upErr;
+        // Sanitize filename and convert extension to .webp
+        const baseName = receiptImage.name.split('.').slice(0, -1).join('.').replace(/[^a-z0-9]/gi, "_").toLowerCase();
+        const fileName = `${Date.now()}-${baseName}.webp`;
+        
+        const { error: upErr } = await supabase.storage
+          .from("inventory-proofs")
+          .upload(fileName, compressed, {
+            contentType: "image/webp",
+            upsert: true
+          });
+          
+        if (upErr) {
+          console.error("Storage Error:", upErr);
+          throw new Error(`Image Upload Failed: ${upErr.message}`);
+        }
+
         const { data: urlData } = supabase.storage.from("inventory-proofs").getPublicUrl(fileName);
         imageUrl = urlData.publicUrl;
       }
@@ -186,9 +206,9 @@ export default function NewStockInPage() {
       }
       if (selectedPO) await supabase.from("purchase_orders").update({ status: "received" }).eq("id", selectedPO);
       router.push("/admin/inventory/stock-in");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error recording stock-in.");
+      alert(`Error recording stock-in: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -380,7 +400,7 @@ export default function NewStockInPage() {
 
         {/* Receipt Upload */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5">
-          <h2 className="text-sm font-semibold text-slate-700 mb-3">Proof of Receipt(has bugs and not yet fix)</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Proof of Receipt</h2>
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <button type="button" onClick={() => fileInputRef.current?.click()}
               className={`w-full sm:w-36 h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors shrink-0 overflow-hidden ${previewUrl ? "border-[#16a34a] bg-green-50" : "border-slate-200 hover:border-[#16a34a] hover:bg-green-50"}`}>

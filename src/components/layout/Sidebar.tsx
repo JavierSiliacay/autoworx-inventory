@@ -20,7 +20,8 @@ import {
   Building2,
   PackageCheck,
   ClipboardList,
-  Truck
+  Truck,
+  CreditCard
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -74,6 +75,7 @@ export default function Sidebar() {
     { name: "Mixing", href: "/admin/mixing", icon: Beaker },
     { name: "Sales", href: "/admin/sales", icon: TrendingUp },
     { name: "Receivables", href: "/admin/receivable", icon: FileText },
+    { name: "Payables", href: "/admin/payables", icon: CreditCard },
     // Only show these to Owners/Developers after mounting or if session is available on server
     ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },

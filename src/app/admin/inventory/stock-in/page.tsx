@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Truck, Search, Plus, Camera, Eye, Loader2, PackageCheck, Calendar, Building2
+  Truck, Search, Plus, Camera, Eye, Loader2, PackageCheck, Calendar, Building2, Trash2, AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -28,8 +28,51 @@ export default function StockInPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [hoverImageId, setHoverImageId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => { fetchLogs(); }, [selectedBranchId]);
+
+  async function deleteLog(log: StockInLog) {
+    if (!confirm(`Are you sure you want to delete this stock-in? \n\nThis will SUBTRACT the quantities from your current inventory to reverse the entry.`)) return;
+    
+    try {
+      setLoading(true);
+      
+      // 1. Get the items first to know how much to subtract
+      const { data: items } = await supabase.from("stock_in_items").select("inventory_id, quantity_received").eq("stock_in_id", log.id);
+      
+      if (items) {
+        for (const item of items) {
+          // Fetch current
+          const { data: inv } = await supabase.from("inventory").select("quantity").eq("id", item.inventory_id).single();
+          if (inv) {
+            await supabase.from("inventory").update({ 
+              quantity: Math.max(0, inv.quantity - item.quantity_received) 
+            }).eq("id", item.inventory_id);
+          }
+        }
+      }
+
+      // 2. Delete the log (Cascade will handle stock_in_items)
+      const { error } = await supabase.from("stock_in_logs").delete().eq("id", log.id);
+      if (error) throw error;
+
+      // 3. Remove transaction history associated with this invoice
+      if (log.invoice_number) {
+        await supabase.from("stock_transactions").delete().like("reason", `%${log.invoice_number}%`);
+      }
+
+      // 4. If there was a PO, we might want to reset it (optional, usually kept as received)
+      
+      alert("Stock-in deleted and inventory reversed successfully.");
+      fetchLogs();
+    } catch (e: any) {
+      console.error(e);
+      alert("Error deleting record: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function fetchLogs() {
     try {
@@ -114,6 +157,7 @@ export default function StockInPage() {
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Proof</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -141,9 +185,10 @@ export default function StockInPage() {
                     {log.receipt_image_url ? (
                       <div className="relative inline-block">
                         <button
+                          onClick={() => setSelectedImage(log.receipt_image_url!)}
                           onMouseEnter={() => setHoverImageId(log.id)}
                           onMouseLeave={() => setHoverImageId(null)}
-                          className="p-1.5 bg-green-50 text-[#16a34a] rounded-lg hover:bg-green-100 transition-colors"
+                          className="p-1.5 bg-green-50 text-[#16a34a] rounded-lg hover:bg-green-100 transition-all border border-green-100 hover:scale-110 active:scale-95 shadow-sm"
                         >
                           <Camera className="w-4 h-4" />
                         </button>
@@ -157,6 +202,15 @@ export default function StockInPage() {
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => deleteLog(log)}
+                      className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      title="Delete and reverse stock"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -191,6 +245,43 @@ export default function StockInPage() {
           ))}
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] p-4 max-w-2xl w-full shadow-2xl relative overflow-hidden">
+            <button 
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-6 right-6 p-2 bg-white/80 backdrop-blur-md text-slate-500 hover:text-red-500 rounded-full shadow-lg z-10 transition-colors"
+            >
+              <Plus className="w-6 h-6 rotate-45" />
+            </button>
+            
+            <div className="rounded-[1.5rem] overflow-hidden bg-slate-50 border border-slate-100 max-h-[80vh] flex items-center justify-center">
+              <img 
+                src={selectedImage} 
+                alt="Receipt Full View" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            <div className="mt-4 flex items-center justify-between px-2">
+              <div>
+                <p className="text-sm font-black text-[#1e40af] uppercase tracking-widest">Verification Proof</p>
+                <p className="text-xs text-slate-400">Captured during stock-in process</p>
+              </div>
+              <a 
+                href={selectedImage} 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-colors"
+              >
+                Open in New Tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
