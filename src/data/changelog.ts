@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776529760823",
+    version: "v1.4.18",
+    date: "2026-04-18",
+    type: "feature",
+    title: "AI Notification Bell & Enhanced CI/CD Pipeline",
+    description: "Users receive timely, AI-driven alerts via the new notification bell, and the CI/CD pipeline operates more reliably thanks to a fix in the staging checkout process."
+  },
+
+  {
     id: "update-v1.2.0",
     version: "v1.2.0",
     date: "2026-04-18",
