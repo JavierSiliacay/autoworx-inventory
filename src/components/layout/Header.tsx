@@ -95,6 +95,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [readUpdates, setReadUpdates] = useState<string[]>([]);
+  const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
 
   useEffect(() => { 
     setMounted(true); 
@@ -104,22 +105,24 @@ export default function Header() {
         setReadUpdates(JSON.parse(saved));
       } catch (e) {}
     }
+    setHasCheckedStorage(true);
   }, []);
 
   const unreadUpdates = SYSTEM_UPDATES.filter(u => !readUpdates.includes(u.id));
-  const prevUnreadCount = useRef(unreadUpdates.length);
 
   useEffect(() => {
-    // Only play sound if the component is mounted AND the unread count actually increased
-    if (mounted && unreadUpdates.length > prevUnreadCount.current) {
-      try {
-        const audio = new Audio('/sounds/notification.mp3');
-        // Browsers might block autoplay if the user hasn't interacted with the document yet
-        audio.play().catch(e => console.log('Audio autoplay blocked by browser (User must interact first)'));
-      } catch (e) {}
+    // If we have finished loading the user's read history, and there are unread updates:
+    if (mounted && hasCheckedStorage && unreadUpdates.length > 0) {
+      // Use sessionStorage so we only "ding" once when they open the app
+      if (!sessionStorage.getItem('autoworx_has_dinged')) {
+        try {
+          const audio = new Audio('/sounds/notification.mp3');
+          audio.play().catch(e => console.log('Audio blocked by browser (Requires user to click page first)'));
+          sessionStorage.setItem('autoworx_has_dinged', 'true');
+        } catch (e) {}
+      }
     }
-    prevUnreadCount.current = unreadUpdates.length;
-  }, [unreadUpdates.length, mounted]);
+  }, [mounted, hasCheckedStorage, unreadUpdates.length]);
 
   const handleOpenNotifications = () => {
     setIsNotificationsOpen(!isNotificationsOpen);
