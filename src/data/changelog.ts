@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776531023689",
+    version: "v1.4.18",
+    date: "2026-04-18",
+    type: "fix",
+    title: "Audio sound trigger now checks at session start",
+    description: "Audio triggers are evaluated when a session loads, so you receive timely notifications without delay."
+  },
+
+  {
     id: "update-1776530726654",
     version: "v1.4.18",
     date: "2026-04-18",
