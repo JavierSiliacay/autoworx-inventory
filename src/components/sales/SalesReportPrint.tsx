@@ -16,7 +16,7 @@ interface SalesReportPrintProps {
   sales: SaleEntry[];
   month: number;
   year: number;
-  reportType: 'monthly' | 'daily';
+  reportType: 'monthly' | 'daily' | 'yearly';
   printDate: string; // YYYY-MM-DD
   transmittalChecks?: { name: string; ref: string; amount: string; bank: string }[];
   transmittalNotes?: string[];
@@ -28,6 +28,8 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
     const d = new Date(s.date);
     if (reportType === 'monthly') {
       return d.getMonth() + 1 === month && d.getFullYear() === year;
+    } else if (reportType === 'yearly') {
+      return d.getFullYear() === year;
     } else {
       const yStr = d.getFullYear().toString();
       const mStr = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -50,6 +52,8 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
   
   const headerTitle = reportType === 'monthly' 
     ? `SALES REPORT - ${monthName} ${year}` 
+    : reportType === 'yearly'
+    ? `ANNUAL SALES REPORT - FOR YEAR ${year}`
     : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}`;
 
   const cashSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cash' ? acc + sale.total_amount : acc, 0);
@@ -111,7 +115,7 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
         </div>
 
       {/* Report Table */}
-      {reportType === 'monthly' ? (
+      {reportType === 'monthly' || reportType === 'yearly' ? (
         <table className="w-full border-collapse border border-black text-sm">
           <thead>
             <tr>
@@ -143,7 +147,7 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
             ) : (
               <tr>
                 <td colSpan={5} className="border border-black px-2 py-4 text-center font-bold text-gray-500 uppercase">
-                  No records found for {monthName} {year}
+                  No records found for {reportType === 'yearly' ? year : `${monthName} ${year}`}
                 </td>
               </tr>
             )}
