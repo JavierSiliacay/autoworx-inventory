@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ai-release": "node scripts/generate-release.js",
+    "deploy": "pnpm run ai-release && git commit -m \"chore: auto-generated AI changelog\" --allow-empty && git push"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

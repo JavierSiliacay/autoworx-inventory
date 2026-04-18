@@ -1,0 +1,37 @@
+export type UpdateType = 'feature' | 'improvement' | 'fix';
+
+export interface SystemUpdate {
+  id: string; // Used to track read status
+  version: string;
+  date: string;
+  type: UpdateType;
+  title: string;
+  description: string;
+}
+
+export const SYSTEM_UPDATES: SystemUpdate[] = [
+  {
+    id: "update-v1.2.0",
+    version: "v1.2.0",
+    date: "2026-04-18",
+    type: "feature",
+    title: "Yearly Sales Report Export",
+    description: "You can now export Annual Sales Reports! The Sales layout has also been enhanced to display staff auditor details directly when you hover over verified rows."
+  },
+  {
+    id: "update-v1.1.0",
+    version: "v1.1.0",
+    date: "2026-04-17",
+    type: "improvement",
+    title: "Performance & Truncation Fixes",
+    description: "The main dashboard metrics cards have been fully optimized to scale gracefully. Long currency numbers will no longer be clipped on standard displays."
+  },
+  {
+    id: "update-v1.0.0",
+    version: "v1.0.0",
+    date: "2026-04-15",
+    type: "feature",
+    title: "Stock-Out Traceability Mode",
+    description: "Added a comprehensive release checklist for the partsmen, ensuring that released items are strictly tracked with an intuitive '1-click exit' checkout."
+  }
+];

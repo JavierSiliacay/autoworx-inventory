@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bell, Filter, ChevronDown, UserCircle } from "lucide-react";
+import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug } from "lucide-react";
+import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
@@ -92,7 +93,30 @@ export default function Header() {
   }
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [readUpdates, setReadUpdates] = useState<string[]>([]);
+
+  useEffect(() => { 
+    setMounted(true); 
+    const saved = localStorage.getItem('autoworx_read_updates');
+    if (saved) {
+      try {
+        setReadUpdates(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const unreadUpdates = SYSTEM_UPDATES.filter(u => !readUpdates.includes(u.id));
+
+  const handleOpenNotifications = () => {
+    setIsNotificationsOpen(!isNotificationsOpen);
+    if (!isNotificationsOpen && unreadUpdates.length > 0) {
+      // Mark all as read when opening
+      const newRead = [...readUpdates, ...unreadUpdates.map(u => u.id)];
+      setReadUpdates(newRead);
+      localStorage.setItem('autoworx_read_updates', JSON.stringify(newRead));
+    }
+  };
 
   // Stable fallbacks for SSR
   const displayTitle = mounted ? title : "Network Overview";
@@ -153,10 +177,54 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative">
-            <Bell className="w-5 h-5 text-[#64748b]" />
-            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={handleOpenNotifications}
+              className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative"
+            >
+              <Bell className={`w-5 h-5 ${isNotificationsOpen ? 'text-[#1e40af]' : 'text-[#64748b]'}`} />
+              {mounted && unreadUpdates.length > 0 && (
+                <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+            </button>
+            
+            {/* Notifications Dropdown */}
+            {isNotificationsOpen && (
+              <>
+                <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsNotificationsOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 border-b border-slate-50 bg-[#f8fafc] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#0f172a]">What's New</h3>
+                      <p className="text-[10px] text-slate-500 font-medium">Recent system updates & features</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Rocket className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+                    {SYSTEM_UPDATES.map((update) => (
+                      <div key={update.id} className="p-3 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-slate-100">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {update.type === 'feature' ? (
+                            <span className="flex items-center gap-1 bg-green-50 text-green-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-green-100"><Rocket className="w-2.5 h-2.5" /> Feature</span>
+                          ) : update.type === 'improvement' ? (
+                            <span className="flex items-center gap-1 bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-blue-100"><Wrench className="w-2.5 h-2.5" /> Improvement</span>
+                          ) : (
+                            <span className="flex items-center gap-1 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-amber-100"><Bug className="w-2.5 h-2.5" /> Bug Fix</span>
+                          )}
+                          <span className="text-[9px] font-bold text-slate-400">{update.version}</span>
+                          <span className="text-[9px] font-medium text-slate-400 ml-auto">{new Date(update.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'})}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-[#1e293b] mb-1">{update.title}</h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">{update.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           
           <div className="hidden sm:block h-6 w-[1px] bg-slate-200 mx-1" />
 
