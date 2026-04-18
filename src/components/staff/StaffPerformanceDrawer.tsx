@@ -448,6 +448,11 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
                                      })}
                                    </span>
                                    {act.amount && <span className="text-green-600">₱{Number(act.amount).toLocaleString()}</span>}
+                                   {act.branchName && (
+                                     <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[8px]">
+                                       {act.branchName}
+                                     </span>
+                                   )}
                                 </div>
                              </div>
                              <ChevronRight className="w-4 h-4 text-slate-200" />

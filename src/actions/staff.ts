@@ -18,7 +18,7 @@ export async function getStaffStats(email: string, role: string, userId?: string
     // 1. Fetch Sales Stats
     let salesQuery = supabase
       .from('sales')
-      .select('total_amount, created_at, quantity, payment_type, inventory(product_name)');
+      .select('total_amount, created_at, quantity, payment_type, inventory(product_name), branches(name)');
     
     if (userId) {
       salesQuery = salesQuery.or(`performed_by.eq.${email},performed_by.eq.${userId}`);
@@ -44,10 +44,16 @@ export async function getStaffStats(email: string, role: string, userId?: string
     // Fetch product names for these transactions
     const itemIds = [...new Set((invTransactions || []).map(t => t.item_id))];
     const { data: items } = itemIds.length > 0 
-      ? await supabase.from('inventory').select('id, product_name').in('id', itemIds)
+      ? await supabase.from('inventory').select('id, product_name, branches(name)').in('id', itemIds)
       : { data: [] };
 
-    const itemMap = Object.fromEntries((items || []).map(i => [i.id, i.product_name]));
+    const itemMap = Object.fromEntries((items || []).map(i => [
+      i.id, 
+      { 
+        name: i.product_name, 
+        branch: Array.isArray(i.branches) ? i.branches[0]?.name : (i.branches as any)?.name 
+      }
+    ]));
 
     const stats = {
       salesCount: sales?.length || 0,
@@ -63,6 +69,7 @@ export async function getStaffStats(email: string, role: string, userId?: string
       amount: s.total_amount,
       date: s.created_at,
       productName: s.inventory?.product_name,
+      branchName: Array.isArray(s.branches) ? s.branches[0]?.name : s.branches?.name,
       quantity: s.quantity,
       paymentType: s.payment_type,
       description: `Processed sale of ${s.quantity} x ${s.inventory?.product_name || 'items'}`
@@ -73,8 +80,9 @@ export async function getStaffStats(email: string, role: string, userId?: string
       date: t.timestamp,
       transactionType: t.transaction_type,
       isManual: t.remarks?.includes('Stock In') || t.remarks?.includes('Stock Out'),
+      branchName: itemMap[t.item_id]?.branch,
       quantity: t.quantity,
-      productName: itemMap[t.item_id] || 'Inventory Item',
+      productName: itemMap[t.item_id]?.name || 'Inventory Item',
       description: t.remarks || `Stock ${t.transaction_type}: ${t.quantity} units`
     }));
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -30,12 +30,28 @@ const LOGO_URL = "/logo.png";
 export default function Sidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleMouseEnter = () => {
+    if (collapseTimeoutRef.current) {
+      clearTimeout(collapseTimeoutRef.current);
+      collapseTimeoutRef.current = null;
+    }
+    setIsCollapsed(false);
+  };
+
+  const handleMouseLeave = () => {
+    // Add a slight delay before collapsing to prevent accidental closing
+    collapseTimeoutRef.current = setTimeout(() => {
+      setIsCollapsed(true);
+    }, 0); // 300ms debounce
+  };
 
   const role = (session?.user as any)?.role || 'staff';
   const isStaff = role === 'staff';
@@ -76,7 +92,9 @@ export default function Sidebar() {
 
   return (
     <aside 
-      className={`h-screen relative flex flex-col bg-white border-r border-[#e2e8f0] transition-all duration-300 ease-in-out z-40 lg:flex ${
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`h-screen relative flex flex-col bg-white border-r border-[#e2e8f0] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] z-40 lg:flex ${
         isCollapsed ? "w-20" : "w-72"
       } ${mounted ? "flex" : "hidden lg:flex"}`}
     >
@@ -89,7 +107,7 @@ export default function Sidebar() {
       </button>
 
       {/* Logo */}
-      <div className={`px-6 pt-8 pb-10 transition-all duration-300 ${isCollapsed ? "items-center" : ""}`}>
+      <div className={`px-6 pt-8 pb-10 transition-all duration-500 ease-in-out ${isCollapsed ? "items-center" : ""}`}>
         <div className="flex items-center gap-3">
           <Link href="/">
              <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center w-full" : ""}`}>
@@ -126,7 +144,7 @@ export default function Sidebar() {
               {hasChildren ? (
                 <button
                   onClick={() => toggleExpand(item.name)}
-                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-500 ease-in-out group ${
                     pathname.startsWith(item.href)
                        ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
                        : "text-[#64748b] font-medium hover:bg-slate-50"
@@ -136,7 +154,7 @@ export default function Sidebar() {
                   {!isCollapsed && (
                     <>
                       <span className="whitespace-nowrap flex-1 text-left">{item.name}</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-500 ${isExpanded ? "rotate-180" : ""}`} />
                     </>
                   )}
                   {pathname.startsWith(item.href) && !isCollapsed && (
@@ -146,7 +164,7 @@ export default function Sidebar() {
               ) : (
                 <Link
                   href={item.href}
-                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-300 group ${
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl font-manrope text-sm tracking-wide transition-all duration-500 ease-in-out group ${
                     isActive
                        ? "text-[#16a34a] font-bold bg-[#16a34a]/10"
                        : "text-[#64748b] font-medium hover:bg-slate-50"
