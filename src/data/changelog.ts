@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776530726654",
+    version: "v1.4.18",
+    date: "2026-04-18",
+    type: "feature",
+    title: "Automatic notification bell playback",
+    description: "Your notification bell now automatically plays updates for unread notifications, keeping you informed without extra clicks."
+  },
+
+  {
     id: "update-1776529760823",
     version: "v1.4.18",
     date: "2026-04-18",
