@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug } from "lucide-react";
 import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -107,6 +107,19 @@ export default function Header() {
   }, []);
 
   const unreadUpdates = SYSTEM_UPDATES.filter(u => !readUpdates.includes(u.id));
+  const prevUnreadCount = useRef(unreadUpdates.length);
+
+  useEffect(() => {
+    // Only play sound if the component is mounted AND the unread count actually increased
+    if (mounted && unreadUpdates.length > prevUnreadCount.current) {
+      try {
+        const audio = new Audio('/sounds/notification.mp3');
+        // Browsers might block autoplay if the user hasn't interacted with the document yet
+        audio.play().catch(e => console.log('Audio autoplay blocked by browser (User must interact first)'));
+      } catch (e) {}
+    }
+    prevUnreadCount.current = unreadUpdates.length;
+  }, [unreadUpdates.length, mounted]);
 
   const handleOpenNotifications = () => {
     setIsNotificationsOpen(!isNotificationsOpen);
