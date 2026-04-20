@@ -57,11 +57,13 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
     : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}`;
 
   const cashSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cash' ? acc + sale.total_amount : acc, 0);
-  const chargeSales = filteredSales.reduce((acc, sale) => sale.payment_type !== 'Cash' ? acc + sale.total_amount : acc, 0);
-  const totalSales = cashSales + chargeSales;
+  const chargeSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Charge' ? acc + sale.total_amount : acc, 0);
+  const deliverySales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Delivery' ? acc + sale.total_amount : acc, 0);
+  const totalSales = cashSales + chargeSales + deliverySales;
 
   const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash');
-  const chargeSalesArr = filteredSales.filter(s => s.payment_type !== 'Cash');
+  const chargeSalesArr = filteredSales.filter(s => s.payment_type === 'Charge');
+  const deliverySalesArr = filteredSales.filter(s => s.payment_type === 'Delivery');
 
   // Intelligent Print Scaling (Calculate Exact Logical Row Footprint to Maximize 98vh Use)
   let scaleFactor = 1;
@@ -73,7 +75,9 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
     logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
     logicalRows += 2; // Charge Sales Base
     logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
-    logicalRows += 4; // Totals Footer block
+    logicalRows += 2; // Delivery Sales Base
+    logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
+    logicalRows += 5; // Totals Footer block (expanded for delivery)
 
     const hasTransmittal = transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n);
     if (hasTransmittal) {
@@ -178,7 +182,7 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
           </thead>
           <tbody>
             <tr>
-              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm">CASH SALES RECEIPT:</td>
+              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
             </tr>
             {cashSalesArr.map((sale, i) => (
               <tr key={`cash-${i}`} className="border-b border-black">
@@ -191,6 +195,23 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
             {cashSalesArr.length === 0 && (
               <tr>
                 <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
+              </tr>
+            )}
+
+            <tr>
+              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">DELIVERY SALES RECEIPT:</td>
+            </tr>
+            {deliverySalesArr.map((sale, i) => (
+              <tr key={`delivery-${i}`} className="border-b border-black">
+                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
+                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
+                <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'DELIVERY').toUpperCase()}</td>
+              </tr>
+            ))}
+            {deliverySalesArr.length === 0 && (
+              <tr>
+                <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Delivery Sales</td>
               </tr>
             )}
             
@@ -216,6 +237,13 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
               <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
               <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
                 ₱ {cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+              <td className="border border-black bg-white px-2 py-1"></td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL DELIVERY SALES:</td>
+              <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                ₱ {deliverySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="border border-black bg-white px-2 py-1"></td>
             </tr>

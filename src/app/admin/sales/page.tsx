@@ -19,7 +19,7 @@ interface SaleEntry {
   unit_cost: number;
   total_amount: number;
   branch_id: string;
-  payment_type: "Cash" | "Charge";
+  payment_type: "Cash" | "Charge" | "Delivery";
   performed_by: string;
   created_at: string;
   inventory?: {
@@ -59,7 +59,7 @@ export default function AdminSalesPage() {
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
     customer_name: "",
-    payment_type: "Cash" as "Cash" | "Charge",
+    payment_type: "Cash" as "Cash" | "Charge" | "Delivery",
     branch_id: "",
     items: Array(10).fill(null).map(() => ({
       item_id: "",
@@ -89,6 +89,7 @@ export default function AdminSalesPage() {
   const [printYear, setPrintYear] = useState(new Date().getFullYear());
   const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
   const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
+  const [mounted, setMounted] = useState(false);
 
   const toggleExpandSale = async (invoiceNo: string) => {
     if (expandedSaleId === invoiceNo) {
@@ -185,6 +186,7 @@ export default function AdminSalesPage() {
   const userBranchIds = (session?.user as any)?.branch_ids || [];
 
   useEffect(() => {
+    setMounted(true);
     if (session) {
       fetchSales();
       fetchInventory();
@@ -334,8 +336,8 @@ export default function AdminSalesPage() {
       setSaving(true);
       const grandTotal = calculateTotal();
 
-      if (currentSale.payment_type === "Charge" && !currentSale.customer_name.trim()) {
-        alert("Customer Name is required for Charge transactions.");
+      if ((currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && !currentSale.customer_name.trim()) {
+        alert(`Customer Name is required for ${currentSale.payment_type} transactions.`);
         setSaving(false);
         return;
       }
@@ -682,7 +684,7 @@ export default function AdminSalesPage() {
       </div>
 
       {/* Bulk Actions Bar */}
-      {role === 'developer' && selectedSaleIds.length > 0 && (
+      {mounted && role === 'developer' && selectedSaleIds.length > 0 && (
         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
            <div className="flex items-center gap-4 text-emerald-700">
               <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black">
@@ -707,7 +709,7 @@ export default function AdminSalesPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                {role === 'developer' && (
+                {mounted && role === 'developer' && (
                   <th className="px-6 py-4 w-10 border-b border-slate-100">
                     <input 
                       type="checkbox" 
@@ -747,7 +749,7 @@ export default function AdminSalesPage() {
                     onClick={() => toggleExpandSale(invoice.invoice_no)}
                     className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''}`}
                   >
-                    {role === 'developer' && (
+                    {mounted && role === 'developer' && (
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
@@ -849,7 +851,7 @@ export default function AdminSalesPage() {
                                               </div>
                                            </div>
                                         </td>
-                                        {role === 'developer' && (
+                                        {mounted && role === 'developer' && (
                                           <td className="px-4 py-3 text-right">
                                              <button 
                                                disabled={loading}
@@ -983,6 +985,7 @@ export default function AdminSalesPage() {
                   >
                     <option value="Cash">Cash</option>
                     <option value="Charge">Charge (Receivable)</option>
+                    <option value="Delivery">Delivery</option>
                   </select>
                 </div>
               </div>
