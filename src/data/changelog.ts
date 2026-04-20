@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776673516989",
+    version: "v1.4.20",
+    date: "2026-04-20",
+    type: "feature",
+    title: "New Delivery Payment Option & Improved Sales Reporting",
+    description: "Staff can now record deliveries as a payment type, giving clearer sales tracking. Sales reports have been refreshed for easier reading, and we’ve fixed several display glitches to make the system smoother."
+  },
+
+  {
     id: "update-1776531023689",
     version: "v1.4.18",
     date: "2026-04-18",
