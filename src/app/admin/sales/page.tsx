@@ -383,7 +383,7 @@ export default function AdminSalesPage() {
       if (salesError) throw salesError;
 
       // 3. Create Payable record if it's a debt (one for the whole invoice)
-      if (currentSale.payment_type === "Charge" && salesData && salesData.length > 0) {
+      if ((currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && salesData && salesData.length > 0) {
         await supabase.from('payables').insert([{
           sale_id: salesData[0].id, // Link to the first record of the batch
           customer_name: currentSale.customer_name,
@@ -985,7 +985,7 @@ export default function AdminSalesPage() {
                   >
                     <option value="Cash">Cash</option>
                     <option value="Charge">Charge (Receivable)</option>
-                    <option value="Delivery">Delivery</option>
+                    <option value="Delivery">Delivery(Receivable)</option>
                   </select>
                 </div>
               </div>

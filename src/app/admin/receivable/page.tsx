@@ -35,6 +35,7 @@ interface ReceivableRecord {
   sales?: {
     invoice_no: string;
     total_amount: number;
+    payment_type: "Cash" | "Charge" | "Delivery";
     inventory?: {
       product_name: string;
     }
@@ -86,7 +87,7 @@ export default function ReceivablesPage() {
 
       let query = supabase
         .from('payables')
-        .select(`*, sales(invoice_no, total_amount, inventory(product_name)), branches(name)`)
+        .select(`*, sales(invoice_no, total_amount, payment_type, inventory(product_name)), branches(name)`)
         .order('created_at', { ascending: false });
 
       if (filterBranch) {
@@ -272,7 +273,7 @@ export default function ReceivablesPage() {
             </div>
             <div>
                <p className="text-3xl font-manrope font-extrabold text-slate-900 leading-none">{records.length}</p>
-               <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Charge Sales</p>
+               <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Accounts Receivable</p>
             </div>
          </div>
       </div>
@@ -336,7 +337,14 @@ export default function ReceivablesPage() {
                           <FileText className="w-5 h-5"/>
                        </div>
                        <div className="flex flex-col">
-                          <span className="text-[11px] font-black text-[#1e40af] uppercase tracking-widest mb-0.5">INV: {record.sales?.invoice_no}</span>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[11px] font-black text-[#1e40af] uppercase tracking-widest">INV: {record.sales?.invoice_no}</span>
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                              record.sales?.payment_type === 'Delivery' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+                            }`}>
+                              {record.sales?.payment_type || 'Charge'}
+                            </span>
+                          </div>
                           <span className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">{record.sales?.inventory?.product_name || 'Multi-item Asset'}</span>
                        </div>
                     </div>
