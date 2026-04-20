@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776674859273",
+    version: "v1.4.20",
+    date: "2026-04-20",
+    type: "fix",
+    title: "Automated delivery payment type in Receivables",
+    description: "The receivables page now automatically determines or fetches the correct payment type for deliveries, eliminating manual entry and reducing errors."
+  },
+
+  {
     id: "update-1776673516989",
     version: "v1.4.20",
     date: "2026-04-20",
