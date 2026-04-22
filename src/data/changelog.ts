@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776819586546",
+    version: "v1.4.22",
+    date: "2026-04-22",
+    type: "fix",
+    title: "Fixed Dashboard and Payables Display Issues",
+    description: "Resolved visual glitches that caused the admin dashboard and payables page to display incorrectly, ensuring a smoother experience for staff."
+  },
+
+  {
     id: "update-1776674859273",
     version: "v1.4.20",
     date: "2026-04-20",
