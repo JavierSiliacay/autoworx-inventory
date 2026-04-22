@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1776822851771",
+    version: "v1.4.22",
+    date: "2026-04-22",
+    type: "feature",
+    title: "Enhanced Sales Reporting with PDF Preview",
+    description: "Staff can now filter sales reports by payment method and instantly preview reports as PDFs before exporting, making it easier to review and share accurate data."
+  },
+
+  {
     id: "update-1776819586546",
     version: "v1.4.22",
     date: "2026-04-22",
