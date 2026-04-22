@@ -18,25 +18,48 @@ interface SalesReportPrintProps {
   year: number;
   reportType: 'monthly' | 'daily' | 'yearly';
   printDate: string; // YYYY-MM-DD
+  paymentTypeFilter?: 'All' | 'Cash' | 'Charge' | 'Delivery';
   transmittalChecks?: { name: string; ref: string; amount: string; bank: string }[];
   transmittalNotes?: string[];
+  isPreview?: boolean;
 }
 
-export default function SalesReportPrint({ sales, month, year, reportType, printDate, transmittalChecks = [], transmittalNotes = [] }: SalesReportPrintProps) {
-  // Filter sales based on month/year OR exact date
+export default function SalesReportPrint({ 
+  sales, 
+  month, 
+  year, 
+  reportType, 
+  printDate, 
+  paymentTypeFilter = 'All',
+  transmittalChecks = [], 
+  transmittalNotes = [],
+  isPreview = false
+}: SalesReportPrintProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+
+  // Filter sales based on month/year OR exact date AND payment type
   const filteredSales = sales.filter(s => {
+    // 1. Time Filter
     const d = new Date(s.date);
+    let timeMatch = false;
     if (reportType === 'monthly') {
-      return d.getMonth() + 1 === month && d.getFullYear() === year;
+      timeMatch = d.getMonth() + 1 === month && d.getFullYear() === year;
     } else if (reportType === 'yearly') {
-      return d.getFullYear() === year;
+      timeMatch = d.getFullYear() === year;
     } else {
       const yStr = d.getFullYear().toString();
       const mStr = (d.getMonth() + 1).toString().padStart(2, '0');
       const dStr = d.getDate().toString().padStart(2, '0');
       const dateStr = `${yStr}-${mStr}-${dStr}`;
-      return dateStr === printDate;
+      timeMatch = dateStr === printDate;
     }
+
+    if (!timeMatch) return false;
+
+    // 2. Payment Type Filter
+    if (paymentTypeFilter === 'All') return true;
+    return s.payment_type === paymentTypeFilter;
   });
 
   const generateTimestamp = new Date().toLocaleString('en-PH', {
@@ -49,12 +72,13 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
   });
 
   const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
+  const filterLabel = paymentTypeFilter === 'All' ? '' : ` (${paymentTypeFilter.toUpperCase()} ONLY)`;
   
   const headerTitle = reportType === 'monthly' 
-    ? `SALES REPORT - ${monthName} ${year}` 
+    ? `SALES REPORT - ${monthName} ${year}${filterLabel}` 
     : reportType === 'yearly'
-    ? `ANNUAL SALES REPORT - FOR YEAR ${year}`
-    : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    ? `ANNUAL SALES REPORT - FOR YEAR ${year}${filterLabel}`
+    : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}${filterLabel}`;
 
   const cashSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cash' ? acc + sale.total_amount : acc, 0);
   const chargeSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Charge' ? acc + sale.total_amount : acc, 0);
@@ -71,12 +95,22 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
   if (reportType === 'daily') {
     let logicalRows = 0;
     logicalRows += 5; // Base layout components (Header margins + title spaces)
-    logicalRows += 3; // Cash Sales Table Base
-    logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
-    logicalRows += 2; // Charge Sales Base
-    logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
-    logicalRows += 2; // Delivery Sales Base
-    logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
+    
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
+      logicalRows += 3; // Cash Sales Table Base
+      logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
+    }
+    
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') {
+      logicalRows += 2; // Delivery Sales Base
+      logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
+    }
+
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') {
+      logicalRows += 2; // Charge Sales Base
+      logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
+    }
+
     logicalRows += 5; // Totals Footer block (expanded for delivery)
 
     const hasTransmittal = transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n);
@@ -99,19 +133,20 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
   return (
     <>
       <div 
-        className={`hidden ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} w-full bg-white text-black p-8 absolute top-0 left-0 z-[9999] overflow-hidden`}
+        id={isPreview ? 'sales-report-preview-container' : 'sales-report-print-container'}
+        className={`${isPreview ? 'block w-[1122px] shadow-2xl mx-auto rounded-none my-8' : 'hidden fixed inset-0 z-[999999] w-full print:fixed print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8 overflow-hidden`}
         style={reportType === 'daily' ? { 
            zoom: scaleFactor, 
-           height: `calc(96vh / ${scaleFactor})`,
-           maxHeight: `calc(96vh / ${scaleFactor})` 
-        } : { minHeight: '100vh' }}
+           height: isPreview ? '794px' : `100vh`,
+           maxHeight: isPreview ? '794px' : `100vh` 
+        } : { minHeight: isPreview ? '794px' : '100vh', height: isPreview ? 'auto' : 'auto' }}
       >
       <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
         <div className="mb-4 flex justify-between items-end shrink-0">
           <div>
             <h1 className="text-2xl font-bold uppercase tracking-wider">{headerTitle}</h1>
-            <p className="text-sm text-gray-600 font-medium">Generated on: {generateTimestamp}</p>
+            <p className="text-sm text-gray-600 font-medium">Generated on: {mounted ? generateTimestamp : ''}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">Autoworx Inventory System</p>
@@ -151,7 +186,7 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
             ) : (
               <tr>
                 <td colSpan={5} className="border border-black px-2 py-4 text-center font-bold text-gray-500 uppercase">
-                  No records found for {reportType === 'yearly' ? year : `${monthName} ${year}`}
+                  No {paymentTypeFilter !== 'All' ? paymentTypeFilter : ''} records found for {reportType === 'yearly' ? year : `${monthName} ${year}`}
                 </td>
               </tr>
             )}
@@ -161,7 +196,7 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
             <tfoot>
               <tr>
                 <td colSpan={3} className="border-l border-b border-black border-r-0 border-t-0 p-0 text-right pr-2"></td>
-                <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold uppercase">Total Revenue:</td>
+                <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold uppercase">{paymentTypeFilter !== 'All' ? `${paymentTypeFilter} ` : ''}Total Revenue:</td>
                 <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold">
                   {totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
@@ -181,79 +216,97 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
-            </tr>
-            {cashSalesArr.map((sale, i) => (
-              <tr key={`cash-${i}`} className="border-b border-black">
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
-                <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN CASH</td>
-              </tr>
-            ))}
-            {cashSalesArr.length === 0 && (
-              <tr>
-                <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
-              </tr>
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
+              <>
+                <tr>
+                  <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
+                </tr>
+                {cashSalesArr.map((sale, i) => (
+                  <tr key={`cash-${i}`} className="border-b border-black">
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
+                    <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN CASH</td>
+                  </tr>
+                ))}
+                {cashSalesArr.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
+                  </tr>
+                )}
+              </>
             )}
 
-            <tr>
-              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">DELIVERY SALES RECEIPT:</td>
-            </tr>
-            {deliverySalesArr.map((sale, i) => (
-              <tr key={`delivery-${i}`} className="border-b border-black">
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
-                <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'DELIVERY').toUpperCase()}</td>
-              </tr>
-            ))}
-            {deliverySalesArr.length === 0 && (
-              <tr>
-                <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Delivery Sales</td>
-              </tr>
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') && (
+              <>
+                <tr>
+                  <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">DELIVERY SALES RECEIPT:</td>
+                </tr>
+                {deliverySalesArr.map((sale, i) => (
+                  <tr key={`delivery-${i}`} className="border-b border-black">
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
+                    <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'DELIVERY').toUpperCase()}</td>
+                  </tr>
+                ))}
+                {deliverySalesArr.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Delivery Sales</td>
+                  </tr>
+                )}
+              </>
             )}
             
-            <tr>
-              <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CHARGE SALES RECEIPT:</td>
-            </tr>
-            {chargeSalesArr.map((sale, i) => (
-              <tr key={`charge-${i}`} className="border-b border-black">
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
-                <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'CHARGE').toUpperCase()}</td>
-              </tr>
-            ))}
-            {chargeSalesArr.length === 0 && (
-              <tr>
-                <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Charge Sales</td>
-              </tr>
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') && (
+              <>
+                <tr>
+                  <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CHARGE SALES RECEIPT:</td>
+                </tr>
+                {chargeSalesArr.map((sale, i) => (
+                  <tr key={`charge-${i}`} className="border-b border-black">
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
+                    <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'CHARGE').toUpperCase()}</td>
+                  </tr>
+                ))}
+                {chargeSalesArr.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Charge Sales</td>
+                  </tr>
+                )}
+              </>
             )}
           </tbody>
           <tfoot>
-            <tr>
-              <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
-              <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
-                ₱ {cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td className="border border-black bg-white px-2 py-1"></td>
-            </tr>
-            <tr>
-              <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL DELIVERY SALES:</td>
-              <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
-                ₱ {deliverySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td className="border border-black bg-white px-2 py-1"></td>
-            </tr>
-            <tr>
-              <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CHARGE SALES:</td>
-              <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
-                ₱ {chargeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </td>
-              <td className="border border-black bg-white px-2 py-1"></td>
-            </tr>
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
+              <tr>
+                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
+                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                  ₱ {cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-black bg-white px-2 py-1"></td>
+              </tr>
+            )}
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') && (
+              <tr>
+                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL DELIVERY SALES:</td>
+                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                  ₱ {deliverySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-black bg-white px-2 py-1"></td>
+              </tr>
+            )}
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') && (
+              <tr>
+                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CHARGE SALES:</td>
+                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                  ₱ {chargeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-black bg-white px-2 py-1"></td>
+              </tr>
+            )}
             <tr>
               <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">GRAND TOTAL SALES:</td>
               <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%] border-b-[3px] border-b-black">
@@ -331,9 +384,33 @@ export default function SalesReportPrint({ sales, month, year, reportType, print
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
           @page { size: A4 landscape; margin: 12mm; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
-          .print\\:block { display: block !important; }
-          .print\\:flex { display: flex !important; }
+          
+          body * {
+            visibility: hidden !important;
+          }
+          
+          #sales-report-print-container, #sales-report-print-container * {
+            visibility: visible !important;
+          }
+          
+          #sales-report-print-container {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: block !important;
+            background: white !important;
+            z-index: 9999999 !important;
+          }
+
+          body { 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+            margin: 0; 
+            padding: 0; 
+            background: white !important;
+          }
           
           .print-daily-table td, .print-daily-table th {
              padding-top: max(3px, 0.6vh) !important;

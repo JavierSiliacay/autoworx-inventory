@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -87,6 +87,8 @@ export default function AdminSalesPage() {
   const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
   const [printMonth, setPrintMonth] = useState(new Date().getMonth() + 1);
   const [printYear, setPrintYear] = useState(new Date().getFullYear());
+  const [printPaymentType, setPrintPaymentType] = useState<'All' | 'Cash' | 'Charge' | 'Delivery'>('All');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
   const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
   const [mounted, setMounted] = useState(false);
@@ -730,14 +732,14 @@ export default function AdminSalesPage() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={role === 'developer' ? 7 : 6} className="px-6 py-20 text-center">
+                  <td colSpan={mounted && role === 'developer' ? 7 : 6} className="px-6 py-20 text-center">
                     <Loader2 className="w-8 h-8 text-[#16a34a] animate-spin mx-auto mb-2" />
                     <span className="text-sm text-slate-400 font-medium">Loading ledger...</span>
                   </td>
                 </tr>
               ) : groupedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={role === 'developer' ? 7 : 6} className="px-6 py-20 text-center text-slate-400">
+                  <td colSpan={mounted && role === 'developer' ? 7 : 6} className="px-6 py-20 text-center text-slate-400">
                     <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="font-medium italic">No sales records found.</p>
                   </td>
@@ -1188,6 +1190,22 @@ export default function AdminSalesPage() {
                 </div>
               )}
 
+              {/* Payment Type Filter */}
+              <div className="space-y-2 pt-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                  {['All', 'Cash', 'Charge', 'Delivery'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setPrintPaymentType(type as any)}
+                      className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Transmittal Config */}
               {printType === 'daily' && (
                 <div className="pt-4 border-t border-slate-100 mt-4">
@@ -1246,10 +1264,11 @@ export default function AdminSalesPage() {
               <button
                 onClick={() => {
                   setIsPrintModalOpen(false);
-                  setTimeout(() => window.print(), 300);
+                  setIsPreviewOpen(true);
                 }}
                 className="w-full bg-[#1a1b20] text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2"
               >
+                <Printer className="w-4 h-4" />
                 Generate Print View
               </button>
             </div>
@@ -1258,7 +1277,75 @@ export default function AdminSalesPage() {
       )}
     </div>
 
-    <SalesReportPrint sales={groupedSales as any} month={printMonth} year={printYear} reportType={printType} printDate={printDate} transmittalChecks={transmittalChecks} transmittalNotes={transmittalNotes} />
+    {mounted && isPreviewOpen && (
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[1240px] max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+          {/* Modal Header */}
+          <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <Printer className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-manrope font-black text-[#1a1b20]">PDF Report Preview</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Verify accuracy before printing</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  setIsPrintModalOpen(true);
+                }}
+                className="px-6 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all uppercase tracking-wider"
+              >
+                Close / Back
+              </button>
+              <button
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  setTimeout(() => window.print(), 300);
+                }}
+                className="px-8 py-2.5 bg-indigo-600 hover:bg-[#1a1b20] text-white text-xs font-bold rounded-xl shadow-xl shadow-indigo-100 transition-all flex items-center gap-2 uppercase tracking-wider"
+              >
+                <Printer className="w-4 h-4" />
+                Confirm Print
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Body (Scrollable Preview Area) */}
+          <div className="flex-1 overflow-auto bg-slate-100/50 p-8 flex justify-center">
+            <div className="relative transform origin-top hover:scale-[1.01] transition-transform duration-500">
+              <div className="absolute -inset-4 bg-indigo-600/5 blur-2xl rounded-full opacity-50" />
+              <SalesReportPrint 
+                sales={groupedSales as any} 
+                month={printMonth} 
+                year={printYear} 
+                reportType={printType} 
+                printDate={printDate} 
+                paymentTypeFilter={printPaymentType}
+                transmittalChecks={transmittalChecks} 
+                transmittalNotes={transmittalNotes} 
+                isPreview={true}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <SalesReportPrint 
+      sales={groupedSales as any} 
+      month={printMonth} 
+      year={printYear} 
+      reportType={printType} 
+      printDate={printDate} 
+      paymentTypeFilter={printPaymentType}
+      transmittalChecks={transmittalChecks} 
+      transmittalNotes={transmittalNotes} 
+      isPreview={false}
+    />
     </>
   );
 }
