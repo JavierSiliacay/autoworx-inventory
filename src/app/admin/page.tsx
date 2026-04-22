@@ -21,6 +21,11 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [revenue, setRevenue] = useState(0);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (session) {
@@ -233,7 +238,7 @@ export default function AdminDashboardPage() {
   const isStaff = role === 'staff';
 
   const handleDeleteSale = async (id: string, invoiceNo: string, itemId: string, qty: number) => {
-    if (role !== 'developer') return;
+    if (!mounted || role !== 'developer') return;
     if (!confirm(`DEVELOPER ONLY: Delete test sale ${invoiceNo}? This will revert stock (+${qty}L).`)) return;
 
     try {
@@ -278,7 +283,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleBulkDeleteDashboard = async () => {
-    if (role !== 'developer' || selectedSaleIds.length === 0) return;
+    if (!mounted || role !== 'developer' || selectedSaleIds.length === 0) return;
     if (!confirm(`DEVELOPER ONLY: Purge ${selectedSaleIds.length} test records? This will attempt to restore stock.`)) return;
 
     try {
@@ -327,7 +332,7 @@ export default function AdminDashboardPage() {
       {/* Welcome Header */}
       <div className="mb-10">
         <h1 className="text-3xl md:text-5xl font-manrope font-extrabold text-[#111827] tracking-tight mb-2">
-          Hello, <span className="text-[#16a34a]">{session?.user?.name || "Member"}</span> 👋
+          Hello, <span className="text-[#16a34a]">{mounted ? (session?.user?.name || "Member") : "Member"}</span> 👋
         </h1>
         <p className="text-sm md:text-base text-[#64748b] font-medium font-manrope">
           Welcome back! Here's the current pulse of the Autoworx branch network.
@@ -421,7 +426,7 @@ export default function AdminDashboardPage() {
               {stats.branches}
             </p>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-              {isStaff ? 'Assigned Clusters' : 'Active Branch'}
+              {mounted ? (isStaff ? 'Assigned Clusters' : 'Active Branch') : 'Assigned Clusters'}
             </p>
           </div>
         </div>
@@ -503,7 +508,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Dashboard Bulk Action Bar */}
-        {role === 'developer' && selectedSaleIds.length > 0 && (
+        {mounted && role === 'developer' && selectedSaleIds.length > 0 && (
           <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between mb-4">
              <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">{selectedSaleIds.length} Test Records Selected</span>
              <button 
@@ -520,7 +525,7 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-[#e2e8f0]">
-                  {role === 'developer' && (
+                  {mounted && role === 'developer' && (
                     <th className="px-6 py-4 w-10">
                       <input 
                         type="checkbox" 
@@ -534,13 +539,13 @@ export default function AdminDashboardPage() {
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] hidden md:table-cell">Asset Detail</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center">Qty</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-right">Revenue</th>
-                  {role === 'developer' && <th className="sticky right-0 bg-slate-50 z-20 px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center border-l border-slate-100">Ops</th>}
+                  {mounted && role === 'developer' && <th className="sticky right-0 bg-slate-50 z-20 px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#64748b] text-center border-l border-slate-100">Ops</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e2e8f0]">
                 {sales.map((sale, i) => (
                   <tr key={i} className={`hover:bg-slate-50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/50' : ''}`}>
-                    {role === 'developer' && (
+                    {mounted && role === 'developer' && (
                       <td className="px-6 py-4">
                         <input 
                           type="checkbox" 
@@ -576,7 +581,7 @@ export default function AdminDashboardPage() {
                         ₱{parseFloat(sale.total_amount || 0).toLocaleString()}
                       </p>
                     </td>
-                    {role === 'developer' && (
+                    {mounted && role === 'developer' && (
                       <td className="sticky right-0 bg-white group-hover:bg-slate-50 px-6 py-4 text-center border-l border-slate-100 z-10 transition-colors">
                         <button 
                           onClick={() => handleDeleteSale(sale.id, sale.invoice_no, sale.item_id, sale.quantity)}

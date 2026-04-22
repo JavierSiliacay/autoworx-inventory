@@ -20,6 +20,7 @@ import {
   Edit2,
   Save,
   BadgeAlert,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -122,6 +123,11 @@ export default function PayablesPage() {
   const [editRecord, setEditRecord] = useState<Partial<SupplierPayable> | null>(null);
   const [isEditNew, setIsEditNew] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ── Data Fetching ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -437,8 +443,11 @@ export default function PayablesPage() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-10 py-6"><SortBtn field="supplier_name" label="Supplier" /></th>
+                <tr className="bg-slate-50/50">
+                  {mounted && role === 'developer' && (
+                    <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ops</th>
+                  )}
+                  <th className="px-10 py-6"><SortBtn field="supplier_name" label="Supplier" /></th>
                 <th className="px-6 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reference No.</th>
                 <th className="px-6 py-6"><SortBtn field="due_date" label="Due Date" /></th>
                 <th className="px-6 py-6 text-center"><SortBtn field="status" label="Status" /></th>
@@ -460,6 +469,18 @@ export default function PayablesPage() {
                 const isOverdue = record.status !== "Paid" && new Date(record.due_date) < new Date();
                 return (
                   <tr key={record.id} className="hover:bg-slate-50/80 transition-all group">
+                    {mounted && role === 'developer' && (
+                      <td className="px-10 py-7 text-center">
+                        <button onClick={async () => {
+                          if (confirm("DEVELOPER: Permanent delete?")) {
+                            await supabase.from("supplier_payables").delete().eq("id", record.id);
+                            fetchPayables();
+                          }
+                        }} className="text-red-400 hover:text-red-600">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
                     <td className="px-10 py-7">
                       <div className="flex flex-col">
                         <span className="text-sm font-extrabold text-[#111827] mb-1 flex items-center gap-2">

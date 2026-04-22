@@ -49,6 +49,7 @@ interface StaffPerformanceDrawerProps {
 
 export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerformanceDrawerProps) {
   const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [devStats, setDevStats] = useState<any>(null);
@@ -59,6 +60,7 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
   const [savingStatus, setSavingStatus] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (staff) {
       loadStats();
 
@@ -120,7 +122,7 @@ export default function StaffPerformanceDrawer({ staff, onClose }: StaffPerforma
   if (!staff) return null;
 
   const viewerRole = (session?.user as any)?.role || 'staff';
-  const canEditStatus = viewerRole === 'developer';
+  const canEditStatus = mounted && viewerRole === 'developer';
   const isDeveloper = staff.role === 'developer';
 
   return (
