@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1778219566917",
+    version: "v1.5.8",
+    date: "2026-05-08",
+    type: "feature",
+    title: "Centralized Security Management",
+    description: "Administrators can now manage security settings from a single, centralized location, making it easier to maintain and enforce security policies."
+  },
+
+  {
     id: "update-1776823723699",
     version: "v1.4.22",
     date: "2026-04-22",
