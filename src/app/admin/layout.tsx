@@ -1,6 +1,8 @@
 import AdminShell from "@/components/layout/AdminShell";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { adminConfig } from "@/config/admin-config";
+import MaintenanceGuard from "@/components/admin/MaintenanceGuard";
 
 export default async function AdminLayout({
   children,
@@ -24,5 +26,12 @@ export default async function AdminLayout({
     redirect("/select-branch");
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <MaintenanceGuard 
+      isMaintenance={!adminConfig.developerAvailable} 
+      userRole={role}
+    >
+      <AdminShell>{children}</AdminShell>
+    </MaintenanceGuard>
+  );
 }
