@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1779746868317",
+    version: "v1.5.25",
+    date: "2026-05-25",
+    type: "improvement",
+    title: "System Restored and Ready for Further Improvements",
+    description: "The system is back online and fully operational, enabling the team to work on new enhancements and deliver a more reliable experience for users."
+  },
+
+  {
     id: "update-1778219566917",
     version: "v1.5.8",
     date: "2026-05-08",
