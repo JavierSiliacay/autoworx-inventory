@@ -5,5 +5,5 @@
  * This will block all admin access except for users with the 'developer' role.
  */
 export const adminConfig = {
-  developerAvailable: false, // Set to true to enable normal operations
+  developerAvailable: true, // Set to true to enable normal operations
 };
