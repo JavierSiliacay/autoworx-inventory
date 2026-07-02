@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useNetwork } from "@/context/NetworkContext";
 import SalesReportPrint from "@/components/sales/SalesReportPrint";
+import EditSaleModal from "@/components/admin/sales/EditSaleModal";
 
 interface SaleEntry {
   id: string;
@@ -53,6 +54,8 @@ export default function AdminSalesPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSaleToEdit, setSelectedSaleToEdit] = useState<any>(null);
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   
   const [currentSale, setCurrentSale] = useState({
@@ -263,10 +266,25 @@ export default function AdminSalesPage() {
         throw error;
       }
       
+      // Fetch Staff Map to convert emails to names
+      let staffMap: Record<string, string> = {};
+      try {
+        const { data: staffData } = await supabase.from("users").select("email, name, role");
+        if (staffData) {
+          staffData.forEach(u => { 
+             if (u.email) {
+                const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
+                staffMap[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
+             }
+          });
+        }
+      } catch (e) { console.warn("Staff map fetch error"); }
+
       const results = (data || []).map((s: any) => ({
         ...s,
         inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
-        branches: Array.isArray(s.branches) ? s.branches[0] : s.branches
+        branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
+        performed_by_name: s.performed_by ? (staffMap[s.performed_by.toLowerCase()] || s.performed_by.split('@')[0]) : "Unknown"
       }));
       setSales(results);
     } catch (err) {
@@ -616,7 +634,7 @@ export default function AdminSalesPage() {
 
   if (showSetupAlert) {
     return (
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         <div className="bg-white p-12 rounded-[2rem] border border-emerald-100 shadow-xl shadow-emerald-50 text-center space-y-6">
           <div className="w-20 h-20 bg-emerald-100/50 rounded-[2rem] flex items-center justify-center mx-auto">
              <AlertTriangle className="w-10 h-10 text-emerald-600" />
@@ -646,7 +664,7 @@ export default function AdminSalesPage() {
 
   return (
     <>
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 print:hidden">
+    <div className="p-4 md:p-4 md:p-8 space-y-8 animate-in fade-in duration-500 print:hidden">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-1">
@@ -794,14 +812,25 @@ export default function AdminSalesPage() {
                         </span>
                         <div className="absolute bottom-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 text-[9px] font-bold text-slate-400 flex items-center gap-1 bg-white px-2 py-0.5 rounded shadow-sm border border-slate-100">
                           <User className="w-3 h-3" />
-                          <span className="max-w-[70px] truncate" title={invoice.performed_by}>
-                            {invoice.performed_by.split('@')[0]}
+                          <span className="max-w-[120px] truncate" title={invoice.performed_by}>
+                            {invoice.performed_by_name || invoice.performed_by.split('@')[0]}
                           </span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                       {expandedSaleId === invoice.invoice_no ? <ChevronUp className="w-4 h-4 text-slate-300 ml-auto"/> : <ChevronDown className="w-4 h-4 text-slate-300 ml-auto"/>}
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-3 h-full min-h-[64px]">
+                       <button
+                          onClick={(e) => {
+                             e.stopPropagation();
+                             setSelectedSaleToEdit(invoice);
+                             setIsEditModalOpen(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors z-10"
+                          title="Edit Sale"
+                       >
+                          <Edit2 className="w-4 h-4" />
+                       </button>
+                       {expandedSaleId === invoice.invoice_no ? <ChevronUp className="w-4 h-4 text-slate-300"/> : <ChevronDown className="w-4 h-4 text-slate-300"/>}
                     </td>
                   </tr>
 
@@ -814,6 +843,7 @@ export default function AdminSalesPage() {
                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Breakdown</span>
                                <span className="text-[9px] font-black text-emerald-600 uppercase">Grand Total: ₱{invoice.total_amount.toLocaleString()}</span>
                             </div>
+                            <div className="overflow-x-auto w-full">
                             <table className="w-full text-left text-xs">
                                <thead>
                                   <tr className="text-slate-400 font-bold border-b border-slate-50">
@@ -895,6 +925,7 @@ export default function AdminSalesPage() {
                                   ))}
                                </tbody>
                             </table>
+                            </div>
                          </div>
                       </td>
                     </tr>
@@ -911,7 +942,7 @@ export default function AdminSalesPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
-            <div className="px-8 pt-8 pb-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+            <div className="px-4 md:px-8 pt-4 md:pt-8 pb-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                   <TrendingUp className="w-5 h-5" />
@@ -929,8 +960,8 @@ export default function AdminSalesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveSale} className="p-8 space-y-6">
-              <div className="grid grid-cols-4 gap-4">
+            <form onSubmit={handleSaveSale} className="p-4 md:p-4 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Date */}
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sale Date</label>
@@ -1012,6 +1043,7 @@ export default function AdminSalesPage() {
 
                 <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
                   <div className="max-h-[300px] overflow-y-auto">
+                    <div className="overflow-x-auto w-full">
                     <table className="w-full text-left border-collapse">
                       <thead className="sticky top-0 z-10 bg-slate-100">
                         <tr>
@@ -1046,8 +1078,8 @@ export default function AdminSalesPage() {
                                 type="number"
                                 min="0.01" step="0.01"
                                 className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
-                                value={item.quantity}
-                                onChange={(e) => handleRowChange(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                                value={item.quantity === undefined ? "" : item.quantity}
+                                onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                               />
                             </td>
                             <td className="px-2 py-2">
@@ -1055,8 +1087,8 @@ export default function AdminSalesPage() {
                                 type="number"
                                 step="0.01"
                                 className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
-                                value={item.unit_price}
-                                onChange={(e) => handleRowChange(idx, 'unit_price', parseFloat(e.target.value) || 0)}
+                                value={item.unit_price === undefined ? "" : item.unit_price}
+                                onChange={(e) => handleRowChange(idx, 'unit_price', e.target.value === "" ? ("" as any) : e.target.value as any)}
                               />
                             </td>
                             <td className="px-4 py-2 text-right text-sm font-bold text-[#1a1b20]">
@@ -1075,6 +1107,7 @@ export default function AdminSalesPage() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1279,7 +1312,7 @@ export default function AdminSalesPage() {
     </div>
 
     {mounted && isPreviewOpen && (
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-4 md:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
         <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[1240px] max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
           {/* Modal Header */}
           <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -1316,7 +1349,7 @@ export default function AdminSalesPage() {
           </div>
 
           {/* Modal Body (Scrollable Preview Area) */}
-          <div className="flex-1 overflow-auto bg-slate-100/50 p-8 flex justify-center">
+          <div className="flex-1 overflow-auto bg-slate-100/50 p-4 md:p-8 flex justify-center">
             <div className="relative transform origin-top hover:scale-[1.01] transition-transform duration-500">
               <div className="absolute -inset-4 bg-indigo-600/5 blur-2xl rounded-full opacity-50" />
               <SalesReportPrint 
@@ -1346,6 +1379,17 @@ export default function AdminSalesPage() {
       transmittalChecks={transmittalChecks} 
       transmittalNotes={transmittalNotes} 
       isPreview={false}
+    />
+    <EditSaleModal
+      isOpen={isEditModalOpen}
+      onClose={() => setIsEditModalOpen(false)}
+      invoiceData={selectedSaleToEdit}
+      inventory={inventory}
+      onSuccess={() => {
+        fetchSales();
+        fetchInventory();
+      }}
+      session={session}
     />
     </>
   );

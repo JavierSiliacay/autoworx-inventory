@@ -304,14 +304,14 @@ export default function NewStockInPage() {
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="0.1" value={item.quantity_received} min={0.1}
-                            onChange={e => updateItem(idx, "quantity_received", parseFloat(e.target.value) || 0)}
+                            onChange={e => updateItem(idx, "quantity_received", e.target.value as any || 0)}
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="relative inline-flex items-center">
                             <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
                             <input type="number" value={item.unit_cost}
-                              onChange={e => updateItem(idx, "unit_cost", parseFloat(e.target.value) || 0)}
+                              onChange={e => updateItem(idx, "unit_cost", e.target.value as any || 0)}
                               className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#16a34a]" />
                           </div>
                         </td>
@@ -347,13 +347,13 @@ export default function NewStockInPage() {
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
                         <input type="number" step="0.1" value={item.quantity_received}
-                          onChange={e => updateItem(idx, "quantity_received", parseFloat(e.target.value) || 0)}
+                          onChange={e => updateItem(idx, "quantity_received", e.target.value as any || 0)}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Cost</p>
                         <input type="number" value={item.unit_cost}
-                          onChange={e => updateItem(idx, "unit_cost", parseFloat(e.target.value) || 0)}
+                          onChange={e => updateItem(idx, "unit_cost", e.target.value as any || 0)}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
                       </div>
                       <div>

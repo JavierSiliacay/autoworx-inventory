@@ -25,10 +25,16 @@ interface GroupedProduct {
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState("all");
   const [loading, setLoading] = useState(true);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     fetchInventory();
+    fetchBranches();
 
     const channel = supabase
       .channel('public-inventory')
@@ -41,6 +47,11 @@ export default function ProductsPage() {
       supabase.removeChannel(channel);
     }
   }, []);
+
+  async function fetchBranches() {
+    const { data } = await supabase.from('branches').select('id, name');
+    setBranches(data || []);
+  }
 
   async function fetchInventory() {
     try {
@@ -94,9 +105,39 @@ export default function ProductsPage() {
     return acc;
   }, []);
 
-  const filtered = groupedProducts.filter(p =>
+  // Filter out products that don't belong to the selected branch, if any
+  let branchFiltered = groupedProducts;
+  if (selectedBranch !== "all") {
+    const selectedBranchName = branches.find(b => b.id === selectedBranch)?.name;
+    if (selectedBranchName) {
+      branchFiltered = groupedProducts
+        .map(p => {
+          // Find the specific branch in the product's branches array
+          const branchStock = p.branches.find(b => b.name === selectedBranchName);
+          if (!branchStock) return null;
+          
+          return {
+            ...p,
+            total: parseFloat(branchStock.stock), // Update total to only reflect this branch
+            branches: [branchStock] // Only show this branch in the breakdown
+          };
+        })
+        .filter(Boolean) as GroupedProduct[];
+    }
+  }
+
+  const filtered = branchFiltered.filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
   );
+  
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedBranch]);
 
   return (
     <div className="bg-white text-[#0f172a] min-h-screen" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -127,7 +168,20 @@ export default function ProductsPage() {
               </div>
             </div>
             
-            <div className="mt-6 md:mt-8">
+            <div className="mt-6 md:mt-8 space-y-4">
+               <div>
+                  <h3 className="font-manrope font-bold text-xs tracking-widest uppercase text-slate-400 mb-2">Location</h3>
+                  <select 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-[#0f172a] focus:ring-4 focus:ring-[#16a34a]/5 focus:border-[#16a34a]/30 transition-all outline-none appearance-none"
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                  >
+                    <option value="all">All Branches (Global)</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+               </div>
                <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#16a34a] transition-colors" />
                   <input 
@@ -157,9 +211,10 @@ export default function ProductsPage() {
                 <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-[0.2em]">Synchronizing Archives...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                {filtered.map((product, i) => (
-                  <div key={i} className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#16a34a]/30 transition-all group overflow-hidden relative">
+              <div className="space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                  {paginatedItems.map((product, i) => (
+                    <div key={i} className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#16a34a]/30 transition-all group overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#16a34a]/5 to-transparent rounded-bl-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500" />
                     
                     <div className="flex justify-between items-start mb-8 relative z-10">
@@ -186,13 +241,43 @@ export default function ProductsPage() {
                     </div>
                   </div>
                 ))}
-                {filtered.length === 0 && (
-                  <div className="col-span-full py-32 flex flex-col items-center gap-4 text-center">
-                     <span className="text-5xl">📦</span>
-                     <div>
-                        <p className="text-slate-900 font-bold text-lg">No Results Found</p>
-                        <p className="text-slate-400 text-sm">Adjust your technical filters to see available assets.</p>
-                     </div>
+                  {filtered.length === 0 && (
+                    <div className="col-span-full py-32 flex flex-col items-center gap-4 text-center">
+                       <span className="text-5xl">📦</span>
+                       <div>
+                          <p className="text-slate-900 font-bold text-lg">No Inventory Available</p>
+                          <p className="text-slate-400 text-sm">
+                            {selectedBranch !== "all" 
+                              ? `We currently have no products available at the ${branches.find(b => b.id === selectedBranch)?.name || 'selected'} branch.`
+                              : "Adjust your technical filters to see available assets."}
+                          </p>
+                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100">
+                    <p className="text-sm font-medium text-slate-500">
+                      Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span className="font-bold text-slate-900">{filtered.length}</span> assets
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        Previous
+                      </button>
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

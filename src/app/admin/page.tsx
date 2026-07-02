@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText, Loader2, Shield, Trash2 } from "lucide-react";
+import { Package, ClipboardList, AlertTriangle, Map, TrendingUp, Truck, FileText, Loader2, Shield, Trash2, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
+import { usePresence } from "@/context/PresenceContext";
+import ActiveStaffModal from "@/components/admin/ActiveStaffModal";
 
 export default function AdminDashboardPage() {
   const { data: session } = useSession();
@@ -18,6 +20,20 @@ export default function AdminDashboardPage() {
   const [distribution, setDistribution] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const { onlineUsers } = usePresence();
+  
+  // Calculate active count based on selected branch
+  const activeCount = React.useMemo(() => {
+    const activePresenceList = Object.values(onlineUsers).map(connections => connections[0]).filter(Boolean);
+    if (selectedBranchId === "all") return activePresenceList.length;
+    
+    return activePresenceList.filter(user => 
+      user.role === 'developer' || user.role === 'owner' || user.role === 'manager' || user.role === 'admin' || 
+      user.branch_id === selectedBranchId || user.branch_id === 'all'
+    ).length;
+  }, [onlineUsers, selectedBranchId]);
+
   const [loading, setLoading] = useState(true);
   const [revenue, setRevenue] = useState(0);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
@@ -90,8 +106,26 @@ export default function AdminDashboardPage() {
 
       const uniqueNames = Array.from(new Set(invDocs.map(i => i.product_name)));
 
-      // Recent 5 updates
-      setRecentLogs(invDocs.slice(0, 5));
+      // Fetch Staff Map to convert emails to names
+      let staffMap: Record<string, string> = {};
+      try {
+        const { data: staffData } = await supabase.from("users").select("email, name, role");
+        if (staffData) {
+          staffData.forEach(u => { 
+             if (u.email) {
+                const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
+                staffMap[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
+             }
+          });
+        }
+      } catch (e) { console.warn("Staff map fetch error"); }
+
+      // Recent 5 updates (map email to name)
+      const logs = invDocs.slice(0, 5).map(log => ({
+        ...log,
+        last_modified_by_name: log.last_modified_by ? (staffMap[log.last_modified_by.toLowerCase()] || log.last_modified_by) : "System"
+      }));
+      setRecentLogs(logs);
 
       const rows = uniqueNames.map(name => {
         const productInv = invDocs.filter(i => i.product_name === name);
@@ -501,25 +535,33 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* ── Active Branch / Access ── */}
-        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-              <Map className="w-4 h-4 text-[#64748b]" />
+        {/* ── Active Staff (Real-time) ── */}
+        <div 
+          onClick={() => setIsStaffModalOpen(true)}
+          className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md hover:border-emerald-500/30 transition-all text-left relative overflow-hidden group cursor-pointer z-20"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/5 to-transparent rounded-bl-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500" />
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-500">
+              <Users className="w-4 h-4" />
             </div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
-              Access
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug flex items-center gap-2">
+              Active Staff
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
             </span>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 relative z-10">
             <p
-              className="font-manrope font-extrabold text-[#111827]"
+              className="font-manrope font-extrabold text-emerald-600"
               style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             >
-              {stats.branches}
+              {activeCount}
             </p>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
-              {mounted ? (isStaff ? 'Assigned Clusters' : 'Active Branch') : 'Assigned Clusters'}
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2 group-hover:text-emerald-600 transition-colors">
+              Click to view who's online
             </p>
           </div>
         </div>
@@ -760,12 +802,12 @@ export default function AdminDashboardPage() {
                 <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-[#1e40af]/20 transition-all">
                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-[#1e40af] font-bold text-xs shadow-sm">
-                        {log.last_modified_by?.[0].toUpperCase() || 'A'}
+                        {log.last_modified_by_name?.[0].toUpperCase() || 'A'}
                       </div>
                       <div>
                          <p className="text-xs font-bold text-slate-900">{log.product_name}</p>
                          <p className="text-[10px] text-slate-400 font-medium">
-                           {log.branches?.name} • By {log.last_modified_by}
+                           {log.branches?.name} • By {log.last_modified_by_name}
                          </p>
                       </div>
                    </div>
@@ -799,6 +841,13 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </section>
+
+      <ActiveStaffModal 
+        isOpen={isStaffModalOpen}
+        onClose={() => setIsStaffModalOpen(false)}
+        selectedBranchId={selectedBranchId}
+        activeCount={activeCount}
+      />
     </div>
   );
 }

@@ -255,7 +255,7 @@ export default function CreatePurchaseOrderPage() {
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" value={item.quantity} min={1}
-                            onChange={e => updateItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                            onChange={e => updateItem(idx, "quantity", e.target.value as any || 0)}
                             className="w-16 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#1e40af]" />
                         </td>
                         <td className="px-4 py-3 text-center text-xs text-slate-400 font-medium uppercase">{item.unit}</td>
@@ -263,7 +263,7 @@ export default function CreatePurchaseOrderPage() {
                           <div className="relative inline-flex items-center">
                             <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
                             <input type="number" value={item.unit_price}
-                              onChange={e => updateItem(idx, "unit_price", parseFloat(e.target.value) || 0)}
+                              onChange={e => updateItem(idx, "unit_price", e.target.value as any || 0)}
                               className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#1e40af]" />
                           </div>
                         </td>
@@ -297,13 +297,13 @@ export default function CreatePurchaseOrderPage() {
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
                         <input type="number" value={item.quantity} min={1}
-                          onChange={e => updateItem(idx, "quantity", parseFloat(e.target.value) || 0)}
+                          onChange={e => updateItem(idx, "quantity", e.target.value as any || 0)}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Price</p>
                         <input type="number" value={item.unit_price}
-                          onChange={e => updateItem(idx, "unit_price", parseFloat(e.target.value) || 0)}
+                          onChange={e => updateItem(idx, "unit_price", e.target.value as any || 0)}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
                       </div>
                       <div>

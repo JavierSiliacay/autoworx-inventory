@@ -19,6 +19,7 @@ export default function DeleteHistoryPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
   const [logs, setLogs] = useState<DeleteLog[]>([]);
+  const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -32,17 +33,18 @@ export default function DeleteHistoryPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('delete_history_logs')
-        .select('*')
-        .order('deleted_at', { ascending: false });
+      const [{ data: logsData, error: logsError }, { data: branchData }] = await Promise.all([
+        supabase.from('delete_history_logs').select('*').order('deleted_at', { ascending: false }),
+        supabase.from('branches').select('id, name')
+      ]);
 
-      if (error) throw error;
+      if (logsError) throw logsError;
+      if (branchData) setBranches(branchData);
       
-      let finalData = data || [];
+      let finalData = logsData || [];
       if (selectedBranchId !== 'all') {
-        // Only show records belonging to the selected branch, OR records that don't have a branch_id (global records)
-        finalData = finalData.filter(log => !log.record_data?.branch_id || log.record_data.branch_id === selectedBranchId);
+        // Only show records belonging exactly to the selected branch
+        finalData = finalData.filter(log => log.record_data?.branch_id === selectedBranchId);
       }
       
       setLogs(finalData);
@@ -124,6 +126,11 @@ export default function DeleteHistoryPage() {
     return null;
   };
 
+  const getBranchName = (branchId: string) => {
+    if (!branchId) return "Global";
+    return branches.find(b => b.id === branchId)?.name || "Unknown Branch";
+  };
+
   const filteredLogs = logs.filter(log => 
     formatTable(log.original_table).toLowerCase().includes(searchTerm.toLowerCase()) ||
     getIdentifier(log.record_data).toLowerCase().includes(searchTerm.toLowerCase())
@@ -164,6 +171,7 @@ export default function DeleteHistoryPage() {
               <tr className="bg-slate-50/50">
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original Module</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Record Information</th>
+                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deleted At</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
@@ -171,13 +179,13 @@ export default function DeleteHistoryPage() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-10 py-32 text-center">
+                  <td colSpan={5} className="px-10 py-32 text-center">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-300 mx-auto" />
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-10 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
+                  <td colSpan={5} className="px-10 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
                     Recycle bin is empty
                   </td>
                 </tr>
@@ -198,6 +206,11 @@ export default function DeleteHistoryPage() {
                           <span className="text-sm font-extrabold text-slate-900">{getIdentifier(log.record_data)}</span>
                           {amount && <span className="text-xs font-bold text-emerald-600">{amount}</span>}
                         </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">
+                          {getBranchName(log.record_data?.branch_id)}
+                        </span>
                       </td>
                       <td className="px-10 py-6">
                         <span className="text-xs font-bold text-slate-500">{formatDate(log.deleted_at)}</span>

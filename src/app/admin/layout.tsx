@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { adminConfig } from "@/config/admin-config";
 import MaintenanceGuard from "@/components/admin/MaintenanceGuard";
+import { PresenceProvider } from "@/context/PresenceContext";
 
 export default async function AdminLayout({
   children,
@@ -21,8 +22,8 @@ export default async function AdminLayout({
   const branchIds = (session.user as any)?.branch_ids || [];
 
   // 3. Enforce Branch Selection for Staff without a branch assigned
-  // If role is staff and no branch_ids, redirect to select-branch
-  if (role === "staff" && branchIds.length === 0) {
+  // If role is staff or inventory clerk and no branch_ids, redirect to select-branch
+  if ((role === "staff" || role === "inventory clerk") && branchIds.length === 0) {
     redirect("/select-branch");
   }
 
@@ -31,7 +32,9 @@ export default async function AdminLayout({
       isMaintenance={!adminConfig.developerAvailable} 
       userRole={role}
     >
-      <AdminShell>{children}</AdminShell>
+      <PresenceProvider>
+        <AdminShell>{children}</AdminShell>
+      </PresenceProvider>
     </MaintenanceGuard>
   );
 }

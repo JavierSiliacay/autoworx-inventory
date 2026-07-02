@@ -227,7 +227,7 @@ export default function Sidebar() {
           className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-[#64748b] font-medium font-manrope text-sm tracking-wide transition-all duration-200 hover:text-red-500 hover:bg-red-50 group`}
         >
           <LogOut className="w-5 h-5 shrink-0 group-hover:-translate-x-1 transition-transform" />
-          {!isCollapsed && <span className="whitespace-nowrap">Logout System</span>}
+          {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
         </Link>
       </nav>
 

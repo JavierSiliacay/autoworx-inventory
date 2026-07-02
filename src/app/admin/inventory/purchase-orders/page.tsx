@@ -581,6 +581,7 @@ export default function PurchaseOrdersPage() {
                   </div>
                 ) : (
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto w-full">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200">
                         <tr>
@@ -659,6 +660,7 @@ export default function PurchaseOrdersPage() {
                         </tfoot>
                       )}
                     </table>
+                    </div>
                   </div>
                 )}
               </div>

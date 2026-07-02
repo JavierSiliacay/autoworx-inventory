@@ -384,6 +384,7 @@ export default function StockInPage() {
                               </div>
                             ) : (
                               <div className="rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-sm">
+                                <div className="overflow-x-auto w-full">
                                 <table className="w-full text-left text-xs">
                                   <thead>
                                     <tr className="bg-slate-50 border-b border-slate-100">
@@ -442,6 +443,7 @@ export default function StockInPage() {
                                     </tr>
                                   </tfoot>
                                 </table>
+                                </div>
                               </div>
                             )}
                           </div>

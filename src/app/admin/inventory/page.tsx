@@ -20,6 +20,7 @@ interface InventoryItem {
   price: number;
   branch_id?: string;
   branch_name: string;
+  low_stock_threshold?: number;
   last_modified_by?: string;
   updated_at: string;
 }
@@ -54,6 +55,7 @@ export default function AdminInventoryPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showOnlyLowStock, setShowOnlyLowStock] = useState(false);
 
   const role = (session?.user as any)?.role || "staff";
   const isStaff = role === "staff";
@@ -82,10 +84,15 @@ export default function AdminInventoryPage() {
   }, [session, selectedBranchId]);
 
   async function fetchStaff() {
-    const { data } = await supabase.from("users").select("email, name");
+    const { data } = await supabase.from("users").select("email, name, role");
     if (data) {
       const m: Record<string, string> = {};
-      data.forEach(u => { if (u.email) m[u.email.toLowerCase()] = u.name || u.email; });
+      data.forEach(u => { 
+        if (u.email) {
+          const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
+          m[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
+        }
+      });
       setStaffMap(m);
     }
   }
@@ -121,7 +128,7 @@ export default function AdminInventoryPage() {
 
   // ─── CRUD ──────────────────────────────────────────────────────────────────
   const openModal = (product: Partial<InventoryItem> | null = null) => {
-    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "", sku: "", quantity: 0, cost: 0, price: 0, branch_id: filterBranch || "" });
+    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "", sku: "", quantity: "" as any, cost: "" as any, price: "" as any, branch_id: filterBranch || "", low_stock_threshold: 5 });
     setIsModalOpen(true);
   };
 
@@ -139,6 +146,7 @@ export default function AdminInventoryPage() {
         unit: currentProduct.unit || "",
         sku: currentProduct.sku,
         quantity: parseFloat(currentProduct.quantity?.toString() || "0"),
+        low_stock_threshold: parseFloat(currentProduct.low_stock_threshold?.toString() || "5"),
         cost: parseFloat(currentProduct.cost?.toString() || "0"),
         price: parseFloat(currentProduct.price?.toString() || "0"),
         branch_id: currentProduct.branch_id,
@@ -183,14 +191,19 @@ export default function AdminInventoryPage() {
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
   const filtered = items.filter(p => {
-    const matchSearch = p.product_name.toLowerCase().includes(filter.toLowerCase()) ||
+    let matchSearch = p.product_name.toLowerCase().includes(filter.toLowerCase()) ||
       p.sku?.toLowerCase().includes(filter.toLowerCase()) ||
       p.category.toLowerCase().includes(filter.toLowerCase());
+    
+    if (showOnlyLowStock) {
+      matchSearch = matchSearch && p.quantity <= (p.low_stock_threshold ?? 5);
+    }
+    
     const matchCat = !activeCategory || p.category === activeCategory;
     return matchSearch && matchCat;
   });
 
-  const lowStockCount = items.filter(i => i.quantity < 5).length;
+  const lowStockCount = items.filter(i => i.quantity <= (i.low_stock_threshold ?? 5)).length;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -217,13 +230,16 @@ export default function AdminInventoryPage() {
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Items</p>
           <p className="text-3xl font-manrope font-bold text-slate-900">{items.length}</p>
         </div>
-        <div className={`rounded-2xl p-5 border ${lowStockCount > 0 ? "bg-red-50 border-red-100" : "bg-white border-slate-100"}`}>
+        <button 
+          onClick={() => { setShowOnlyLowStock(!showOnlyLowStock); setCurrentPage(1); }}
+          className={`rounded-2xl p-5 border text-left transition-all active:scale-[0.98] ${lowStockCount > 0 ? "bg-red-50 border-red-100 hover:bg-red-100" : "bg-white border-slate-100 hover:bg-slate-50"} ${showOnlyLowStock ? "ring-2 ring-red-400 ring-offset-2" : ""}`}
+        >
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
             {lowStockCount > 0 && <AlertTriangle className="w-3 h-3 text-red-400" />}
-            Low Stock
+            Low Stock {showOnlyLowStock && "(Filtering Active)"}
           </p>
           <p className={`text-3xl font-manrope font-bold ${lowStockCount > 0 ? "text-red-500" : "text-slate-900"}`}>{lowStockCount}</p>
-        </div>
+        </button>
       </div>
 
       {/* Filter Row */}
@@ -288,7 +304,7 @@ export default function AdminInventoryPage() {
               )}
               {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
                 const margin = (product.price || 0) - (product.cost || 0);
-                const isLow = product.quantity < 5;
+                const isLow = product.quantity <= (product.low_stock_threshold ?? 5);
                 return (
                   <tr key={product.id} className={`hover:bg-slate-50 transition-colors group ${isLow ? "bg-red-50/30" : ""}`}>
                     <td className="px-6 py-4">
@@ -357,7 +373,7 @@ export default function AdminInventoryPage() {
           )}
           {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
             const margin = (product.price || 0) - (product.cost || 0);
-            const isLow = product.quantity < 5;
+            const isLow = product.quantity <= (product.low_stock_threshold ?? 5);
             return (
               <div key={product.id} className={`p-4 space-y-3 ${isLow ? "bg-red-50/30" : ""}`}>
                 {/* Row 1: Name + Actions */}
@@ -528,8 +544,8 @@ export default function AdminInventoryPage() {
                 </div>
               </div>
 
-              {/* SKU + Qty */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* SKU + Qty + Threshold */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Product Code</label>
                   <input
@@ -544,8 +560,17 @@ export default function AdminInventoryPage() {
                   <input
                     type="number" step="0.1"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors"
-                    value={currentProduct.quantity || 0}
-                    onChange={e => setCurrentProduct({ ...currentProduct, quantity: parseFloat(e.target.value) })}
+                    value={currentProduct.quantity === undefined ? "" : currentProduct.quantity}
+                    onChange={e => setCurrentProduct({ ...currentProduct, quantity: e.target.value === "" ? ("" as any) : e.target.value as any })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Low Stock At</label>
+                  <input
+                    type="number" step="0.1" min="0"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors"
+                    value={currentProduct.low_stock_threshold === undefined ? "" : currentProduct.low_stock_threshold}
+                    onChange={e => setCurrentProduct({ ...currentProduct, low_stock_threshold: e.target.value === "" ? ("" as any) : e.target.value as any })}
                   />
                 </div>
               </div>
@@ -558,11 +583,11 @@ export default function AdminInventoryPage() {
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                       <input
-                        type="text"
+                        type="number" step="any"
                         disabled={!canEditCost}
                         className="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors disabled:opacity-50"
-                        value={formatNum(currentProduct.cost || 0)}
-                        onChange={e => setCurrentProduct({ ...currentProduct, cost: parseNum(e.target.value) })}
+                        value={currentProduct.cost === undefined ? "" : currentProduct.cost}
+                        onChange={e => setCurrentProduct({ ...currentProduct, cost: e.target.value === "" ? ("" as any) : e.target.value as any })}
                       />
                     </div>
                   </div>
@@ -572,10 +597,10 @@ export default function AdminInventoryPage() {
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1e40af] text-sm font-bold">₱</span>
                     <input
-                      type="text"
+                      type="number" step="any"
                       className="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-[#1e40af] outline-none focus:border-[#1e40af] transition-colors"
-                      value={formatNum(currentProduct.price || 0)}
-                      onChange={e => setCurrentProduct({ ...currentProduct, price: parseNum(e.target.value) })}
+                      value={currentProduct.price === undefined ? "" : currentProduct.price}
+                      onChange={e => setCurrentProduct({ ...currentProduct, price: e.target.value === "" ? ("" as any) : e.target.value as any })}
                     />
                   </div>
                 </div>

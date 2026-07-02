@@ -10,7 +10,7 @@ interface StaffMember {
   email: string;
   name: string;
   image?: string; // Google Profile Picture
-  role: 'developer' | 'owner' | 'manager' | 'staff';
+  role: 'developer' | 'owner' | 'manager' | 'staff' | 'inventory clerk';
   branch_ids: string[];
 }
 
@@ -296,6 +296,7 @@ export default function StaffPage() {
                          onChange={(e) => setCurrentMember({...currentMember, role: e.target.value as any})}
                        >
                           <option value="staff">Staff</option>
+                          <option value="inventory clerk">Inventory Clerk</option>
                           <option value="manager">Manager</option>
                           <option value="owner">Owner</option>
                           <option value="developer">Developer</option>

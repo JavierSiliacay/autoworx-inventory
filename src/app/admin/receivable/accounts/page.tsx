@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import SettleAccountModal from "@/components/admin/receivable/SettleAccountModal";
+import EditReceivableModal from "@/components/admin/receivable/EditReceivableModal";
+import { Edit2 } from "lucide-react";
 
 interface ReceivableRecord {
   id: string;
@@ -29,6 +31,7 @@ export default function AccountReceivablesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<ReceivableRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (session) {
@@ -203,20 +206,33 @@ export default function AccountReceivablesPage() {
                     )}
                   </td>
                   <td className="px-10 py-6 text-center">
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (window.confirm("Are you sure? This action is irreversible and will wipe out all linked payments and billing statements.")) {
-                          const { error } = await supabase.from('accounts_receivable').delete().eq('id', record.id);
-                          if (error) alert("Failed to delete record: " + error.message);
-                          else fetchReceivables();
-                        }
-                      }}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete Record"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRecord(record);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit Record"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm("Are you sure? This action is irreversible and will wipe out all linked payments and billing statements.")) {
+                            const { error } = await supabase.from('accounts_receivable').delete().eq('id', record.id);
+                            if (error) alert("Failed to delete record: " + error.message);
+                            else fetchReceivables();
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,6 +246,14 @@ export default function AccountReceivablesPage() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         record={selectedRecord} 
+        onSuccess={() => {
+          fetchReceivables();
+        }}
+      />
+      <EditReceivableModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        record={selectedRecord}
         onSuccess={() => {
           fetchReceivables();
         }}
