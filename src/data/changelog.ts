@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782960161961",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "improvement",
+    title: "Production System Updates",
+    description: "We've made behind-the-scenes improvements to enhance reliability and performance for a smoother experience."
+  },
+
+  {
 <<<<<<< HEAD
     id: "update-1782958571725",
 =======
