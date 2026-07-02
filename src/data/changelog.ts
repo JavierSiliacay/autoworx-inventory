@@ -18,22 +18,22 @@ export const SYSTEM_UPDATES: SystemUpdate[] = [
     title: "Automated changelog generation",
     description: "The system now automatically creates changelog entries, making it easier for staff and users to stay informed about updates without manual effort."
   },
+  {
+    id: "update-1782960161961",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "improvement",
+    title: "Production System Updates",
+    description: "We've made behind-the-scenes improvements to enhance reliability and performance for a smoother experience."
+  },
 
   {
-<<<<<<< HEAD
-    id: "update-1782958571725",
-=======
     id: "update-1782959917600",
->>>>>>> 1bef071 (chore: auto-generated AI changelog)
     version: "v1.7.2",
     date: "2026-07-02",
     type: "feature",
     title: "New Accounts Receivable System",
-<<<<<<< HEAD
-    description: "Staff can now track and manage customer invoices and payments directly in the system, with seamless data migration to get you up and running quickly."
-=======
     description: "Staff can now track invoices, see what customers owe, and record payments all in one place, making it easier to manage money coming in and reducing manual paperwork."
->>>>>>> 1bef071 (chore: auto-generated AI changelog)
   },
 
   {
