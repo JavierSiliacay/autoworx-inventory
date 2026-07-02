@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782961353981",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "fix",
+    title: "Excel File Support Restored",
+    description: "The missing package needed for Excel file handling has been added, so you can now open, edit, and export .xlsx files without encountering errors."
+  },
+
+  {
     id: "update-1782961072947",
     version: "v1.7.2",
     date: "2026-07-02",
