@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782980835123",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "feature",
+    title: "Enhanced User Experience with Staff Tracking & Form Improvements",
+    description: "We refreshed the interface for easier navigation, added staff tracking to see who's working on what, and smoothed out form interactions so tasks are quicker and less error‑prone."
+  },
+
+  {
     id: "update-1782961353981",
     version: "v1.7.2",
     date: "2026-07-02",
