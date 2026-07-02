@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782958571725",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "feature",
+    title: "New Accounts Receivable System",
+    description: "Staff can now track and manage customer invoices and payments directly in the system, with seamless data migration to get you up and running quickly."
+  },
+
+  {
     id: "update-1779746868317",
     version: "v1.5.25",
     date: "2026-05-25",
