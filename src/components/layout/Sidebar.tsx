@@ -14,14 +14,14 @@ import {
   ChevronRight,
   User,
   Settings,
-  Beaker,
   FileText,
   ChevronDown,
   Building2,
   PackageCheck,
   ClipboardList,
   Truck,
-  CreditCard
+  CreditCard,
+  History
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -72,14 +72,24 @@ export default function Sidebar() {
         { name: "Suppliers", href: "/admin/inventory/suppliers", icon: Building2 },
       ]
     },
-    { name: "Mixing", href: "/admin/mixing", icon: Beaker },
     { name: "Sales", href: "/admin/sales", icon: TrendingUp },
-    { name: "Receivables", href: "/admin/receivable", icon: FileText },
+    { 
+      name: "Receivables", 
+      href: "/admin/receivable", 
+      icon: FileText,
+      children: [
+        { name: "Account Receivables", href: "/admin/receivable/accounts", icon: FileText },
+        { name: "Check Logs", href: "/admin/receivable/checks", icon: CreditCard },
+        { name: "Billing Statements", href: "/admin/receivable/billing-statements", icon: FileText },
+        { name: "Aging Report", href: "/admin/receivable/aging", icon: FileText },
+      ]
+    },
     { name: "Payables", href: "/admin/payables", icon: CreditCard },
     // Only show these to Owners/Developers after mounting or if session is available on server
     ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },
       { name: "Staff", href: "/admin/staff", icon: Users },
+      { name: "Delete History", href: "/admin/delete-history", icon: History },
     ] : []),
   ];
 

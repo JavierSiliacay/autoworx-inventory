@@ -1,20 +1,22 @@
-import { supabase } from "@/lib/supabase";
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+);
 
 export async function GET() {
-  const { data: trans } = await supabase
-    .from('transactions')
-    .select('*')
-    .order('timestamp', { ascending: false })
-    .limit(20);
+  const { data, error } = await supabase
+    .from('users')
+    .select('role, branch_ids, image')
+    .eq('email', 'javiersiliacay12@gmail.com')
+    .single();
 
-  const { data: inventory } = await supabase
-    .from('inventory')
-    .select('id, product_name, sku')
-    .ilike('product_name', '%MIX%')
-    .limit(10);
-
-  return Response.json({
-    recentTransactions: trans,
-    mixedInventory: inventory
+  return NextResponse.json({
+    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    data,
+    error
   });
 }

@@ -42,7 +42,7 @@ export default function LoginPage() {
               Staff Login
             </h1>
             <p className="text-[#434751] text-sm leading-relaxed max-w-[240px] mx-auto">
-              Access the technical atelier inventory and mixing systems.
+              Access the AutoWorx Paint Center inventory management system.
             </p>
           </div>
 

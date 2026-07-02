@@ -1,0 +1,44 @@
+{
+  "B2": {
+    "v": "AUTOWORX PAINT CENTER - DISTRIBUTION DATABASE"
+  },
+  "B3": {
+    "v": "SELECT MONTH"
+  },
+  "C3": {
+    "v": "JUNE"
+  },
+  "B4": {
+    "v": "SELECT YEAR"
+  },
+  "C4": {
+    "v": 2026
+  },
+  "B5": {
+    "v": "SELECT DAY"
+  },
+  "C5": {
+    "v": "ALL"
+  },
+  "B7": {
+    "v": "TOTAL SALES"
+  },
+  "F7": {
+    "v": "TOTAL PURCHASES"
+  },
+  "J7": {
+    "v": "STOCK VALUE"
+  },
+  "B8": {
+    "v": 1254686.63,
+    "f": "IF(C3=\"ALL MONTH\", SUMIFS(SALES!K:K, SALES!A:A, \">=\"&DATE(C4, 1, 1), SALES!A:A, \"<=\"&DATE(C4, 12, 31)), IF(C5=\"ALL\", SUMIFS(SALES!K:K, SALES!A:A, \">=\"&DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), 1), SALES!A:A, \"<=\"&EOMONTH(DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), 1), 0)), SUMIFS(SALES!K:K, SALES!A:A, DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), C5))))"
+  },
+  "F8": {
+    "v": 14389639.38,
+    "f": "IF(C3=\"ALL MONTH\", SUMIFS('STOCK IN  TRANSFER'!J:J, 'STOCK IN  TRANSFER'!A:A, \">=\"&DATE(C4, 1, 1), 'STOCK IN  TRANSFER'!A:A, \"<=\"&DATE(C4, 12, 31), 'STOCK IN  TRANSFER'!F:F, \"STOCK IN\"), IF(C5=\"ALL\", SUMIFS('STOCK IN  TRANSFER'!J:J, 'STOCK IN  TRANSFER'!A:A, \">=\"&DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), 1), 'STOCK IN  TRANSFER'!A:A, \"<=\"&EOMONTH(DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), 1), 0), 'STOCK IN  TRANSFER'!F:F, \"STOCK IN\"), SUMIFS('STOCK IN  TRANSFER'!J:J, 'STOCK IN  TRANSFER'!A:A, DATE(C4, MATCH(C3, {\"JANUARY\",\"FEBRUARY\",\"MARCH\",\"APRIL\",\"MAY\",\"JUNE\",\"JULY\",\"AUGUST\",\"SEPTEMBER\",\"OCTOBER\",\"NOVEMBER\",\"DECEMBER\"}, 0), C5), 'STOCK IN  TRANSFER'!F:F, \"STOCK IN\")))"
+  },
+  "J8": {
+    "v": 12714912.71,
+    "f": "SUMPRODUCT('MASTER ITEM LIST'!C2:C18, 'MASTER ITEM LIST'!E2:E18)"
+  }
+}

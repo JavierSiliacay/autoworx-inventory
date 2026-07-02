@@ -22,6 +22,12 @@ export default function AdminDashboardPage() {
   const [revenue, setRevenue] = useState(0);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [distPage, setDistPage] = useState(1);
+  const [salesPage, setSalesPage] = useState(1);
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [filterMonth, setFilterMonth] = useState(currentMonthStr);
+  const distItemsPerPage = 15;
+  const salesItemsPerPage = 10;
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +42,7 @@ export default function AdminDashboardPage() {
         .subscribe();
       return () => { supabase.removeChannel(sub); };
     }
-  }, [session, selectedBranchId]); // Re-fetch when filter changes
+  }, [session, selectedBranchId, filterMonth]); // Re-fetch when filter changes
 
   async function fetchDashboardData() {
     try {
@@ -150,13 +156,35 @@ export default function AdminDashboardPage() {
       }, 0);
 
       // 3. Historical Total Purchase (Investment Reconciliation)
-      // Standard Accounting: Initial Investment = Current Assets + Cost of Goods Sold (COGS)
-      // This is 100% stable during mixing because value simply transfers from ingredient assets to mix assets.
-      const totalCOGS = (officialSalesTable || []).reduce((acc, sale) => {
-         return acc + (Number(sale.quantity || 0) * Number(sale.unit_cost || 0));
-      }, 0);
+      // Total Purchase = Accumulation of all inbound transactions (non-deductible)
+      let totalPurchaseValue = 0;
+      try {
+        // We only use the new stock_transactions table to avoid double-counting
+        let stQuery = supabase
+          .from('stock_transactions')
+          .select('quantity, unit_price, created_at, inventory(branch_id, cost, price)')
+          .eq('type', 'IN');
 
-      const totalPurchaseValue = currentStockCost + totalCOGS;
+        const { data: stData, error: stError } = await stQuery;
+        if (stError) console.warn("Stock transactions query error:", stError);
+        
+        if (stData) {
+          const validStData = stData.filter(tx => {
+            if (!tx.inventory) return false;
+            const bId = (tx.inventory as any).branch_id;
+            if (filterBranch && bId !== filterBranch) return false;
+            if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(bId)) return false;
+            if (tx.created_at && filterMonth !== "all" && !tx.created_at.startsWith(filterMonth)) return false;
+            return true;
+          });
+          totalPurchaseValue += validStData.reduce((acc, tx) => {
+            const cost = tx.unit_price ?? (tx.inventory as any)?.cost ?? (tx.inventory as any)?.price ?? 0;
+            return acc + (Number(tx.quantity || 0) * Number(cost));
+          }, 0);
+        }
+      } catch (err) {
+        console.warn("Error calculating total purchase:", err);
+      }
 
       const totalVolume = (invDocs as any[]).reduce((acc, item) => acc + (parseFloat(item.quantity) || 0), 0);
       const uniqueProdCount = new Set((invDocs as any[]).map(i => i.product_name)).size;
@@ -210,10 +238,16 @@ export default function AdminDashboardPage() {
             branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
             total_amount: Number(s.total_amount || 0) // Explicit cast to Number
           }));
-          setSales(mapped);
+          
+          const filteredMapped = mapped.filter((s: any) => {
+            const d = s.created_at || s.date;
+            return filterMonth === "all" || (d && d.startsWith(filterMonth));
+          });
+          
+          setSales(filteredMapped);
           
           // SUM ALL matching sales for Gross Revenue
-          const totalRev = mapped.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+          const totalRev = filteredMapped.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
           setRevenue(totalRev);
         }
       } catch (err) {
@@ -330,13 +364,72 @@ export default function AdminDashboardPage() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Welcome Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl md:text-5xl font-manrope font-extrabold text-[#111827] tracking-tight mb-2">
-          Hello, <span className="text-[#16a34a]">{mounted ? (session?.user?.name || "Member") : "Member"}</span> 👋
-        </h1>
-        <p className="text-sm md:text-base text-[#64748b] font-medium font-manrope">
-          Welcome back! Here's the current pulse of the Autoworx branch network.
-        </p>
+      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-5xl font-manrope font-extrabold text-[#111827] tracking-tight mb-2">
+            Hello, <span className="text-[#16a34a]">{mounted ? (session?.user?.name || "Member") : "Member"}</span> 👋
+          </h1>
+          <p className="text-sm md:text-base text-[#64748b] font-medium font-manrope">
+            Welcome back! Here's the current pulse of the Autoworx branch network.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest">Period</label>
+          <select 
+            value={filterMonth === "all" ? "all" : (filterMonth.split('-')[1] || "06")}
+            onChange={(e) => {
+              if (e.target.value === "all") {
+                setFilterMonth("all");
+              } else {
+                const parts = filterMonth === "all" ? [String(new Date().getFullYear()), e.target.value] : filterMonth.split('-');
+                setFilterMonth(`${parts[0] || new Date().getFullYear()}-${e.target.value}${parts[2] ? `-${parts[2]}` : ''}`);
+              }
+            }}
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+          >
+            <option value="all" className="font-bold text-blue-600">Overall</option>
+            {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+              <option key={m} value={String(m).padStart(2, '0')}>
+                {new Date(0, m - 1).toLocaleString('default', { month: 'long' })}
+              </option>
+            ))}
+          </select>
+          {filterMonth !== "all" && (
+            <>
+              <select
+                value={filterMonth.split('-')[2] || ""}
+                onChange={(e) => {
+                  const parts = filterMonth.split('-');
+                  const year = parts[0] || new Date().getFullYear();
+                  const month = parts[1] || "06";
+                  if (e.target.value === "") {
+                    setFilterMonth(`${year}-${month}`);
+                  } else {
+                    setFilterMonth(`${year}-${month}-${e.target.value}`);
+                  }
+                }}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+              >
+                <option value="">All Days</option>
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => (
+                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                ))}
+              </select>
+              <select 
+                value={filterMonth.split('-')[0] || "2026"}
+                onChange={(e) => {
+                  const parts = filterMonth.split('-');
+                  setFilterMonth(`${e.target.value}-${parts[1] || "06"}${parts[2] ? `-${parts[2]}` : ''}`);
+                }}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-blue-700 bg-blue-50 focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+              >
+                {Array.from({length: 10}, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -472,7 +565,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e2e8f0]">
-                {distribution.map((row, ri) => (
+                {distribution.slice((distPage - 1) * distItemsPerPage, distPage * distItemsPerPage).map((row, ri) => (
                   <tr key={ri} className="hover:bg-slate-50 transition-colors group">
                     <td className="sticky left-0 bg-white group-hover:bg-slate-50 px-6 py-4 z-10 border-r border-slate-50">
                       <div>
@@ -491,6 +584,30 @@ export default function AdminDashboardPage() {
               </tbody>
             </table>
           </div>
+          {/* Pagination Controls */}
+          {Math.ceil(distribution.length / distItemsPerPage) > 1 && (
+            <div className="flex justify-between items-center px-6 py-4 border-t border-[#e2e8f0] bg-white">
+              <span className="text-xs font-medium text-[#64748b]">
+                Showing {((distPage - 1) * distItemsPerPage) + 1} to {Math.min(distPage * distItemsPerPage, distribution.length)} of {distribution.length} items
+              </span>
+              <div className="flex gap-2">
+                <button
+                  disabled={distPage === 1}
+                  onClick={() => setDistPage(distPage - 1)}
+                  className="px-4 py-1.5 text-xs border border-[#e2e8f0] rounded-md disabled:opacity-50 hover:bg-slate-50 font-bold text-slate-600 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={distPage === Math.ceil(distribution.length / distItemsPerPage)}
+                  onClick={() => setDistPage(distPage + 1)}
+                  className="px-4 py-1.5 text-xs border border-[#e2e8f0] rounded-md disabled:opacity-50 hover:bg-slate-50 font-bold text-slate-600 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
       
@@ -543,7 +660,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e2e8f0]">
-                {sales.map((sale, i) => (
+                {sales.slice((salesPage - 1) * salesItemsPerPage, salesPage * salesItemsPerPage).map((sale, i) => (
                   <tr key={i} className={`hover:bg-slate-50 transition-colors ${selectedSaleIds.includes(sale.id) ? 'bg-emerald-50/50' : ''}`}>
                     {mounted && role === 'developer' && (
                       <td className="px-6 py-4">
@@ -603,6 +720,30 @@ export default function AdminDashboardPage() {
               </tbody>
             </table>
           </div>
+          {/* Pagination Controls */}
+          {Math.ceil(sales.length / salesItemsPerPage) > 1 && (
+            <div className="flex justify-between items-center px-6 py-4 border-t border-[#e2e8f0] bg-white">
+              <span className="text-xs font-medium text-[#64748b]">
+                Showing {((salesPage - 1) * salesItemsPerPage) + 1} to {Math.min(salesPage * salesItemsPerPage, sales.length)} of {sales.length} items
+              </span>
+              <div className="flex gap-2">
+                <button
+                  disabled={salesPage === 1}
+                  onClick={() => setSalesPage(salesPage - 1)}
+                  className="px-4 py-1.5 text-xs border border-[#e2e8f0] rounded-md disabled:opacity-50 hover:bg-slate-50 font-bold text-slate-600 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={salesPage === Math.ceil(sales.length / salesItemsPerPage)}
+                  onClick={() => setSalesPage(salesPage + 1)}
+                  className="px-4 py-1.5 text-xs border border-[#e2e8f0] rounded-md disabled:opacity-50 hover:bg-slate-50 font-bold text-slate-600 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

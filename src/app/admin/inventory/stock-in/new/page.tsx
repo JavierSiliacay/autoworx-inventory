@@ -150,61 +150,36 @@ export default function NewStockInPage() {
         imageUrl = urlData.publicUrl;
       }
 
-      const { data: log, error: logErr } = await supabase.from("stock_in_logs")
-        .insert([{ reference_po_id: selectedPO || null, branch_id: selectedBranchId, supplier_id: supplierId, invoice_number: invoiceNumber, date_received: dateReceived, received_by: session?.user?.name || session?.user?.email, receipt_image_url: imageUrl, total_amount: total }])
-        .select().single();
-      if (logErr) throw logErr;
+      const logPayload = {
+        reference_po_id: selectedPO || null,
+        branch_id: selectedBranchId,
+        supplier_id: supplierId,
+        invoice_number: invoiceNumber,
+        date_received: dateReceived,
+        received_by: session?.user?.name || session?.user?.email || "System",
+        receipt_image_url: imageUrl,
+        total_amount: total
+      };
 
-      for (const item of items) {
-        let targetInventoryId = item.inventory_id;
+      const itemsPayload = items.map(item => {
+        const template = inventory.find(inv => inv.product_name === item.product_name);
+        return {
+          inventory_id: item.inventory_id || null,
+          product_name: item.product_name,
+          category: template?.category || "Paint",
+          unit: template?.unit || "Gallon",
+          price: template?.price || (item.unit_cost * 1.3),
+          quantity_received: item.quantity_received,
+          unit_cost: item.unit_cost
+        };
+      });
 
-        // CRITICAL FIX: If item is from master catalog but doesn't exist in THIS branch yet, create it.
-        if (!targetInventoryId) {
-          // Find the template from the master catalog
-          const template = inventory.find(inv => inv.product_name === item.product_name);
-          
-          const { data: newInv, error: createErr } = await supabase.from("inventory").insert([{
-            product_name: item.product_name,
-            category: template?.category || "Paint",
-            unit: template?.unit || "Gallon",
-            quantity: 0, // Start at 0, updated below
-            cost: item.unit_cost,
-            price: template?.price || (item.unit_cost * 1.3), // Default 30% margin if unknown
-            branch_id: selectedBranchId,
-            last_modified_by: session?.user?.email || "System",
-            updated_at: new Date().toISOString()
-          }]).select().single();
+      const { error: rpcErr } = await supabase.rpc('process_stock_in', {
+        log_payload: logPayload,
+        items_payload: itemsPayload
+      });
 
-          if (createErr) throw createErr;
-          targetInventoryId = newInv.id;
-        }
-
-        await supabase.from("stock_in_items").insert([{ 
-          stock_in_id: log.id, 
-          inventory_id: targetInventoryId, 
-          quantity_received: item.quantity_received, 
-          unit_cost: item.unit_cost 
-        }]);
-
-        // Fetch current quantity using the resolved ID (whether it was existing or newly created)
-        const { data: cur } = await supabase.from("inventory").select("quantity").eq("id", targetInventoryId).single();
-        
-        await supabase.from("inventory").update({ 
-          quantity: (cur?.quantity || 0) + item.quantity_received, 
-          updated_at: new Date().toISOString(), 
-          last_modified_by: session?.user?.email,
-          cost: item.unit_cost // Update cost on stock-in
-        }).eq("id", targetInventoryId);
-
-        await supabase.from("stock_transactions").insert([{ 
-          inventory_id: targetInventoryId, 
-          branch_id: selectedBranchId, 
-          type: "IN", 
-          quantity: item.quantity_received, 
-          reason: `Stock In: ${invoiceNumber}` 
-        }]);
-      }
-      if (selectedPO) await supabase.from("purchase_orders").update({ status: "received" }).eq("id", selectedPO);
+      if (rpcErr) throw rpcErr;
       router.push("/admin/inventory/stock-in");
     } catch (err: any) {
       console.error(err);

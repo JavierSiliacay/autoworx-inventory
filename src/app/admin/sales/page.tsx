@@ -384,15 +384,16 @@ export default function AdminSalesPage() {
 
       if (salesError) throw salesError;
 
-      // 3. Create Payable record if it's a debt (one for the whole invoice)
+      // 3. Create Accounts Receivable record if it's a debt (one for the whole invoice)
       if ((currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && salesData && salesData.length > 0) {
-        await supabase.from('payables').insert([{
-          sale_id: salesData[0].id, // Link to the first record of the batch
+        await supabase.from('accounts_receivable').insert([{
+          invoice_no: currentSale.invoice_no,
           customer_name: currentSale.customer_name,
-          total_amount: grandTotal,
-          balance: grandTotal,
-          paid_amount: 0,
-          status: 'Unpaid',
+          total_amount_due: grandTotal,
+          remaining_balance: grandTotal,
+          amount_collected: 0,
+          payment_status: 'Unpaid',
+          date: new Date().toISOString().split('T')[0],
           branch_id: currentSale.branch_id || salesBatch[0].branch_id
         }]);
       }

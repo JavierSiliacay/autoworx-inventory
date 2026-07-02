@@ -65,6 +65,8 @@ export default function AdminInventoryPage() {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [staffMap, setStaffMap] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   // ─── Data Fetching ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function AdminInventoryPage() {
 
   // ─── CRUD ──────────────────────────────────────────────────────────────────
   const openModal = (product: Partial<InventoryItem> | null = null) => {
-    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "Gallon", sku: "", quantity: 0, cost: 0, price: 0, branch_id: filterBranch || "" });
+    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "", sku: "", quantity: 0, cost: 0, price: 0, branch_id: filterBranch || "" });
     setIsModalOpen(true);
   };
 
@@ -134,7 +136,7 @@ export default function AdminInventoryPage() {
       const payload = {
         product_name: currentProduct.product_name,
         category: currentProduct.category,
-        unit: currentProduct.unit || "Gallon",
+        unit: currentProduct.unit || "",
         sku: currentProduct.sku,
         quantity: parseFloat(currentProduct.quantity?.toString() || "0"),
         cost: parseFloat(currentProduct.cost?.toString() || "0"),
@@ -153,11 +155,13 @@ export default function AdminInventoryPage() {
       if (err) throw err;
 
       if (!currentProduct.id && newData && Number(payload.quantity) > 0) {
-        await supabase.from("transactions").insert([{
-          item_id: newData.id, module_type: "paints", transaction_type: "inbound",
+        await supabase.from("stock_transactions").insert([{
+          inventory_id: newData.id, 
+          branch_id: newData.branch_id,
+          type: "IN",
           quantity: payload.quantity,
-          performed_by: (session?.user as any)?.id || "00000000-0000-0000-0000-000000000000",
-          remarks: `Initial inventory: ${payload.product_name}`,
+          unit_price: payload.cost,
+          reason: `Initial inventory: ${payload.product_name}`,
         }]);
       }
       await fetchInventory();
@@ -230,14 +234,14 @@ export default function AdminInventoryPage() {
             className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400"
             placeholder="Search by name, SKU, or category..."
             value={filter}
-            onChange={e => setFilter(e.target.value)}
+            onChange={e => { setFilter(e.target.value); setCurrentPage(1); }}
           />
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+              onClick={() => { setActiveCategory(activeCategory === cat ? null : cat); setCurrentPage(1); }}
               className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
                 activeCategory === cat
                   ? "bg-[#16a34a] text-white"
@@ -282,7 +286,7 @@ export default function AdminInventoryPage() {
                   <td colSpan={7} className="px-6 py-16 text-center text-sm text-slate-400">No products found.</td>
                 </tr>
               )}
-              {filtered.map(product => {
+              {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
                 const margin = (product.price || 0) - (product.cost || 0);
                 const isLow = product.quantity < 5;
                 return (
@@ -312,7 +316,7 @@ export default function AdminInventoryPage() {
                       <span className={`text-sm font-bold font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
                         {parseFloat(product.quantity.toString()).toFixed(1)}
                       </span>
-                      <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>
+                      {product.unit && <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>}
                     </td>
                     {canViewCost && (
                       <td className="px-4 py-4 text-right text-sm text-slate-500 font-medium">
@@ -351,7 +355,7 @@ export default function AdminInventoryPage() {
           {filtered.length === 0 && !loading && (
             <div className="py-16 text-center text-sm text-slate-400">No products found.</div>
           )}
-          {filtered.map(product => {
+          {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
             const margin = (product.price || 0) - (product.cost || 0);
             const isLow = product.quantity < 5;
             return (
@@ -413,6 +417,31 @@ export default function AdminInventoryPage() {
             );
           })}
         </div>
+
+        {/* Pagination Controls */}
+        {Math.ceil(filtered.length / itemsPerPage) > 1 && (
+          <div className="flex justify-between items-center p-4 border-t border-slate-100 bg-slate-50/50">
+            <span className="text-xs font-medium text-slate-500">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} items
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+                className="px-4 py-1.5 text-xs border border-slate-200 bg-white rounded-lg disabled:opacity-50 hover:bg-slate-50 font-semibold text-slate-600 transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <button
+                disabled={currentPage === Math.ceil(filtered.length / itemsPerPage)}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="px-4 py-1.5 text-xs border border-slate-200 bg-white rounded-lg disabled:opacity-50 hover:bg-slate-50 font-semibold text-slate-600 transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── Add / Edit Modal ─────────────────────────────────────────────── */}
@@ -471,7 +500,7 @@ export default function AdminInventoryPage() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Unit</label>
-                  {!PREDEFINED_UNITS.includes(currentProduct.unit || "Gallon") ? (
+                  {!PREDEFINED_UNITS.includes(currentProduct.unit ?? "") && currentProduct.unit !== "" ? (
                     <div className="relative">
                       <input
                         autoFocus
@@ -480,7 +509,7 @@ export default function AdminInventoryPage() {
                         value={currentProduct.unit === "" ? "" : currentProduct.unit}
                         onChange={e => setCurrentProduct({ ...currentProduct, unit: e.target.value })}
                       />
-                      <button onClick={() => setCurrentProduct({ ...currentProduct, unit: "Gallon" })}
+                      <button onClick={() => setCurrentProduct({ ...currentProduct, unit: "" })}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-400">
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -488,9 +517,10 @@ export default function AdminInventoryPage() {
                   ) : (
                     <select
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors"
-                      value={currentProduct.unit || "Gallon"}
-                      onChange={e => setCurrentProduct({ ...currentProduct, unit: e.target.value === "CUSTOM" ? "" : e.target.value })}
+                      value={currentProduct.unit || ""}
+                      onChange={e => setCurrentProduct({ ...currentProduct, unit: e.target.value === "CUSTOM" ? " " : e.target.value })}
                     >
+                      <option value="">None (Blank)</option>
                       {PREDEFINED_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                       <option value="CUSTOM">+ Custom unit...</option>
                     </select>
