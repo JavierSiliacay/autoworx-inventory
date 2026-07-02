@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782960816092",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "improvement",
+    title: "Automated changelog generation",
+    description: "The system now automatically creates changelog entries, making it easier for staff and users to stay informed about updates without manual effort."
+  },
+
+  {
 <<<<<<< HEAD
     id: "update-1782958571725",
 =======
