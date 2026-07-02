@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1782961072947",
+    version: "v1.7.2",
+    date: "2026-07-02",
+    type: "fix",
+    title: "Improved deployment reliability",
+    description: "Fixed a build issue that could prevent updates from deploying correctly, ensuring smoother and more reliable releases for all users."
+  },
+
+  {
     id: "update-1782960816092",
     version: "v1.7.2",
     date: "2026-07-02",
