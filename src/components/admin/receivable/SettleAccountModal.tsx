@@ -80,6 +80,27 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
     }
   };
 
+  const handleUndoPayment = async (paymentId: string) => {
+    if (!window.confirm("Are you sure you want to undo this payment? This will update the remaining balance.")) return;
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('receivable_payments')
+        .update({ status: 'Cancelled' })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+      fetchPayments();
+      onSuccess();
+    } catch (err) {
+      console.error("Error undoing payment:", err);
+      alert("Failed to undo payment.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -139,9 +160,20 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{p.payment_method}</span>
                           {p.remarks && <span className="text-xs text-slate-500 mt-1 line-clamp-1">{p.remarks}</span>}
                         </div>
-                        <span className="text-[9px] font-medium text-slate-400">
-                          {new Date(p.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-[9px] font-medium text-slate-400">
+                            {new Date(p.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {(p.status === 'Completed' || p.status === 'Pending' || p.status === 'Cleared') && (
+                            <button
+                              onClick={() => handleUndoPayment(p.id)}
+                              disabled={loading}
+                              className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors disabled:opacity-50 uppercase tracking-widest"
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))

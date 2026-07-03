@@ -15,6 +15,7 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
   const [customerName, setCustomerName] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [totalAmountDue, setTotalAmountDue] = useState("");
+  const [amountCollected, setAmountCollected] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,6 +30,14 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
         formatted += '.' + parts[1];
       }
       setTotalAmountDue(formatted);
+
+      const initialCol = record.amount_collected?.toString() || "0";
+      const partsCol = initialCol.split('.');
+      let formattedCol = partsCol[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      if (partsCol.length > 1) {
+        formattedCol += '.' + partsCol[1];
+      }
+      setAmountCollected(formattedCol);
     }
   }, [isOpen, record]);
 
@@ -36,7 +45,8 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
 
   const handleSave = async () => {
     const rawAmount = totalAmountDue.replace(/,/g, '');
-    if (!customerName || !invoiceNo || !rawAmount || isNaN(Number(rawAmount))) {
+    const rawCollected = amountCollected.replace(/,/g, '');
+    if (!customerName || !invoiceNo || !rawAmount || isNaN(Number(rawAmount)) || isNaN(Number(rawCollected))) {
       alert("Please fill all fields correctly.");
       return;
     }
@@ -44,20 +54,41 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
     try {
       setLoading(true);
       const newTotal = Number(rawAmount);
-      const amountCollected = Number(record.amount_collected || 0);
-      const exactRemaining = newTotal - amountCollected;
+      const newCollected = Number(rawCollected);
+      const oldCollected = Number(record.amount_collected || 0);
+      const difference = newCollected - oldCollected;
+      
+      // We first update the total amount due and recalculate remaining balance based on OLD collected amount.
+      // The trigger will handle the difference when we insert the payment record below.
+      const exactRemainingBeforePayment = newTotal - oldCollected;
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('accounts_receivable')
         .update({
           customer_name: customerName,
           invoice_no: invoiceNo,
           total_amount_due: newTotal,
-          remaining_balance: exactRemaining,
+          remaining_balance: exactRemainingBeforePayment,
         })
         .eq('id', record.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // If the collected amount was manually changed, insert an adjustment payment record
+      // so it shows up in the Settle Account Audit Trail
+      if (difference !== 0) {
+        const { error: paymentError } = await supabase
+          .from('receivable_payments')
+          .insert({
+            ar_id: record.id,
+            amount: difference,
+            payment_method: 'Cash',
+            status: 'Completed',
+            remarks: 'Manual Balance Adjustment via Edit Record'
+          });
+          
+        if (paymentError) throw paymentError;
+      }
       
       onSuccess();
       onClose();
@@ -119,9 +150,28 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
                 }}
               />
             </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Amount Collected: ₱{Number(record.amount_collected || 0).toLocaleString()} <br/>
-              The remaining balance will be recalculated automatically.
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Amount Collected (PHP)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
+              <input
+                type="text"
+                className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl outline-none font-black text-slate-800 transition-all"
+                value={amountCollected}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  const parts = val.split('.');
+                  let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                  if (parts.length > 1) {
+                    formatted += '.' + parts[1];
+                  }
+                  setAmountCollected(formatted);
+                }}
+              />
+            </div>
+            <p className="text-[9px] font-bold text-emerald-500 mt-2 uppercase tracking-widest">
+              Changes will be recorded as a manual adjustment in the audit trail.
             </p>
           </div>
         </div>

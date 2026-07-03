@@ -149,6 +149,7 @@ export default function AccountReceivablesPage() {
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Invoice</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer Name</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Total Due</th>
+                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Collected</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Balance</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
                 <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center w-16"></th>

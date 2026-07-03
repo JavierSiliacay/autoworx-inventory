@@ -64,20 +64,21 @@ export default function NewStockInPage() {
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [itemSearch, setItemSearch] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => { fetchData(); }, [selectedBranchId]);
 
   async function fetchData() {
-    // UPDATED: Fetch unique products across ALL branches to provide a global catalog
+    const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
     const [sRes, iRes, pRes] = await Promise.all([
       supabase.from("suppliers").select("id, name").order("name"),
-      supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id").order("product_name"),
-      supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("branch_id", selectedBranchId === "all" ? "" : selectedBranchId).eq("status", "pending"),
+      supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id").eq("branch_id", branchId).order("product_name"),
+      supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("branch_id", branchId).eq("status", "pending"),
     ]);
 
     setSuppliers(sRes.data || []);
     
-    // Create a unique catalog by product name to allow discovery in any branch
+    // Create a unique catalog by product name
     const uniqueMap = new Map();
     (iRes.data || []).forEach(item => {
       if (!uniqueMap.has(item.product_name)) {
@@ -85,10 +86,6 @@ export default function NewStockInPage() {
       }
     });
 
-    // We still want to prioritize items that already exist in THIS branch for faster lookup
-    const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
-    const branchItems = (iRes.data || []).filter(item => item.branch_id === branchId);
-    
     setInventory(Array.from(uniqueMap.values()));
     setPurchaseOrders(pRes.data || []);
   }
@@ -150,13 +147,16 @@ export default function NewStockInPage() {
         imageUrl = urlData.publicUrl;
       }
 
+      const userRole = (session?.user as any)?.role || "staff";
+      const formattedRole = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+
       const logPayload = {
         reference_po_id: selectedPO || null,
         branch_id: selectedBranchId,
         supplier_id: supplierId,
         invoice_number: invoiceNumber,
         date_received: dateReceived,
-        received_by: session?.user?.name || session?.user?.email || "System",
+        received_by: `${session?.user?.name || session?.user?.email || "System"} (${formattedRole})`,
         receipt_image_url: imageUrl,
         total_amount: total
       };
@@ -252,26 +252,36 @@ export default function NewStockInPage() {
           </div>
         </div>
 
-        {/* Items Card */}
-        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-700">Incoming Items</h2>
-            <div className="relative w-full sm:w-56">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+        {/* Line Items Card */}
+        <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col">
+          {/* Search Header */}
+          <div className="p-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-40">
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Line Items</span>
+            </div>
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <input
+                type="text"
                 disabled={!!selectedPO}
-                className={`w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-[#16a34a] transition-colors placeholder:text-slate-400 ${selectedPO ? "opacity-50 cursor-not-allowed" : ""}`}
-                placeholder={selectedPO ? "Fixed by PO reference" : "Search inventory..."}
+                placeholder={selectedPO ? "Fixed by PO reference" : "Search item to add..."}
                 value={itemSearch}
-                onChange={e => setItemSearch(e.target.value)}
+                onChange={(e) => setItemSearch(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                className={`w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#16a34a] focus:ring-2 focus:ring-[#16a34a]/10 transition-all bg-white ${selectedPO ? "opacity-50 cursor-not-allowed" : ""}`}
               />
-              {itemSearch && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden">
+              {(itemSearch || isSearchFocused) && !selectedPO && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
                   {filteredInventory.map(item => (
                     <button key={item.id} type="button" onClick={() => addItem(item)}
-                      className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center justify-between group transition-colors">
+                      className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0">
                       <p className="text-xs font-semibold text-slate-800 group-hover:text-[#16a34a] transition-colors">{item.product_name}</p>
-                      <Plus className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#16a34a]" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-mono">₱{(item.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                        <Plus className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#16a34a]" />
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -304,14 +314,14 @@ export default function NewStockInPage() {
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="0.1" value={item.quantity_received} min={0.1}
-                            onChange={e => updateItem(idx, "quantity_received", e.target.value as any || 0)}
+                            onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="relative inline-flex items-center">
                             <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
                             <input type="number" value={item.unit_cost}
-                              onChange={e => updateItem(idx, "unit_cost", e.target.value as any || 0)}
+                              onChange={e => updateItem(idx, "unit_cost", e.target.value === "" ? "" : Number(e.target.value))}
                               className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#16a34a]" />
                           </div>
                         </td>
@@ -347,13 +357,13 @@ export default function NewStockInPage() {
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
                         <input type="number" step="0.1" value={item.quantity_received}
-                          onChange={e => updateItem(idx, "quantity_received", e.target.value as any || 0)}
+                          onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Cost</p>
                         <input type="number" value={item.unit_cost}
-                          onChange={e => updateItem(idx, "unit_cost", e.target.value as any || 0)}
+                          onChange={e => updateItem(idx, "unit_cost", e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
                       </div>
                       <div>

@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Truck, Search, Plus, Camera, Loader2, Building2, Trash2,
-  ChevronDown, ChevronUp, Package, Hash, DollarSign, ReceiptText, X
+  ChevronDown, ChevronUp, Package, Hash, DollarSign, ReceiptText, X, Edit2
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
+import EditStockInModal from "@/components/admin/inventory/EditStockInModal";
 
 interface StockInItem {
   id: string;
@@ -53,11 +54,41 @@ export default function StockInPage() {
   const [expandedItems, setExpandedItems] = useState<StockInItem[]>([]);
   const [expandLoading, setExpandLoading] = useState(false);
 
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEditLog, setSelectedEditLog] = useState<any>(null);
+  const [globalInventory, setGlobalInventory] = useState<any[]>([]);
+  const [globalSuppliers, setGlobalSuppliers] = useState<any[]>([]);
+
   // Pagination
   const PAGE_SIZE = 15;
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => { fetchLogs(); }, [selectedBranchId]);
+  useEffect(() => { 
+    fetchLogs(); 
+    fetchCatalog();
+  }, [selectedBranchId]);
+
+  async function fetchCatalog() {
+    try {
+      const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
+      const [sRes, iRes] = await Promise.all([
+        supabase.from("suppliers").select("id, name").order("name"),
+        supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id").eq("branch_id", branchId).order("product_name"),
+      ]);
+      setGlobalSuppliers(sRes.data || []);
+      
+      const uniqueMap = new Map();
+      (iRes.data || []).forEach(item => {
+        if (!uniqueMap.has(item.product_name)) {
+          uniqueMap.set(item.product_name, item);
+        }
+      });
+      setGlobalInventory(Array.from(uniqueMap.values()));
+    } catch (e) {
+      console.error("Failed to fetch catalog", e);
+    }
+  }
 
   async function deleteLog(log: StockInLog) {
     if (!confirm(`Are you sure you want to delete this stock-in? \n\nThis will SUBTRACT the quantities from your current inventory to reverse the entry.`)) return;
@@ -337,13 +368,37 @@ export default function StockInPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={() => deleteLog(log)}
-                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                          title="Delete and reverse stock"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <button
+                            onClick={async () => {
+                              // Fetch items first
+                              setLoading(true);
+                              const { data, error } = await supabase
+                                .from("stock_in_items")
+                                .select("id, inventory_id, quantity_received, unit_cost, inventory:inventory(product_name)")
+                                .eq("stock_in_id", log.id)
+                                .order("id");
+                              setLoading(false);
+                              if (error) {
+                                alert("Failed to fetch items for edit.");
+                                return;
+                              }
+                              setSelectedEditLog({ ...log, items: data });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Edit stock-in"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteLog(log)}
+                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete and reverse stock"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
 
@@ -665,6 +720,19 @@ export default function StockInPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <EditStockInModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        logData={selectedEditLog}
+        inventory={globalInventory}
+        suppliers={globalSuppliers}
+        onSuccess={() => {
+          fetchLogs();
+        }}
+        session={session}
+      />
     </div>
   );
 }
