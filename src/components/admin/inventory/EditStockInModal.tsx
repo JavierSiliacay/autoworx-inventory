@@ -207,7 +207,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl w-full md:w-fit md:min-w-[896px] max-w-[95vw] overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
           <div>

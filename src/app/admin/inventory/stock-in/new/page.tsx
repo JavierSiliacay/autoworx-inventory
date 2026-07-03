@@ -204,7 +204,7 @@ export default function NewStockInPage() {
   const filteredInventory = inventory.filter(i => i.product_name.toLowerCase().includes(itemSearch.toLowerCase())).slice(0, 5);
 
   return (
-    <div className="pb-24 max-w-3xl mx-auto space-y-6">
+    <div className="pb-24 w-full md:w-fit md:min-w-[768px] max-w-[95vw] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
