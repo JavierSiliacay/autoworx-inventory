@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783067229104",
+    version: "v1.7.3",
+    date: "2026-07-03",
+    type: "improvement",
+    title: "Smoother Stock‑In Recording",
+    description: "The process for recording and editing stock‑in entries has been streamlined, making it faster and easier for staff to update inventory."
+  },
+
+  {
     id: "update-1783063093500",
     version: "v1.7.3",
     date: "2026-07-03",
