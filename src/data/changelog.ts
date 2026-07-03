@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783063093500",
+    version: "v1.7.3",
+    date: "2026-07-03",
+    type: "feature",
+    title: "Editable Stock for Records & Receivables",
+    description: "Staff can now edit stock quantities directly within records and receivable accounts, making it quicker and easier to keep inventory accurate without extra steps."
+  },
+
+  {
     id: "update-1782980835123",
     version: "v1.7.2",
     date: "2026-07-02",
