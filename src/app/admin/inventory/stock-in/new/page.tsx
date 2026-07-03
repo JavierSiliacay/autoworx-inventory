@@ -50,8 +50,10 @@ export default function NewStockInPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tableEndRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
+  const [hoveredSearchItem, setHoveredSearchItem] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -103,9 +105,19 @@ export default function NewStockInPage() {
   };
 
   const addItem = (product: InventoryItem) => {
-    if (items.find(i => i.inventory_id === product.id)) return;
+    if (items.find(i => i.inventory_id === product.id)) {
+      alert("Item is already added.");
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to add ${product.product_name}?`)) return;
+
     setItems(prev => [...prev, { inventory_id: product.id, product_name: product.product_name, quantity_received: 1, unit_cost: product.cost || 0 }]);
     setItemSearch("");
+    
+    setTimeout(() => {
+      tableEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const updateItem = (idx: number, field: keyof StockInItem, value: any) => {
@@ -274,16 +286,35 @@ export default function NewStockInPage() {
               />
               {(itemSearch || isSearchFocused) && !selectedPO && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
-                  {filteredInventory.map(item => (
-                    <button key={item.id} type="button" onClick={() => addItem(item)}
-                      className="w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0">
-                      <p className="text-xs font-semibold text-slate-800 group-hover:text-[#16a34a] transition-colors">{item.product_name}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-mono">₱{(item.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                        <Plus className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#16a34a]" />
-                      </div>
-                    </button>
-                  ))}
+                  {filteredInventory.map(item => {
+                    const isAdded = items.some(i => i.inventory_id === item.id);
+                    return (
+                      <button key={item.id} type="button" onClick={() => addItem(item)}
+                        onMouseEnter={() => {
+                          setHoveredSearchItem(item.id);
+                          if (isAdded) {
+                            const elId = window.innerWidth >= 640 ? `desktop-row-${item.id}` : `mobile-row-${item.id}`;
+                            document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredSearchItem(null)}
+                        className={`w-full px-4 py-3 text-left flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0 ${
+                          isAdded
+                            ? "text-[#15803d] bg-green-50 ring-1 ring-inset ring-[#16a34a]"
+                            : "hover:bg-slate-50"
+                        }`}>
+                        <p className={`text-xs font-semibold transition-colors ${isAdded ? "text-[#15803d]" : "text-slate-800 group-hover:text-[#16a34a]"}`}>{item.product_name}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-mono ${isAdded ? "text-[#16a34a]" : "text-slate-400"}`}>₱{(item.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
+                          {isAdded ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#16a34a]" />
+                          ) : (
+                            <Plus className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#16a34a]" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -309,8 +340,10 @@ export default function NewStockInPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {items.map((item, idx) => (
-                      <tr key={idx}>
+                    {items.map((item, idx) => {
+                      const isHovered = hoveredSearchItem === item.inventory_id;
+                      return (
+                      <tr id={`desktop-row-${item.inventory_id}`} key={idx} className={`transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-[#16a34a]/50 relative z-10' : ''}`}>
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="0.1" value={item.quantity_received} min={0.1}
@@ -337,15 +370,18 @@ export default function NewStockInPage() {
                           </td>
                         )}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile */}
               <div className="sm:hidden divide-y divide-slate-100">
-                {items.map((item, idx) => (
-                  <div key={idx} className="p-4 space-y-3">
+                {items.map((item, idx) => {
+                  const isHovered = hoveredSearchItem === item.inventory_id;
+                  return (
+                  <div id={`mobile-row-${item.inventory_id}`} key={idx} className={`p-4 space-y-3 transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-[#16a34a]/50 relative z-10' : ''}`}>
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
                       {!selectedPO && (
@@ -372,13 +408,15 @@ export default function NewStockInPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="px-5 py-4 border-t border-slate-100 flex justify-end items-center gap-4 bg-slate-50">
                 <span className="text-sm font-medium text-slate-500">Total Amount</span>
                 <span className="text-xl font-manrope font-bold text-slate-900">₱{total.toLocaleString()}</span>
               </div>
+              <div ref={tableEndRef} />
             </>
           )}
         </div>

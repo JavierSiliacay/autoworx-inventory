@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Loader2, Save, Plus, Package, Calendar, Building2, CheckCircle2, Trash2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -18,6 +18,8 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const [loading, setLoading] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [hoveredSearchItem, setHoveredSearchItem] = useState<string | null>(null);
+  const tableEndRef = useRef<HTMLDivElement>(null);
   
   const [currentLog, setCurrentLog] = useState({
     date_received: "",
@@ -59,6 +61,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
   const addItem = (product: any) => {
     if (currentLog.items.find(i => i.inventory_id === product.id)) return;
+    
+    if (!confirm(`Are you sure you want to add ${product.product_name}?`)) return;
+
     setCurrentLog({
       ...currentLog,
       items: [
@@ -73,6 +78,10 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       ]
     });
     setItemSearch("");
+    
+    setTimeout(() => {
+      tableEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const removeRow = (index: number) => {
@@ -170,16 +179,18 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         }
       }
 
-      for (const item of validItems) {
-        await supabase.from('stock_transactions').insert([{
-          item_id: item.inventory_id,
-          quantity: item.quantity_received,
-          transaction_type: 'inbound',
-          module_type: 'paints',
-          performed_by: session?.user?.id || null,
-          reason: `Stock In Edited: ${currentLog.invoice_number}`,
-          branch_id: currentLog.branch_id
-        }]);
+      const transactions = validItems.map(item => ({
+        item_id: item.inventory_id,
+        quantity: item.quantity_received,
+        transaction_type: 'inbound',
+        module_type: 'paints',
+        performed_by: session?.user?.id || null,
+        reason: `Stock In Edited: ${currentLog.invoice_number}`,
+        branch_id: currentLog.branch_id
+      }));
+
+      if (transactions.length > 0) {
+        await supabase.from('stock_transactions').insert(transactions);
       }
       
       onSuccess();
@@ -278,20 +289,40 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                     {filteredInventory.length === 0 ? (
                       <div className="p-3 text-xs text-center text-slate-400">No items found</div>
                     ) : (
-                      filteredInventory.map(prod => (
-                        <button
-                          key={prod.id}
-                          type="button"
-                          onClick={() => addItem(prod)}
-                          className="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 hover:bg-blue-50 flex items-center justify-between group border-b border-slate-50 last:border-0"
-                        >
-                          <span>{prod.product_name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-400 font-mono">₱{(prod.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
-                            <Plus className="w-3.5 h-3.5 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </button>
-                      ))
+                      filteredInventory.map(prod => {
+                        const isAdded = currentLog.items.some(i => i.inventory_id === prod.id);
+                        return (
+                          <button
+                            key={prod.id}
+                            type="button"
+                            onClick={() => addItem(prod)}
+                            onMouseEnter={() => {
+                              setHoveredSearchItem(prod.id);
+                              if (isAdded) {
+                                document.getElementById(`row-${prod.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }
+                            }}
+                            onMouseLeave={() => setHoveredSearchItem(null)}
+                            className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between group border-b border-slate-50 last:border-0 transition-colors ${
+                              isAdded 
+                                ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-500 hover:bg-green-100" 
+                                : "text-slate-700 hover:bg-blue-50"
+                            }`}
+                          >
+                            <span>{prod.product_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-mono ${isAdded ? 'text-green-600' : 'text-slate-400'}`}>
+                                ₱{(prod.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                              </span>
+                              {isAdded ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                              ) : (
+                                <Plus className="w-3.5 h-3.5 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 )}
@@ -310,8 +341,10 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {currentLog.items.map((item, index) => (
-                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                  {currentLog.items.map((item, index) => {
+                    const isHovered = hoveredSearchItem === item.inventory_id;
+                    return (
+                    <tr id={`row-${item.inventory_id}`} key={index} className={`transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-green-500/50 relative z-10' : 'hover:bg-slate-50/50'}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Package className="w-4 h-4 text-slate-300" />
@@ -351,9 +384,11 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
+              <div ref={tableEndRef} />
             </div>
             
             {/* Total Footer */}
