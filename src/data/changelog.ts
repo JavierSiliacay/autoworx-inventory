@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783067454709",
+    version: "v1.7.3",
+    date: "2026-07-03",
+    type: "improvement",
+    title: "Stock‑in containers now auto‑adjust to fit items",
+    description: "When you add or remove items in the inventory, the stock‑in sections automatically resize to show all content neatly, eliminating extra scrolling or wasted space."
+  },
+
+  {
     id: "update-1783067229104",
     version: "v1.7.3",
     date: "2026-07-03",
