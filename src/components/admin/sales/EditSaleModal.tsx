@@ -20,7 +20,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     invoice_no: "",
     old_invoice_no: "",
     customer_name: "",
-    payment_type: "Cash" as "Cash" | "Charge" | "Delivery",
+    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery",
     branch_id: "",
     items: [] as any[],
     old_payment_type: "Cash"
@@ -259,6 +259,8 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                 onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
               >
                 <option value="Cash">Cash</option>
+                <option value="GCash">GCash</option>
+                <option value="Bank Transfer">Bank Transfer</option>
                 <option value="Charge">Charge (Receivable)</option>
                 <option value="Delivery">Delivery (Receivable)</option>
               </select>

@@ -62,7 +62,7 @@ export default function AdminSalesPage() {
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
     customer_name: "",
-    payment_type: "Cash" as "Cash" | "Charge" | "Delivery",
+    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery",
     branch_id: "",
     items: Array(10).fill(null).map(() => ({
       item_id: "",
@@ -92,7 +92,7 @@ export default function AdminSalesPage() {
   const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
   const [printMonth, setPrintMonth] = useState(new Date().getMonth() + 1);
   const [printYear, setPrintYear] = useState(new Date().getFullYear());
-  const [printPaymentType, setPrintPaymentType] = useState<'All' | 'Cash' | 'Charge' | 'Delivery'>('All');
+  const [printPaymentType, setPrintPaymentType] = useState<'All' | 'Cash' | 'GCash' | 'Bank Transfer' | 'Charge' | 'Delivery'>('All');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
   const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
@@ -1087,8 +1087,10 @@ export default function AdminSalesPage() {
                     onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
                   >
                     <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Charge">Charge (Receivable)</option>
-                    <option value="Delivery">Delivery(Receivable)</option>
+                    <option value="Delivery">Delivery (Receivable)</option>
                   </select>
                 </div>
               </div>
@@ -1297,7 +1299,7 @@ export default function AdminSalesPage() {
               <div className="space-y-2 pt-2">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
                 <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                  {['All', 'Cash', 'Charge', 'Delivery'].map((type) => (
+                  {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
                     <button
                       key={type}
                       onClick={() => setPrintPaymentType(type as any)}

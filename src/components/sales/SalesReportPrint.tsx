@@ -18,7 +18,7 @@ interface SalesReportPrintProps {
   year: number;
   reportType: 'monthly' | 'daily' | 'yearly';
   printDate: string; // YYYY-MM-DD
-  paymentTypeFilter?: 'All' | 'Cash' | 'Charge' | 'Delivery';
+  paymentTypeFilter?: 'All' | 'Cash' | 'GCash' | 'Bank Transfer' | 'Charge' | 'Delivery';
   transmittalChecks?: { name: string; ref: string; amount: string; bank: string }[];
   transmittalNotes?: string[];
   isPreview?: boolean;
@@ -80,12 +80,12 @@ export default function SalesReportPrint({
     ? `ANNUAL SALES REPORT - FOR YEAR ${year}${filterLabel}`
     : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}${filterLabel}`;
 
-  const cashSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cash' ? acc + sale.total_amount : acc, 0);
+  const cashSales = filteredSales.reduce((acc, sale) => (sale.payment_type === 'Cash' || sale.payment_type === 'GCash' || sale.payment_type === 'Bank Transfer') ? acc + sale.total_amount : acc, 0);
   const chargeSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Charge' ? acc + sale.total_amount : acc, 0);
   const deliverySales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Delivery' ? acc + sale.total_amount : acc, 0);
   const totalSales = cashSales + chargeSales + deliverySales;
 
-  const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash');
+  const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
   const chargeSalesArr = filteredSales.filter(s => s.payment_type === 'Charge');
   const deliverySalesArr = filteredSales.filter(s => s.payment_type === 'Delivery');
 
@@ -96,7 +96,7 @@ export default function SalesReportPrint({
     let logicalRows = 0;
     logicalRows += 5; // Base layout components (Header margins + title spaces)
     
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
       logicalRows += 3; // Cash Sales Table Base
       logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
     }
@@ -171,7 +171,7 @@ export default function SalesReportPrint({
                 const d = new Date(sale.date);
                 const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
                 
-                const remarks = (sale.payment_type === 'Cash' ? 'PAID IN CASH' : (sale.payment_type || 'CHARGE')).toUpperCase();
+                const remarks = (sale.payment_type === 'Cash' || sale.payment_type === 'GCash' || sale.payment_type === 'Bank Transfer' ? `PAID IN ${sale.payment_type}` : (sale.payment_type || 'CHARGE')).toUpperCase();
 
                 return (
                   <tr key={`${sale.invoice_no}-${i}`} className="border-b border-black">
@@ -216,7 +216,7 @@ export default function SalesReportPrint({
             </tr>
           </thead>
           <tbody>
-            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash') && (
               <>
                 <tr>
                   <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
@@ -226,12 +226,12 @@ export default function SalesReportPrint({
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no || 'N/A'}</td>
                     <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN CASH</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN {sale.payment_type.toUpperCase()}</td>
                   </tr>
                 ))}
                 {cashSalesArr.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash/GCash/Bank Transfer Sales</td>
                   </tr>
                 )}
               </>
@@ -280,7 +280,7 @@ export default function SalesReportPrint({
             )}
           </tbody>
           <tfoot>
-            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
               <tr>
                 <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
                 <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">

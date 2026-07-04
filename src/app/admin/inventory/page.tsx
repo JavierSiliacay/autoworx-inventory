@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package
+  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -78,6 +78,37 @@ export default function AdminInventoryPage() {
   const [staffMap, setStaffMap] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  async function fetchPriceHistory(id: string) {
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("inventory_price_history")
+        .select("*")
+        .eq("inventory_id", id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setPriceHistory(data || []);
+    } catch (err: any) {
+      console.error("Error fetching history:", err.message || err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  const handleRowClick = (product: InventoryItem, e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    if (expandedRowId === product.id) {
+      setExpandedRowId(null);
+    } else {
+      setExpandedRowId(product.id);
+      fetchPriceHistory(product.id);
+    }
+  };
 
   // ─── Data Fetching ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -321,65 +352,131 @@ export default function AdminInventoryPage() {
                 const margin = (product.price || 0) - (product.cost || 0);
                 const isLow = product.quantity <= (product.low_stock_threshold ?? 5);
                 return (
-                  <tr key={product.id} className={`hover:bg-slate-50 transition-colors group ${isLow ? "bg-red-50/30" : ""}`}>
-                    <td className="px-6 py-4">
-                      <div className="relative group/audit">
-                        <p className="text-sm font-semibold text-slate-900">{product.product_name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-semibold text-[#1e40af]">{product.branch_name}</span>
-                          {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
-                        </div>
-                        {/* Audit tooltip */}
-                        <div className="absolute left-0 top-full mt-1 z-50 opacity-0 group-hover/audit:opacity-100 pointer-events-none transition-opacity hidden lg:block">
-                          <div className="bg-slate-900 text-white text-[10px] px-3 py-2 rounded-xl shadow-xl whitespace-nowrap">
-                            <p className="text-slate-400">Modified by: <span className="text-white font-semibold">{product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System"}</span></p>
-                            <p className="text-slate-400 mt-0.5">{new Date(product.updated_at).toLocaleString()}</p>
+                  <React.Fragment key={product.id}>
+                    <tr onClick={(e) => handleRowClick(product, e)} className={`hover:bg-slate-50 transition-colors group cursor-pointer ${isLow ? "bg-red-50/30" : ""} ${expandedRowId === product.id ? "bg-slate-50" : ""}`}>
+                      <td className="px-6 py-4">
+                        <div className="relative group/audit">
+                          <p className="text-sm font-semibold text-slate-900">{product.product_name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] font-semibold text-[#1e40af]">{product.branch_name}</span>
+                            {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
+                          </div>
+                          {/* Audit tooltip */}
+                          <div className="absolute left-0 top-full mt-1 z-50 opacity-0 group-hover/audit:opacity-100 pointer-events-none transition-opacity hidden lg:block">
+                            <div className="bg-slate-900 text-white text-[10px] px-3 py-2 rounded-xl shadow-xl whitespace-nowrap">
+                              <p className="text-slate-400">Modified by: <span className="text-white font-semibold">{product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System"}</span></p>
+                              <p className="text-slate-400 mt-0.5">{new Date(product.updated_at).toLocaleString()}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${categoryBadge[product.category] || "bg-slate-100 text-slate-500"}`}>
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`text-sm font-bold font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
-                        {parseFloat(product.quantity.toString()).toFixed(1)}
-                      </span>
-                      {product.unit && <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>}
-                    </td>
-                    {canViewCost && (
-                      <td className="px-4 py-4 text-right text-sm text-slate-500 font-medium">
-                        ₱{formatNum(product.cost || 0)}
                       </td>
-                    )}
-                    <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900">
-                      ₱{formatNum(product.price || 0)}
-                    </td>
-                    {isMainDistributionView && (
-                      <td className="px-4 py-4 text-right text-sm font-semibold text-[#1e40af]">
-                        {product.dealers_price ? `₱${formatNum(product.dealers_price)}` : '-'}
-                      </td>
-                    )}
-                    {canViewCost && (
-                      <td className="px-4 py-4 text-right">
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${margin >= 0 ? "bg-green-50 text-[#16a34a]" : "bg-red-50 text-red-500"}`}>
-                          +₱{formatNum(margin)}
+                      <td className="px-4 py-4">
+                        <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${categoryBadge[product.category] || "bg-slate-100 text-slate-500"}`}>
+                          {product.category}
                         </span>
                       </td>
+                      <td className="px-4 py-4 text-center">
+                        <span className={`text-sm font-bold font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
+                          {parseFloat(product.quantity.toString()).toFixed(1)}
+                        </span>
+                        {product.unit && <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>}
+                      </td>
+                      {canViewCost && (
+                        <td className="px-4 py-4 text-right text-sm text-slate-500 font-medium">
+                          ₱{formatNum(product.cost || 0)}
+                        </td>
+                      )}
+                      <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900">
+                        ₱{formatNum(product.price || 0)}
+                      </td>
+                      {isMainDistributionView && (
+                        <td className="px-4 py-4 text-right text-sm font-semibold text-[#1e40af]">
+                          {product.dealers_price ? `₱${formatNum(product.dealers_price)}` : '-'}
+                        </td>
+                      )}
+                      {canViewCost && (
+                        <td className="px-4 py-4 text-right">
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${margin >= 0 ? "bg-green-50 text-[#16a34a]" : "bg-red-50 text-red-500"}`}>
+                            +₱{formatNum(margin)}
+                          </span>
+                        </td>
+                      )}
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); openModal(product); }} className="p-2 text-slate-400 hover:text-[#16a34a] hover:bg-green-50 rounded-lg transition-colors">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedRowId === product.id && (
+                      <tr>
+                        <td colSpan={canViewCost ? (isMainDistributionView ? 8 : 7) : (isMainDistributionView ? 6 : 5)} className="p-0 border-b border-slate-100 bg-slate-50/80 shadow-inner">
+                          <div className="p-4 md:p-6 animate-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <History className="w-4 h-4 text-indigo-500" />
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Price & Cost Audit Trail</h4>
+                            </div>
+                            {historyLoading ? (
+                              <div className="flex items-center gap-2 text-sm text-slate-500 py-4"><Loader2 className="w-4 h-4 animate-spin"/> Loading history logs...</div>
+                            ) : priceHistory.length === 0 ? (
+                              <div className="text-sm text-slate-500 py-4 italic bg-white rounded-xl border border-slate-100 px-4">No price or cost changes recorded for this item.</div>
+                            ) : (
+                              <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-left">
+                                  <thead className="bg-slate-50">
+                                    <tr>
+                                      <th className="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Timestamp</th>
+                                      <th className="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase">Changed By</th>
+                                      <th className="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-right">Cost Change</th>
+                                      <th className="px-4 py-2.5 text-[10px] font-bold text-slate-400 uppercase text-right">Price Change</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-50 text-xs">
+                                    {priceHistory.map((h: any) => {
+                                      const costChanged = h.old_cost !== h.new_cost;
+                                      const priceChanged = h.old_price !== h.new_price;
+                                      return (
+                                        <tr key={h.id} className="hover:bg-slate-50/50">
+                                          <td className="px-4 py-3 text-slate-500 font-medium">{new Date(h.created_at).toLocaleString()}</td>
+                                          <td className="px-4 py-3 font-semibold text-slate-700">{h.changed_by ? (staffMap[h.changed_by.toLowerCase()] || h.changed_by) : "System"}</td>
+                                          <td className="px-4 py-3 text-right">
+                                            {costChanged ? (
+                                              <div className="flex items-center justify-end gap-2">
+                                                <span className="text-slate-400 line-through">₱{formatNum(h.old_cost)}</span>
+                                                <span className="text-slate-300">→</span>
+                                                <span className="font-bold text-slate-900">₱{formatNum(h.new_cost)}</span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-slate-300">-</span>
+                                            )}
+                                          </td>
+                                          <td className="px-4 py-3 text-right">
+                                            {priceChanged ? (
+                                              <div className="flex items-center justify-end gap-2">
+                                                <span className="text-slate-400 line-through">₱{formatNum(h.old_price)}</span>
+                                                <span className="text-slate-300">→</span>
+                                                <span className="font-bold text-[#16a34a]">₱{formatNum(h.new_price)}</span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-slate-300">-</span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openModal(product)} className="p-2 text-slate-400 hover:text-[#16a34a] hover:bg-green-50 rounded-lg transition-colors">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteProduct(product.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
