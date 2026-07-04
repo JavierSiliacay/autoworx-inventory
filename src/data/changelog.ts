@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783136163284",
+    version: "v1.7.4",
+    date: "2026-07-04",
+    type: "feature",
+    title: "Faster bulk stock‑in and smoother UI",
+    description: "Staff can now add multiple items to inventory in one go, with a refreshed interface that makes the process quicker and less error‑prone."
+  },
+
+  {
     id: "update-1783067454709",
     version: "v1.7.3",
     date: "2026-07-03",
