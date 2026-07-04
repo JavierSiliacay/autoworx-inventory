@@ -74,6 +74,8 @@ export default function AdminSalesPage() {
 
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [filterMonth, setFilterMonth] = useState(currentMonthStr);
   const [showSetupAlert, setShowSetupAlert] = useState(false);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   
@@ -208,7 +210,7 @@ export default function AdminSalesPage() {
         supabase.removeChannel(channel);
       };
     }
-  }, [session, selectedBranchId]);
+  }, [session, selectedBranchId, filterMonth]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
@@ -255,6 +257,16 @@ export default function AdminSalesPage() {
         query = query.eq('branch_id', filterBranch);
       } else if (isStaff && userBranchIds.length > 0) {
         query = query.in('branch_id', userBranchIds);
+      }
+
+      if (filterMonth !== 'all') {
+        if (filterMonth.length === 7) {
+          const [year, month] = filterMonth.split('-');
+          const lastDay = new Date(Number(year), Number(month), 0).getDate();
+          query = query.gte('date', `${filterMonth}-01`).lte('date', `${filterMonth}-${lastDay}`);
+        } else if (filterMonth.length === 10) {
+          query = query.eq('date', filterMonth);
+        }
       }
 
       const { data, error } = await query;
@@ -599,7 +611,7 @@ export default function AdminSalesPage() {
         groups[key] = {
           invoice_no: sale.invoice_no,
           customer_name: sale.customer_name,
-          date: sale.created_at || sale.date,
+          date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
           payment_type: sale.payment_type,
           branch_name: sale.branches?.name,
           performed_by: sale.performed_by || 'Unknown Staff',
@@ -677,6 +689,63 @@ export default function AdminSalesPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:block">Period</label>
+            <select 
+              value={filterMonth === "all" ? "all" : (filterMonth.split('-')[1] || "06")}
+              onChange={(e) => {
+                if (e.target.value === "all") {
+                  setFilterMonth("all");
+                } else {
+                  const parts = filterMonth === "all" ? [String(new Date().getFullYear()), e.target.value] : filterMonth.split('-');
+                  setFilterMonth(`${parts[0] || new Date().getFullYear()}-${e.target.value}${parts[2] ? `-${parts[2]}` : ''}`);
+                }
+              }}
+              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+            >
+              <option value="all" className="font-bold text-blue-600">Overall</option>
+              {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                <option key={m} value={String(m).padStart(2, '0')}>
+                  {new Date(0, m - 1).toLocaleString('default', { month: 'short' })}
+                </option>
+              ))}
+            </select>
+            {filterMonth !== "all" && (
+              <>
+                <select
+                  value={filterMonth.split('-')[2] || ""}
+                  onChange={(e) => {
+                    const parts = filterMonth.split('-');
+                    const year = parts[0] || new Date().getFullYear();
+                    const month = parts[1] || "06";
+                    if (e.target.value === "") {
+                      setFilterMonth(`${year}-${month}`);
+                    } else {
+                      setFilterMonth(`${year}-${month}-${e.target.value}`);
+                    }
+                  }}
+                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+                >
+                  <option value="">All Days</option>
+                  {Array.from({length: 31}, (_, i) => i + 1).map(d => (
+                    <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                  ))}
+                </select>
+                <select 
+                  value={filterMonth.split('-')[0] || String(new Date().getFullYear())}
+                  onChange={(e) => {
+                    const parts = filterMonth.split('-');
+                    setFilterMonth(`${e.target.value}-${parts[1] || "06"}${parts[2] ? `-${parts[2]}` : ''}`);
+                  }}
+                  className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-bold text-blue-700 bg-blue-50 shadow-sm focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+                >
+                  {Array.from({length: 10}, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
           <div className="relative group flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#16a34a] transition-colors" />
             <input

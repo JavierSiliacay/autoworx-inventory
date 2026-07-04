@@ -56,39 +56,17 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
       const newTotal = Number(rawAmount);
       const newCollected = Number(rawCollected);
       const oldCollected = Number(record.amount_collected || 0);
-      const difference = newCollected - oldCollected;
-      
-      // We first update the total amount due and recalculate remaining balance based on OLD collected amount.
-      // The trigger will handle the difference when we insert the payment record below.
-      const exactRemainingBeforePayment = newTotal - oldCollected;
 
-      const { error: updateError } = await supabase
-        .from('accounts_receivable')
-        .update({
-          customer_name: customerName,
-          invoice_no: invoiceNo,
-          total_amount_due: newTotal,
-          remaining_balance: exactRemainingBeforePayment,
-        })
-        .eq('id', record.id);
+      const { error: rpcError } = await supabase.rpc('edit_receivable', {
+        p_ar_id: record.id,
+        p_customer_name: customerName,
+        p_invoice_no: invoiceNo,
+        p_new_total: newTotal,
+        p_old_collected: oldCollected,
+        p_new_collected: newCollected
+      });
 
-      if (updateError) throw updateError;
-
-      // If the collected amount was manually changed, insert an adjustment payment record
-      // so it shows up in the Settle Account Audit Trail
-      if (difference !== 0) {
-        const { error: paymentError } = await supabase
-          .from('receivable_payments')
-          .insert({
-            ar_id: record.id,
-            amount: difference,
-            payment_method: 'Cash',
-            status: 'Completed',
-            remarks: 'Manual Balance Adjustment via Edit Record'
-          });
-          
-        if (paymentError) throw paymentError;
-      }
+      if (rpcError) throw rpcError;
       
       onSuccess();
       onClose();

@@ -129,128 +129,53 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         }
       }
 
-      // Step 2: Revert Old Inventory
-      for (const oldItem of invoiceData.items) {
-         const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('id', oldItem.item_id).single();
-         if (currentInv) {
-           await supabase.from('inventory').update({ quantity: currentInv.quantity + oldItem.quantity }).eq('id', oldItem.item_id);
-         }
-      }
 
-      // Step 3: Delete old sale records and transactions
-      for (const oldItem of invoiceData.items) {
-         await supabase.from('sales').delete().eq('id', oldItem.id);
-         await supabase.from('transactions').delete()
-           .eq('item_id', oldItem.item_id)
-           .eq('transaction_type', 'outbound')
-           .ilike('remarks', `%Inv: ${currentSale.old_invoice_no}%`);
-      }
+      const salePayload = {
+        old_invoice_no: currentSale.old_invoice_no,
+        old_payment_type: currentSale.old_payment_type,
+        invoice_no: currentSale.invoice_no,
+        customer_name: currentSale.customer_name,
+        payment_type: currentSale.payment_type,
+        date: currentSale.date,
+        branch_id: currentSale.branch_id,
+        grand_total: grandTotal
+      };
 
-      // Step 4: Handle Accounts Receivable
-      if (currentSale.old_payment_type === "Charge" || currentSale.old_payment_type === "Delivery") {
-         const { data: arData, error: arErr } = await supabase.from('accounts_receivable').select('*').eq('invoice_no', currentSale.old_invoice_no).maybeSingle();
-         
-         if (currentSale.payment_type === "Cash") {
-            // Changed to cash, delete the AR
-            if (arData) {
-               // First delete any linked payments or statements to avoid FK constraint errors
-               await supabase.from('receivable_payments').delete().eq('ar_id', arData.id);
-               
-               const { error: delErr } = await supabase.from('accounts_receivable').delete().eq('id', arData.id);
-               if (delErr) throw new Error("Could not remove AR: " + delErr.message);
-            }
-         } else {
-            // Still charge/delivery, update the AR
-            if (arData) {
-               const diff = grandTotal - arData.total_amount_due;
-               const { error: upErr } = await supabase.from('accounts_receivable').update({
-                  invoice_no: currentSale.invoice_no,
-                  customer_name: currentSale.customer_name,
-                  total_amount_due: grandTotal,
-                  remaining_balance: Number(arData.remaining_balance) + diff
-               }).eq('id', arData.id);
-               if (upErr) throw new Error("Could not update AR: " + upErr.message);
-            } else {
-               // AR missing for some reason, recreate it
-               const { error: insErr } = await supabase.from('accounts_receivable').insert([{
-                 invoice_no: currentSale.invoice_no,
-                 customer_name: currentSale.customer_name,
-                 total_amount_due: grandTotal,
-                 remaining_balance: grandTotal,
-                 amount_collected: 0,
-                 payment_status: 'Unpaid',
-                 date: currentSale.date,
-                 branch_id: currentSale.branch_id
-               }]);
-               if (insErr) throw new Error("Could not recreate AR: " + insErr.message);
-            }
-         }
-      } else {
-         // Old was Cash
-         if (currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") {
-            const { error: insErr2 } = await supabase.from('accounts_receivable').insert([{
-              invoice_no: currentSale.invoice_no,
-              customer_name: currentSale.customer_name,
-              total_amount_due: grandTotal,
-              remaining_balance: grandTotal,
-              amount_collected: 0,
-              payment_status: 'Unpaid',
-              date: currentSale.date,
-              branch_id: currentSale.branch_id
-            }]);
-            if (insErr2) throw new Error("Could not create AR: " + insErr2.message);
-         }
-      }
+      const oldItemsPayload = invoiceData.items.map((item: any) => ({
+        id: item.id,
+        item_id: item.item_id,
+        quantity: item.quantity
+      }));
 
-      // Step 5: Insert new sale records
-      const salesBatch = validItems.map(item => {
+      const newItemsPayload = validItems.map(item => {
         const invItem = inventory.find(i => i.id === item.item_id);
         const sellingPrice = Number(item.unit_price || 0);
         const sellingQty = Number(item.quantity || 0);
         const resolvedCost = Number(invItem?.cost || 0);
         const subtotal = sellingPrice * sellingQty;
-
+        
         return {
-          date: currentSale.date,
-          invoice_no: currentSale.invoice_no,
-          customer_name: currentSale.customer_name,
-          payment_type: currentSale.payment_type,
-          branch_id: currentSale.branch_id || invItem?.branch_id,
           item_id: item.item_id,
           quantity: sellingQty,
           unit_price: sellingPrice,
           unit_cost: resolvedCost,
           total_amount: subtotal,
-          performed_by: session?.user?.email || 'Anonymous'
+          branch_id: invItem?.branch_id || currentSale.branch_id
         };
       });
 
-      await supabase.from('sales').insert(salesBatch);
+      const userEmail = session?.user?.email || 'Anonymous';
+      const userId = (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000';
 
-      // Step 6: Deduct New Inventory and Log Transactions
-      const consolidatedDeductions: Record<string, number> = {};
-      validItems.forEach(item => {
-        consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
+      const { error: rpcErr } = await supabase.rpc('edit_sale', {
+        p_sale_payload: salePayload,
+        p_old_items_payload: oldItemsPayload,
+        p_new_items_payload: newItemsPayload,
+        p_user_email: userEmail,
+        p_user_id: userId
       });
 
-      for (const itemId in consolidatedDeductions) {
-        const totalDeduction = consolidatedDeductions[itemId];
-        const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('id', itemId).single();
-        if (currentInv) {
-           await supabase.from('inventory').update({ quantity: currentInv.quantity - totalDeduction }).eq('id', itemId);
-        }
-      }
-
-      for (const item of validItems) {
-        await supabase.from('transactions').insert([{
-          item_id: item.item_id,
-          quantity: item.quantity,
-          transaction_type: 'outbound',
-          module_type: 'paints',
-          performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
-          remarks: `Sale Edit to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
-        }]);
-      }
+      if (rpcErr) throw new Error("Failed to update sale: " + rpcErr.message);
 
       onSuccess();
       onClose();
