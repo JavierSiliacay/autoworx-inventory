@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783148497955",
+    version: "v1.7.4",
+    date: "2026-07-04",
+    type: "feature",
+    title: "New payment methods, price history and sales filtering",
+    description: "Staff can now record payments using Gcash or Bank Transfer, track product price changes over time, and filter sales reports by date for faster insights and smoother checkout."
+  },
+
+  {
     id: "update-1783136163284",
     version: "v1.7.4",
     date: "2026-07-04",
