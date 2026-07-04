@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783150024675",
+    version: "v1.7.4",
+    date: "2026-07-04",
+    type: "feature",
+    title: "Track and Report Cancelled Invoices",
+    description: "Staff can now view and generate reports on cancelled invoices, giving better insight into lost sales and improving financial oversight."
+  },
+
+  {
     id: "update-1783148497955",
     version: "v1.7.4",
     date: "2026-07-04",
