@@ -274,6 +274,7 @@ export default function AdminDashboardPage() {
           }));
           
           const filteredMapped = mapped.filter((s: any) => {
+            if (s.payment_type === 'Cancelled') return false;
             const d = s.created_at || s.date;
             return filterMonth === "all" || (d && d.startsWith(filterMonth));
           });

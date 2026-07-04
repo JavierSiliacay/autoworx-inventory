@@ -20,7 +20,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     invoice_no: "",
     old_invoice_no: "",
     customer_name: "",
-    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery",
+    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
     branch_id: "",
     items: [] as any[],
     old_payment_type: "Cash"
@@ -263,6 +263,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="Charge">Charge (Receivable)</option>
                 <option value="Delivery">Delivery (Receivable)</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
           </div>

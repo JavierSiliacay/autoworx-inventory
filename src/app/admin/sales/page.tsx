@@ -62,7 +62,7 @@ export default function AdminSalesPage() {
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
     customer_name: "",
-    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery",
+    payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
     branch_id: "",
     items: Array(10).fill(null).map(() => ({
       item_id: "",
@@ -92,7 +92,7 @@ export default function AdminSalesPage() {
   const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
   const [printMonth, setPrintMonth] = useState(new Date().getMonth() + 1);
   const [printYear, setPrintYear] = useState(new Date().getFullYear());
-  const [printPaymentType, setPrintPaymentType] = useState<'All' | 'Cash' | 'GCash' | 'Bank Transfer' | 'Charge' | 'Delivery'>('All');
+  const [printPaymentType, setPrintPaymentType] = useState<'All' | 'Cash' | 'GCash' | 'Bank Transfer' | 'Charge' | 'Delivery' | 'Cancelled'>('All');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
   const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
@@ -374,13 +374,15 @@ export default function AdminSalesPage() {
         return;
       }
 
-      // 1. Validate Stock first for all items
-      for (const item of validItems) {
-        const invItem = inventory.find(i => i.id === item.item_id);
-        if (!invItem || invItem.quantity < item.quantity) {
-          alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available: ${invItem?.quantity || 0}`);
-          setSaving(false);
-          return;
+      // 1. Validate Stock first for all items (unless Cancelled)
+      if (currentSale.payment_type !== 'Cancelled') {
+        for (const item of validItems) {
+          const invItem = inventory.find(i => i.id === item.item_id);
+          if (!invItem || invItem.quantity < item.quantity) {
+            alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available: ${invItem?.quantity || 0}`);
+            setSaving(false);
+            return;
+          }
         }
       }
 
@@ -415,7 +417,7 @@ export default function AdminSalesPage() {
       if (salesError) throw salesError;
 
       // 3. Create Accounts Receivable record if it's a debt (one for the whole invoice)
-      if ((currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && salesData && salesData.length > 0) {
+      if (currentSale.payment_type !== 'Cancelled' && (currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && salesData && salesData.length > 0) {
         await supabase.from('accounts_receivable').insert([{
           invoice_no: currentSale.invoice_no,
           customer_name: currentSale.customer_name,
@@ -428,34 +430,36 @@ export default function AdminSalesPage() {
         }]);
       }
 
-      // 4. Update Inventory & Log Transactions for each item
-      // Consolidate deductions by item_id to avoid stale state issues if same product is in multiple rows
-      const consolidatedDeductions: Record<string, number> = {};
-      validItems.forEach(item => {
-        consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
-      });
+      // 4. Update Inventory & Log Transactions for each item (skip if Cancelled)
+      if (currentSale.payment_type !== 'Cancelled') {
+        // Consolidate deductions by item_id to avoid stale state issues if same product is in multiple rows
+        const consolidatedDeductions: Record<string, number> = {};
+        validItems.forEach(item => {
+          consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
+        });
 
-      for (const itemId in consolidatedDeductions) {
-        const totalDeduction = consolidatedDeductions[itemId];
-        const invItem = inventory.find(i => i.id === itemId)!;
-        
-        // Deduct from Inventory
-        await supabase
-          .from('inventory')
-          .update({ quantity: invItem.quantity - totalDeduction })
-          .eq('id', itemId);
-      }
+        for (const itemId in consolidatedDeductions) {
+          const totalDeduction = consolidatedDeductions[itemId];
+          const invItem = inventory.find(i => i.id === itemId)!;
+          
+          // Deduct from Inventory
+          await supabase
+            .from('inventory')
+            .update({ quantity: invItem.quantity - totalDeduction })
+            .eq('id', itemId);
+        }
 
-      // Log Transactions for each row (for audit granularity)
-      for (const item of validItems) {
-        await supabase.from('transactions').insert([{
-          item_id: item.item_id,
-          quantity: item.quantity,
-          transaction_type: 'outbound',
-          module_type: 'paints',
-          performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
-          remarks: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
-        }]);
+        // Log Transactions for each row (for audit granularity)
+        for (const item of validItems) {
+          await supabase.from('transactions').insert([{
+            item_id: item.item_id,
+            quantity: item.quantity,
+            transaction_type: 'outbound',
+            module_type: 'paints',
+            performed_by: (session?.user as any)?.id || '00000000-0000-0000-0000-000000000000',
+            remarks: `Sale to ${currentSale.customer_name} (Inv: ${currentSale.invoice_no})`
+          }]);
+        }
       }
 
       setIsModalOpen(false);
@@ -837,7 +841,7 @@ export default function AdminSalesPage() {
                   <React.Fragment key={invoice.invoice_no}>
                   <tr 
                     onClick={() => toggleExpandSale(invoice.invoice_no)}
-                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''}`}
+                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''} ${invoice.payment_type === 'Cancelled' ? 'bg-red-50/50' : ''}`}
                   >
                     {mounted && role === 'developer' && (
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -851,13 +855,13 @@ export default function AdminSalesPage() {
                     )}
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#1a1b20]">{invoice.invoice_no}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className={`text-sm font-bold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>{invoice.invoice_no}</span>
+                        <span className={`text-[10px] font-medium ${invoice.payment_type === 'Cancelled' ? 'text-red-400' : 'text-slate-400'}`}>
                           {new Date(invoice.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-sm text-[#334155]">{invoice.customer_name}</td>
+                    <td className={`px-6 py-4 font-bold text-sm ${invoice.payment_type === 'Cancelled' ? 'text-red-600' : 'text-[#334155]'}`}>{invoice.customer_name}</td>
                     <td className="px-6 py-4 text-center">
                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase tracking-tight">
                          {invoice.items.length} Product{invoice.items.length > 1 ? 's' : ''}
@@ -865,8 +869,8 @@ export default function AdminSalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
-                        <span className="text-sm font-extrabold text-[#1a1b20]">₱{invoice.total_amount.toLocaleString()}</span>
-                        <div className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                        <span className={`text-sm font-extrabold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>₱{invoice.total_amount.toLocaleString()}</span>
+                        <div className={`flex items-center justify-end gap-1 text-[9px] font-bold uppercase tracking-tighter ${invoice.payment_type === 'Cancelled' ? 'text-red-500' : 'text-slate-400'}`}>
                           <span>{invoice.payment_type}</span>
                           <span className="opacity-50">|</span>
                           <span>{invoice.branch_name}</span>
@@ -1091,6 +1095,7 @@ export default function AdminSalesPage() {
                     <option value="Bank Transfer">Bank Transfer</option>
                     <option value="Charge">Charge (Receivable)</option>
                     <option value="Delivery">Delivery (Receivable)</option>
+                    <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
               </div>

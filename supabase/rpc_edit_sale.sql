@@ -35,19 +35,21 @@ BEGIN
     IF (v_old_item->>'item_id') IS NOT NULL AND (v_old_item->>'item_id') != '' THEN
       v_inventory_id := (v_old_item->>'item_id')::uuid;
 
-      -- Revert inventory
-      UPDATE public.inventory
-      SET quantity = quantity + (v_old_item->>'quantity')::decimal
-      WHERE id = v_inventory_id;
+      -- Revert inventory only if old sale was not cancelled
+      IF (p_sale_payload->>'old_payment_type') IS DISTINCT FROM 'Cancelled' THEN
+        UPDATE public.inventory
+        SET quantity = quantity + (v_old_item->>'quantity')::decimal
+        WHERE id = v_inventory_id;
 
-      -- Delete old sale
+        -- Delete old transaction
+        DELETE FROM public.transactions 
+        WHERE item_id = v_inventory_id 
+        AND transaction_type = 'outbound' 
+        AND reason ILIKE '%Inv: ' || (p_sale_payload->>'old_invoice_no') || '%';
+      END IF;
+
+      -- ALWAYS Delete old sale
       DELETE FROM public.sales WHERE id = (v_old_item->>'id')::uuid;
-
-      -- Delete old transaction
-      DELETE FROM public.transactions 
-      WHERE item_id = v_inventory_id 
-      AND transaction_type = 'outbound' 
-      AND reason ILIKE '%Inv: ' || (p_sale_payload->>'old_invoice_no') || '%';
     END IF;
   END LOOP;
 
@@ -60,8 +62,8 @@ BEGIN
     WHERE invoice_no = (p_sale_payload->>'old_invoice_no')
     LIMIT 1;
 
-    IF (p_sale_payload->>'payment_type') = 'Cash' THEN
-      -- Changed to Cash -> Delete the AR and its payments
+    IF (p_sale_payload->>'payment_type') = 'Cash' OR (p_sale_payload->>'payment_type') = 'Cancelled' THEN
+      -- Changed to Cash or Cancelled -> Delete the AR and its payments
       IF v_ar_id IS NOT NULL THEN
         DELETE FROM public.receivable_payments WHERE ar_id = v_ar_id;
         DELETE FROM public.accounts_receivable WHERE id = v_ar_id;
@@ -136,23 +138,26 @@ BEGIN
       p_user_email
     );
 
-    -- Deduct inventory
-    UPDATE public.inventory
-    SET quantity = quantity - (v_new_item->>'quantity')::decimal
-    WHERE id = v_inventory_id;
+    -- Deduct inventory and insert transaction log only if not Cancelled
+    IF (p_sale_payload->>'payment_type') IS DISTINCT FROM 'Cancelled' THEN
+      -- Deduct inventory
+      UPDATE public.inventory
+      SET quantity = quantity - (v_new_item->>'quantity')::decimal
+      WHERE id = v_inventory_id;
 
-    -- Insert transaction log
-    INSERT INTO public.transactions (
-      item_id, quantity, transaction_type, module_type, performed_by, reason, branch_id
-    ) VALUES (
-      v_inventory_id,
-      (v_new_item->>'quantity')::decimal,
-      'outbound',
-      'paints',
-      p_user_id,
-      'Sales Inv: ' || (p_sale_payload->>'invoice_no'),
-      v_branch_id
-    );
+      -- Insert transaction log
+      INSERT INTO public.transactions (
+        item_id, quantity, transaction_type, module_type, performed_by, reason, branch_id
+      ) VALUES (
+        v_inventory_id,
+        (v_new_item->>'quantity')::decimal,
+        'outbound',
+        'paints',
+        p_user_id,
+        'Sales Inv: ' || (p_sale_payload->>'invoice_no'),
+        v_branch_id
+      );
+    END IF;
   END LOOP;
 
 END;
