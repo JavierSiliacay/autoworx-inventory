@@ -18,6 +18,7 @@ interface InventoryItem {
   quantity: number;
   cost: number;
   price: number;
+  dealers_price?: number;
   branch_id?: string;
   branch_name: string;
   low_stock_threshold?: number;
@@ -45,6 +46,14 @@ const formatNum = (v: number | string) => {
   return isNaN(n) ? "" : n.toLocaleString();
 };
 const parseNum = (v: string) => parseFloat(v.replace(/,/g, "")) || 0;
+
+const formatInputNumber = (v: string | number | undefined) => {
+  if (v === undefined || v === null || v === "") return "";
+  const str = String(v).replace(/,/g, "");
+  const parts = str.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+};
 
 export default function AdminInventoryPage() {
   const { data: session } = useSession();
@@ -128,7 +137,7 @@ export default function AdminInventoryPage() {
 
   // ─── CRUD ──────────────────────────────────────────────────────────────────
   const openModal = (product: Partial<InventoryItem> | null = null) => {
-    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "", sku: "", quantity: "" as any, cost: "" as any, price: "" as any, branch_id: filterBranch || "", low_stock_threshold: 5 });
+    setCurrentProduct(product || { product_name: "", category: "Paint", unit: "", sku: "", quantity: "" as any, cost: "" as any, price: "" as any, dealers_price: "" as any, branch_id: filterBranch || "", low_stock_threshold: 5 });
     setIsModalOpen(true);
   };
 
@@ -149,6 +158,7 @@ export default function AdminInventoryPage() {
         low_stock_threshold: parseFloat(currentProduct.low_stock_threshold?.toString() || "5"),
         cost: parseFloat(currentProduct.cost?.toString() || "0"),
         price: parseFloat(currentProduct.price?.toString() || "0"),
+        dealers_price: currentProduct.dealers_price ? parseFloat(currentProduct.dealers_price.toString()) : null,
         branch_id: currentProduct.branch_id,
         last_modified_by: session?.user?.email || "System",
         updated_at: new Date().toISOString(),
@@ -204,6 +214,8 @@ export default function AdminInventoryPage() {
   });
 
   const lowStockCount = items.filter(i => i.quantity <= (i.low_stock_threshold ?? 5)).length;
+
+  const isMainDistributionView = filterBranch ? branches.find(b => b.id === filterBranch)?.name.toLowerCase().includes("main") : false;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -290,6 +302,9 @@ export default function AdminInventoryPage() {
                   <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Cost</th>
                 )}
                 <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Price</th>
+                {isMainDistributionView && (
+                  <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Dealer's Price</th>
+                )}
                 {canViewCost && (
                   <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Margin</th>
                 )}
@@ -342,6 +357,11 @@ export default function AdminInventoryPage() {
                     <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900">
                       ₱{formatNum(product.price || 0)}
                     </td>
+                    {isMainDistributionView && (
+                      <td className="px-4 py-4 text-right text-sm font-semibold text-[#1e40af]">
+                        {product.dealers_price ? `₱${formatNum(product.dealers_price)}` : '-'}
+                      </td>
+                    )}
                     {canViewCost && (
                       <td className="px-4 py-4 text-right">
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${margin >= 0 ? "bg-green-50 text-[#16a34a]" : "bg-red-50 text-red-500"}`}>
@@ -419,6 +439,12 @@ export default function AdminInventoryPage() {
                       <p className="text-[10px] text-slate-400">Price</p>
                       <p className="text-sm font-semibold text-slate-900">₱{formatNum(product.price || 0)}</p>
                     </div>
+                    {isMainDistributionView && (
+                      <div>
+                        <p className="text-[10px] text-slate-400">Dealer's Price</p>
+                        <p className="text-sm font-semibold text-[#1e40af]">{product.dealers_price ? `₱${formatNum(product.dealers_price)}` : '-'}</p>
+                      </div>
+                    )}
                     {canViewCost && (
                       <div>
                         <p className="text-[10px] text-slate-400">Margin</p>
@@ -583,11 +609,16 @@ export default function AdminInventoryPage() {
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₱</span>
                       <input
-                        type="number" step="any"
+                        type="text" inputMode="decimal"
                         disabled={!canEditCost}
                         className="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors disabled:opacity-50"
-                        value={currentProduct.cost === undefined ? "" : currentProduct.cost}
-                        onChange={e => setCurrentProduct({ ...currentProduct, cost: e.target.value === "" ? ("" as any) : e.target.value as any })}
+                        value={formatInputNumber(currentProduct.cost)}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/,/g, "");
+                          if (raw === "" || raw === "." || !isNaN(Number(raw))) {
+                            setCurrentProduct({ ...currentProduct, cost: raw as any });
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -597,13 +628,37 @@ export default function AdminInventoryPage() {
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1e40af] text-sm font-bold">₱</span>
                     <input
-                      type="number" step="any"
+                      type="text" inputMode="decimal"
                       className="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-[#1e40af] outline-none focus:border-[#1e40af] transition-colors"
-                      value={currentProduct.price === undefined ? "" : currentProduct.price}
-                      onChange={e => setCurrentProduct({ ...currentProduct, price: e.target.value === "" ? ("" as any) : e.target.value as any })}
+                      value={formatInputNumber(currentProduct.price)}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/,/g, "");
+                        if (raw === "" || raw === "." || !isNaN(Number(raw))) {
+                          setCurrentProduct({ ...currentProduct, price: raw as any });
+                        }
+                      }}
                     />
                   </div>
                 </div>
+                {branches.find(b => b.id === currentProduct.branch_id)?.name.toLowerCase().includes("main") && (
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-[#1e40af] uppercase tracking-wider mb-1.5">Dealer's Price (Main Distribution Only)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1e40af] text-sm font-bold">₱</span>
+                      <input
+                        type="text" inputMode="decimal"
+                        className="w-full pl-7 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-[#1e40af] outline-none focus:border-[#1e40af] transition-colors"
+                        value={formatInputNumber(currentProduct.dealers_price)}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/,/g, "");
+                          if (raw === "" || raw === "." || !isNaN(Number(raw))) {
+                            setCurrentProduct({ ...currentProduct, dealers_price: raw as any });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

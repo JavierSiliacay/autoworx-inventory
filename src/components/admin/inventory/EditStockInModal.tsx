@@ -18,7 +18,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const [loading, setLoading] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [hoveredSearchItem, setHoveredSearchItem] = useState<string | null>(null);
+
   const tableEndRef = useRef<HTMLDivElement>(null);
   
   const [currentLog, setCurrentLog] = useState({
@@ -81,7 +81,14 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     
     setTimeout(() => {
       tableEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+      const el = document.getElementById(`row-${product.id}`);
+      if (el) {
+        el.classList.add('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-green-500/50', 'relative', 'z-10');
+        setTimeout(() => {
+          el.classList.remove('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-green-500/50', 'relative', 'z-10');
+        }, 5000);
+      }
+    }, 150);
   };
 
   const removeRow = (index: number) => {
@@ -89,6 +96,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       alert("A stock-in must have at least one item.");
       return;
     }
+    if (!window.confirm("Are you sure you want to remove this item?")) return;
     const newItems = currentLog.items.filter((_, i) => i !== index);
     setCurrentLog({ ...currentLog, items: newItems });
   };
@@ -115,83 +123,38 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       setLoading(true);
       const grandTotal = calculateTotal();
 
-      // Step 1: Revert Old Inventory (Subtract old quantities)
-      if (logData.items) {
-        for (const oldItem of logData.items) {
-          if (!oldItem.inventory_id) continue;
-          const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('id', oldItem.inventory_id).single();
-          if (currentInv) {
-            await supabase.from('inventory').update({ quantity: Math.max(0, currentInv.quantity - oldItem.quantity_received) }).eq('id', oldItem.inventory_id);
-          }
-        }
-      }
-
-      // Step 2: Delete old stock-in items and transactions
-      if (logData.items && logData.items.length > 0) {
-        await supabase.from('stock_in_items').delete().eq('stock_in_id', logData.id);
-        
-        if (currentLog.old_invoice_number) {
-          await supabase.from('stock_transactions').delete()
-            .eq('transaction_type', 'inbound')
-            .ilike('reason', `%${currentLog.old_invoice_number}%`);
-        }
-      }
-
-      // Step 3: Update stock_in_logs Header
-      const { error: updateErr } = await supabase.from('stock_in_logs').update({
+      const logPayload = {
+        branch_id: currentLog.branch_id,
         invoice_number: currentLog.invoice_number,
+        old_invoice_number: currentLog.old_invoice_number,
         date_received: currentLog.date_received,
         supplier_id: currentLog.supplier_id,
         total_amount: grandTotal
-      }).eq('id', logData.id);
+      };
 
-      if (updateErr) throw new Error("Failed to update stock-in log: " + updateErr.message);
-
-      // Step 4: Insert new stock_in_items
-      const itemsBatch = validItems.map(item => {
-        return {
-          stock_in_id: logData.id,
-          inventory_id: item.inventory_id,
-          quantity_received: Number(item.quantity_received),
-          unit_cost: Number(item.unit_cost)
-        };
-      });
-
-      const { error: insErr } = await supabase.from('stock_in_items').insert(itemsBatch);
-      if (insErr) throw new Error("Failed to insert new items: " + insErr.message);
-
-      // Step 5: Add New Inventory and Log Transactions
-      const consolidatedAdditions: Record<string, number> = {};
-      validItems.forEach(item => {
-        consolidatedAdditions[item.inventory_id] = (consolidatedAdditions[item.inventory_id] || 0) + Number(item.quantity_received);
-      });
-
-      for (const itemId in consolidatedAdditions) {
-        const totalAddition = consolidatedAdditions[itemId];
-        const itemLine = validItems.find(i => i.inventory_id === itemId);
-        const newCost = itemLine ? Number(itemLine.unit_cost) : null;
-        
-        const { data: currentInv } = await supabase.from('inventory').select('quantity').eq('id', itemId).single();
-        if (currentInv) {
-           const updatePayload: any = { quantity: currentInv.quantity + totalAddition };
-           if (newCost !== null) updatePayload.cost = newCost;
-           await supabase.from('inventory').update(updatePayload).eq('id', itemId);
-        }
-      }
-
-      const transactions = validItems.map(item => ({
-        item_id: item.inventory_id,
-        quantity: item.quantity_received,
-        transaction_type: 'inbound',
-        module_type: 'paints',
-        performed_by: session?.user?.id || null,
-        reason: `Stock In Edited: ${currentLog.invoice_number}`,
-        branch_id: currentLog.branch_id
+      const oldItemsPayload = (logData.items || []).map((item: any) => ({
+        inventory_id: item.inventory_id,
+        quantity_received: item.quantity_received
       }));
 
-      if (transactions.length > 0) {
-        await supabase.from('stock_transactions').insert(transactions);
-      }
+      const newItemsPayload = validItems.map(item => ({
+        inventory_id: item.inventory_id,
+        quantity_received: Number(item.quantity_received),
+        unit_cost: Number(item.unit_cost)
+      }));
+
+      const userId = session?.user?.id || null;
+
+      const { error: rpcErr } = await supabase.rpc('edit_stock_in', {
+        p_log_id: logData.id,
+        p_log_payload: logPayload,
+        p_old_items_payload: oldItemsPayload,
+        p_new_items_payload: newItemsPayload,
+        p_user_id: userId
+      });
+
+      if (rpcErr) throw new Error("Failed to update stock-in: " + rpcErr.message);
+
       
       onSuccess();
       onClose();
@@ -297,12 +260,24 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                             type="button"
                             onClick={() => addItem(prod)}
                             onMouseEnter={() => {
-                              setHoveredSearchItem(prod.id);
-                              if (isAdded) {
-                                document.getElementById(`row-${prod.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              const el = document.getElementById(`row-${prod.id}`);
+                              if (el) {
+                                clearTimeout((el as any)._hoverTimeout);
+                                el.classList.add('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-green-500/50', 'relative', 'z-10');
+                                el.classList.remove('hover:bg-slate-50/50');
+                                if (isAdded) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                               }
                             }}
-                            onMouseLeave={() => setHoveredSearchItem(null)}
+                            onMouseLeave={() => {
+                              const el = document.getElementById(`row-${prod.id}`);
+                              if (el) {
+                                const t = setTimeout(() => {
+                                  el.classList.remove('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-green-500/50', 'relative', 'z-10');
+                                  el.classList.add('hover:bg-slate-50/50');
+                                }, 5000);
+                                (el as any)._hoverTimeout = t;
+                              }
+                            }}
                             className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between group border-b border-slate-50 last:border-0 transition-colors ${
                               isAdded 
                                 ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-500 hover:bg-green-100" 
@@ -342,9 +317,8 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentLog.items.map((item, index) => {
-                    const isHovered = hoveredSearchItem === item.inventory_id;
                     return (
-                    <tr id={`row-${item.inventory_id}`} key={index} className={`transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-green-500/50 relative z-10' : 'hover:bg-slate-50/50'}`}>
+                    <tr id={`row-${item.inventory_id}`} key={index} className="transition-colors hover:bg-slate-50/50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Package className="w-4 h-4 text-slate-300" />

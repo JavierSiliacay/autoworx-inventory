@@ -53,7 +53,6 @@ export default function NewStockInPage() {
   const tableEndRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
-  const [hoveredSearchItem, setHoveredSearchItem] = useState<string | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<POHeader[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -117,7 +116,16 @@ export default function NewStockInPage() {
     
     setTimeout(() => {
       tableEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+      const applyGlow = (el: HTMLElement | null) => {
+        if (!el) return;
+        el.classList.add('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+        setTimeout(() => {
+          el.classList.remove('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+        }, 5000);
+      };
+      applyGlow(document.getElementById(`desktop-row-${product.id}`));
+      applyGlow(document.getElementById(`mobile-row-${product.id}`));
+    }, 150);
   };
 
   const updateItem = (idx: number, field: keyof StockInItem, value: any) => {
@@ -291,13 +299,40 @@ export default function NewStockInPage() {
                     return (
                       <button key={item.id} type="button" onClick={() => addItem(item)}
                         onMouseEnter={() => {
-                          setHoveredSearchItem(item.id);
+                          const deskEl = document.getElementById(`desktop-row-${item.id}`);
+                          const mobEl = document.getElementById(`mobile-row-${item.id}`);
+                          
+                          if (deskEl) {
+                            clearTimeout((deskEl as any)._hoverTimeout);
+                            deskEl.classList.add('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+                          }
+                          if (mobEl) {
+                            clearTimeout((mobEl as any)._hoverTimeout);
+                            mobEl.classList.add('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+                          }
+
                           if (isAdded) {
                             const elId = window.innerWidth >= 640 ? `desktop-row-${item.id}` : `mobile-row-${item.id}`;
                             document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }
                         }}
-                        onMouseLeave={() => setHoveredSearchItem(null)}
+                        onMouseLeave={() => {
+                          const deskEl = document.getElementById(`desktop-row-${item.id}`);
+                          const mobEl = document.getElementById(`mobile-row-${item.id}`);
+                          
+                          if (deskEl) {
+                            const tDesk = setTimeout(() => {
+                              deskEl.classList.remove('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+                            }, 5000);
+                            (deskEl as any)._hoverTimeout = tDesk;
+                          }
+                          if (mobEl) {
+                            const tMob = setTimeout(() => {
+                              mobEl.classList.remove('bg-green-50/70', 'ring-1', 'ring-inset', 'ring-[#16a34a]/50', 'relative', 'z-10');
+                            }, 5000);
+                            (mobEl as any)._hoverTimeout = tMob;
+                          }
+                        }}
                         className={`w-full px-4 py-3 text-left flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0 ${
                           isAdded
                             ? "text-[#15803d] bg-green-50 ring-1 ring-inset ring-[#16a34a]"
@@ -341,9 +376,8 @@ export default function NewStockInPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {items.map((item, idx) => {
-                      const isHovered = hoveredSearchItem === item.inventory_id;
                       return (
-                      <tr id={`desktop-row-${item.inventory_id}`} key={idx} className={`transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-[#16a34a]/50 relative z-10' : ''}`}>
+                      <tr id={`desktop-row-${item.inventory_id}`} key={idx} className="transition-colors">
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="0.1" value={item.quantity_received} min={0.1}
@@ -363,7 +397,11 @@ export default function NewStockInPage() {
                         </td>
                         {!selectedPO && (
                           <td className="px-4 py-3 text-right">
-                            <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                            <button type="button" onClick={() => {
+                              if (window.confirm("Are you sure you want to remove this item?")) {
+                                setItems(items.filter((_, i) => i !== idx));
+                              }
+                            }}
                               className="p-1.5 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -379,13 +417,16 @@ export default function NewStockInPage() {
               {/* Mobile */}
               <div className="sm:hidden divide-y divide-slate-100">
                 {items.map((item, idx) => {
-                  const isHovered = hoveredSearchItem === item.inventory_id;
                   return (
-                  <div id={`mobile-row-${item.inventory_id}`} key={idx} className={`p-4 space-y-3 transition-colors ${isHovered ? 'bg-green-50/70 ring-1 ring-inset ring-[#16a34a]/50 relative z-10' : ''}`}>
+                  <div id={`mobile-row-${item.inventory_id}`} key={idx} className="p-4 space-y-3 transition-colors">
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
                       {!selectedPO && (
-                        <button type="button" onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                        <button type="button" onClick={() => {
+                          if (window.confirm("Are you sure you want to remove this item?")) {
+                            setItems(items.filter((_, i) => i !== idx));
+                          }
+                        }}
                           className="p-1 text-slate-300 hover:text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                       )}
                     </div>

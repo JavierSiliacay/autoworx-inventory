@@ -53,6 +53,8 @@ export default function StockInPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<StockInItem[]>([]);
   const [expandLoading, setExpandLoading] = useState(false);
+  const [expandedPage, setExpandedPage] = useState(1);
+  const EXPANDED_PAGE_SIZE = 15;
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -179,6 +181,7 @@ export default function StockInPage() {
 
     setExpandedId(logId);
     setExpandedItems([]);
+    setExpandedPage(1);
     setExpandLoading(true);
 
     try {
@@ -213,12 +216,14 @@ export default function StockInPage() {
     setCurrentPage(1);
     setExpandedId(null);
     setExpandedItems([]);
+    setExpandedPage(1);
   };
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
     setExpandedId(null);
     setExpandedItems([]);
+    setExpandedPage(1);
   };
 
   const fmt = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -452,11 +457,12 @@ export default function StockInPage() {
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-50">
-                                    {expandedItems.map((item, idx) => {
+                                    {expandedItems.slice((expandedPage - 1) * EXPANDED_PAGE_SIZE, expandedPage * EXPANDED_PAGE_SIZE).map((item, idx) => {
                                       const lineTotal = item.quantity_received * item.unit_cost;
+                                      const globalIdx = (expandedPage - 1) * EXPANDED_PAGE_SIZE + idx;
                                       return (
                                         <tr key={item.id} className={`hover:bg-slate-50/50 transition-colors ${idx % 2 === 0 ? "" : "bg-slate-50/30"}`}>
-                                          <td className="px-4 py-2.5 text-slate-400 font-mono">{idx + 1}</td>
+                                          <td className="px-4 py-2.5 text-slate-400 font-mono">{globalIdx + 1}</td>
                                           <td className="px-4 py-2.5">
                                             <p className="font-medium text-slate-800 leading-snug">{item.inventory?.product_name || "—"}</p>
                                             {item.inventory?.category && (
@@ -499,6 +505,25 @@ export default function StockInPage() {
                                   </tfoot>
                                 </table>
                                 </div>
+                                {expandedItems.length > EXPANDED_PAGE_SIZE && (
+                                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-t border-slate-100">
+                                    <p className="text-[10px] text-slate-400">
+                                      Showing {(expandedPage - 1) * EXPANDED_PAGE_SIZE + 1}–{Math.min(expandedPage * EXPANDED_PAGE_SIZE, expandedItems.length)} of {expandedItems.length}
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        disabled={expandedPage === 1}
+                                        onClick={() => setExpandedPage(p => p - 1)}
+                                        className="px-2 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-30 border border-slate-200 rounded"
+                                      >Prev</button>
+                                      <button
+                                        disabled={expandedPage * EXPANDED_PAGE_SIZE >= expandedItems.length}
+                                        onClick={() => setExpandedPage(p => p + 1)}
+                                        className="px-2 py-1 text-[10px] font-semibold text-slate-500 hover:text-slate-700 disabled:opacity-30 border border-slate-200 rounded"
+                                      >Next</button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -630,7 +655,7 @@ export default function StockInPage() {
                       <p className="text-xs text-slate-400 text-center py-4">No items found.</p>
                     ) : (
                       <div className="space-y-2">
-                        {expandedItems.map((item, idx) => {
+                        {expandedItems.slice((expandedPage - 1) * EXPANDED_PAGE_SIZE, expandedPage * EXPANDED_PAGE_SIZE).map((item, idx) => {
                           const lineTotal = item.quantity_received * item.unit_cost;
                           return (
                             <div key={item.id} className="bg-white rounded-xl border border-slate-100 p-3 shadow-sm">
@@ -651,6 +676,27 @@ export default function StockInPage() {
                             </div>
                           );
                         })}
+                        
+                        {expandedItems.length > EXPANDED_PAGE_SIZE && (
+                          <div className="flex items-center justify-between py-2 border-t border-slate-100 mt-2">
+                            <p className="text-[10px] text-slate-400">
+                              {(expandedPage - 1) * EXPANDED_PAGE_SIZE + 1}–{Math.min(expandedPage * EXPANDED_PAGE_SIZE, expandedItems.length)} of {expandedItems.length}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                disabled={expandedPage === 1}
+                                onClick={() => setExpandedPage(p => p - 1)}
+                                className="px-2 py-1 text-[10px] font-semibold text-slate-500 border border-slate-200 rounded disabled:opacity-30"
+                              >Prev</button>
+                              <button
+                                disabled={expandedPage * EXPANDED_PAGE_SIZE >= expandedItems.length}
+                                onClick={() => setExpandedPage(p => p + 1)}
+                                className="px-2 py-1 text-[10px] font-semibold text-slate-500 border border-slate-200 rounded disabled:opacity-30"
+                              >Next</button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Mobile Total */}
                         <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">
                           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Invoice Total</p>
