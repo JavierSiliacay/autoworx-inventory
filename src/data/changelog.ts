@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783405172927",
+    version: "v1.7.7",
+    date: "2026-07-07",
+    type: "feature",
+    title: "Smarter Search & Clearer Stock Info",
+    description: "You can now find items quicker thanks to a new tokenized search that works everywhere, and out‑of‑stock products are highlighted so you know availability at a glance."
+  },
+
+  {
     id: "update-1783150024675",
     version: "v1.7.4",
     date: "2026-07-04",
