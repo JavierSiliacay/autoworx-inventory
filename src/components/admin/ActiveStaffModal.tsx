@@ -88,8 +88,8 @@ export default function ActiveStaffModal({ isOpen, onClose, selectedBranchId, ac
                 return (
                 <div key={idx} className={`flex items-center justify-between p-4 rounded-2xl border bg-white shadow-sm transition-all group ${isOnline ? 'border-emerald-200 hover:shadow-md hover:border-emerald-500/30' : 'border-slate-100 opacity-75 grayscale-[0.2]'}`}>
                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                         {user.role === 'admin' || user.role === 'developer' || user.role === 'owner' ? <ShieldCheck className="w-5 h-5" /> : <UserAvatar name={user.name || user.email} />}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'} overflow-hidden`}>
+                         <UserAvatar name={user.name || user.email} image={user.image} />
                       </div>
                       <div>
                          <div className="flex items-center gap-2">
@@ -126,7 +126,10 @@ export default function ActiveStaffModal({ isOpen, onClose, selectedBranchId, ac
   return createPortal(modalContent, document.body);
 }
 
-function UserAvatar({ name }: { name: string }) {
+function UserAvatar({ name, image }: { name: string; image?: string }) {
+  if (image) {
+    return <img src={image} alt={name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />;
+  }
   const initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
   return <span className="font-black text-sm">{initials}</span>;
 }

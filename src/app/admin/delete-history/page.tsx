@@ -131,10 +131,12 @@ export default function DeleteHistoryPage() {
     return branches.find(b => b.id === branchId)?.name || "Unknown Branch";
   };
 
-  const filteredLogs = logs.filter(log => 
-    formatTable(log.original_table).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getIdentifier(log.record_data).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredLogs = logs.filter(log => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${formatTable(log.original_table)} ${getIdentifier(log.record_data)}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   return (
     <div className="pb-20 animate-in fade-in duration-500" style={{ fontFamily: "'Inter', sans-serif" }}>

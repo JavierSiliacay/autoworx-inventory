@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2 } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useNetwork } from "@/context/NetworkContext";
 import SalesReportPrint from "@/components/sales/SalesReportPrint";
 import EditSaleModal from "@/components/admin/sales/EditSaleModal";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface SaleEntry {
   id: string;
@@ -53,10 +54,12 @@ export default function AdminSalesPage() {
   const [sales, setSales] = useState<SaleEntry[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removedItems, setRemovedItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSaleToEdit, setSelectedSaleToEdit] = useState<any>(null);
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string, name: string }[]>([]);
   
   const [currentSale, setCurrentSale] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -75,7 +78,7 @@ export default function AdminSalesPage() {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const [filterMonth, setFilterMonth] = useState(currentMonthStr);
+  const [filterMonth, setFilterMonth] = useState("all");
   const [showSetupAlert, setShowSetupAlert] = useState(false);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   
@@ -198,6 +201,7 @@ export default function AdminSalesPage() {
       fetchSales();
       fetchInventory();
       fetchBranches();
+      fetchCustomers();
 
       const channel = supabase
         .channel('sales-inventory-live')
@@ -215,6 +219,11 @@ export default function AdminSalesPage() {
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
     setBranches(data || []);
+  }
+
+  async function fetchCustomers() {
+    const { data } = await supabase.from('customers').select('id, name').order('name');
+    setCustomers(data || []);
   }
 
   async function fetchInventory() {
@@ -313,6 +322,11 @@ export default function AdminSalesPage() {
     if (field === 'item_id') {
       const invItem = inventory.find(i => i.id === value);
       if (invItem) {
+        if (invItem.quantity <= 0) {
+          if (!window.confirm("Are you sure you want to add this no stock product ?")) {
+            return;
+          }
+        }
         item.unit_price = invItem.price;
         item.subtotal = Number(item.quantity || 0) * Number(invItem.price || 0);
         
@@ -345,8 +359,29 @@ export default function AdminSalesPage() {
 
   const removeRow = (index: number) => {
     if (currentSale.items.length <= 1) return;
-    const newItems = currentSale.items.filter((_, i) => i !== index);
-    setCurrentSale({ ...currentSale, items: newItems });
+    if (window.confirm("Are you sure you want to remove this item?")) {
+      const itemToRemove = currentSale.items[index];
+      setRemovedItems(prev => [...prev, itemToRemove]);
+      const newItems = currentSale.items.filter((_, i) => i !== index);
+      setCurrentSale({ ...currentSale, items: newItems });
+    }
+  };
+
+  const undoRemoveRow = () => {
+    if (removedItems.length === 0) return;
+    const itemToRestore = removedItems[removedItems.length - 1];
+    setRemovedItems(prev => prev.slice(0, -1));
+    setCurrentSale({
+      ...currentSale,
+      items: [...currentSale.items, itemToRestore]
+    });
+  };
+
+  const handleCloseModal = () => {
+    if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+      setIsModalOpen(false);
+      setRemovedItems([]);
+    }
   };
 
   const calculateTotal = () => {
@@ -463,6 +498,7 @@ export default function AdminSalesPage() {
       }
 
       setIsModalOpen(false);
+      setRemovedItems([]);
       setCurrentSale({
         date: new Date().toISOString().split('T')[0],
         invoice_no: "",
@@ -600,11 +636,12 @@ export default function AdminSalesPage() {
       setLoading(false);
     }
   };
-  const filteredSales = (sales || []).filter(s => 
-    s.invoice_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.inventory?.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredSales = (sales || []).filter(s => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${s.invoice_no} ${s.customer_name} ${s.inventory?.product_name}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   const groupedSales = React.useMemo(() => {
     const groups: Record<string, any> = {};
@@ -1026,7 +1063,7 @@ export default function AdminSalesPage() {
                 </div>
               </div>
               <button 
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
               >
                 <X className="w-5 h-5" />
@@ -1071,13 +1108,12 @@ export default function AdminSalesPage() {
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter Name..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                    <SearchableSelect
+                      options={customers.map(c => ({ value: c.name, label: c.name }))}
                       value={currentSale.customer_name}
-                      onChange={(e) => setCurrentSale({...currentSale, customer_name: e.target.value})}
+                      onChange={(val) => setCurrentSale({...currentSale, customer_name: val})}
+                      placeholder="Select a customer..."
+                      className="pl-8"
                     />
                   </div>
                 </div>
@@ -1107,14 +1143,26 @@ export default function AdminSalesPage() {
                     <Package className="w-4 h-4 text-emerald-600" />
                     Sold Items Ledger
                   </label>
-                  <button 
-                    type="button"
-                    onClick={addRow}
-                    className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Add Entry
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {removedItems.length > 0 && (
+                      <button 
+                        type="button"
+                        onClick={undoRemoveRow}
+                        className="flex items-center gap-1.5 text-[10px] font-black uppercase text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-all"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        Undo Remove
+                      </button>
+                    )}
+                    <button 
+                      type="button"
+                      onClick={addRow}
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Entry
+                    </button>
+                  </div>
                 </div>
 
                 <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
@@ -1135,19 +1183,18 @@ export default function AdminSalesPage() {
                         {currentSale.items.map((item, idx) => (
                           <tr key={idx} className="hover:bg-white transition-colors group">
                             <td className="px-4 py-3 text-[10px] font-bold text-slate-400">{idx + 1}</td>
-                            <td className="px-2 py-2">
-                              <select
-                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm focus:ring-0 focus:bg-white font-medium"
-                                value={item.item_id}
-                                onChange={(e) => handleRowChange(idx, 'item_id', e.target.value)}
-                              >
-                                <option value="">- Select Product -</option>
-                                {inventory.map((inv) => (
-                                  <option key={inv.id} value={inv.id} disabled={inv.quantity <= 0}>
-                                    {inv.product_name} ({inv.sku}) | Stock: {inv.quantity}
-                                  </option>
-                                ))}
-                              </select>
+                            <td className="p-2">
+                               <SearchableSelect
+                                  options={inventory.map(inv => ({ 
+                                     value: inv.id, 
+                                     label: inv.product_name,
+                                     subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
+                                     danger: inv.quantity <= 0
+                                  }))}
+                                  value={item.item_id}
+                                  onChange={(val) => handleRowChange(idx, 'item_id', val)}
+                                  placeholder="- Select Product -"
+                               />
                             </td>
                             <td className="px-2 py-2">
                               <input
@@ -1197,7 +1244,7 @@ export default function AdminSalesPage() {
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={handleCloseModal}
                     className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all focus:outline-none"
                   >
                     Cancel
@@ -1461,6 +1508,7 @@ export default function AdminSalesPage() {
       onClose={() => setIsEditModalOpen(false)}
       invoiceData={selectedSaleToEdit}
       inventory={inventory}
+      customers={customers}
       onSuccess={() => {
         fetchSales();
         fetchInventory();

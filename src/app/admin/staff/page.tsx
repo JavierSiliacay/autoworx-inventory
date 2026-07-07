@@ -127,10 +127,12 @@ export default function StaffPage() {
     setCurrentMember({ ...currentMember, branch_ids: newList });
   };
 
-  const filteredStaff = staff.filter(s => 
-    s.email.toLowerCase().includes(search.toLowerCase()) || 
-    s.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const searchTokens = search.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredStaff = staff.filter(s => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${s.email} ${s.name}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   return (
     <div className="pb-20" style={{ fontFamily: "'Inter', sans-serif" }}>

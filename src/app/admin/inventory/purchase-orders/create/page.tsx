@@ -118,8 +118,13 @@ export default function CreatePurchaseOrderPage() {
     }
   };
 
+  const itemSearchTokens = itemSearch.toLowerCase().split(/\s+/).filter(Boolean);
   const filteredInventory = inventory
-    .filter(i => i.product_name.toLowerCase().includes(itemSearch.toLowerCase()))
+    .filter(i => {
+      if (itemSearchTokens.length === 0) return true;
+      const searchableText = i.product_name.toLowerCase();
+      return itemSearchTokens.every(token => searchableText.includes(token));
+    })
     .slice(0, 50);
 
   return (

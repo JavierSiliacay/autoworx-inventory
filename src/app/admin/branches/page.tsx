@@ -73,9 +73,12 @@ export default function AdminBranchesPage() {
     }
   }
 
-  const filteredItems = branches.filter(b =>
-    b.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchTokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredItems = branches.filter(b => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = b.name.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   return (
     <div className="pb-20" style={{ fontFamily: "'Inter', sans-serif" }}>

@@ -231,10 +231,14 @@ export default function AdminInventoryPage() {
 
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
+  const searchTokens = filter.toLowerCase().split(/\s+/).filter(Boolean);
+
   const filtered = items.filter(p => {
-    let matchSearch = p.product_name.toLowerCase().includes(filter.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(filter.toLowerCase()) ||
-      p.category.toLowerCase().includes(filter.toLowerCase());
+    let matchSearch = true;
+    if (searchTokens.length > 0) {
+      const searchableText = `${p.product_name} ${p.sku || ""} ${p.category}`.toLowerCase();
+      matchSearch = searchTokens.every(token => searchableText.includes(token));
+    }
     
     if (showOnlyLowStock) {
       matchSearch = matchSearch && p.quantity <= (p.low_stock_threshold ?? 5);

@@ -180,9 +180,9 @@ export default function PayablesPage() {
   // ── Sorting & Filtering ────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = records.filter(r => {
-      const matchSearch =
-        r.supplier_name.toLowerCase().includes(search.toLowerCase()) ||
-        r.reference_no.toLowerCase().includes(search.toLowerCase());
+      const searchTokens = search.toLowerCase().split(/\s+/).filter(Boolean);
+      const searchableText = `${r.supplier_name} ${r.reference_no}`.toLowerCase();
+      const matchSearch = searchTokens.length === 0 || searchTokens.every(token => searchableText.includes(token));
       const matchStatus = statusFilter === "All" || r.status === statusFilter;
       return matchSearch && matchStatus;
     });

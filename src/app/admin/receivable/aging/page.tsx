@@ -159,10 +159,12 @@ export default function AgingReportPage() {
 
   const formatNum = (num: any) => Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
-  const filteredRecords = records.filter(r => 
-    r.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.invoice_no.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredRecords = records.filter(r => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${r.customer_name} ${r.invoice_no}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   const totalCurrent = records.reduce((sum, r) => sum + r.current, 0);
   const total31_60 = records.reduce((sum, r) => sum + r.day31_60, 0);

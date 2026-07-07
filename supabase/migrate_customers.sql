@@ -1,4 +1,16 @@
 -- Migrate Customers
+DROP TABLE IF EXISTS public.customers;
+CREATE TABLE IF NOT EXISTS public.customers (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    customer_id TEXT UNIQUE,
+    name TEXT NOT NULL,
+    address TEXT,
+    contact_person TEXT,
+    contact_number TEXT,
+    terms TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 INSERT INTO public.customers (customer_id, name, address, contact_person, contact_number, terms) VALUES
 ('CUST_00001', 'APC KAUSWAGAN', 'NAT''L HIWAY KAUSWAGAN, CAGAYAN DE ORO CITY', 'MIRASOL TEVES', '0915-532-5653', '90 DAYS'),
 ('CUST_00002', 'APC AGORA', 'AGORA RD. LAPASAN, CAGAYAN DE ORO CITY', 'JUPITER SON', '0965-062-8340', '90 DAYS'),

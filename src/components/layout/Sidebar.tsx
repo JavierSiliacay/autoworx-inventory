@@ -72,7 +72,15 @@ export default function Sidebar() {
         { name: "Suppliers", href: "/admin/inventory/suppliers", icon: Building2 },
       ]
     },
-    { name: "Sales", href: "/admin/sales", icon: TrendingUp },
+    { 
+      name: "Sales", 
+      href: "/admin/sales", 
+      icon: TrendingUp,
+      children: [
+        { name: "Sales Invoice", href: "/admin/sales", icon: FileText },
+        { name: "Customers List", href: "/admin/sales/customers", icon: Users },
+      ]
+    },
     { 
       name: "Receivables", 
       href: "/admin/receivable", 

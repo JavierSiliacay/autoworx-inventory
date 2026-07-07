@@ -45,10 +45,12 @@ export default function SuppliersPage() {
     } catch (e) { console.error(e); }
   };
 
-  const filteredItems = suppliers.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.tin?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchTokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredItems = suppliers.filter(s => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${s.name} ${s.tin}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   return (
     <div className="space-y-6 pb-20">
@@ -89,14 +91,16 @@ export default function SuppliersPage() {
         )}
 
         {/* Search Bar */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-          <Search className="w-4 h-4 text-slate-300 shrink-0" />
-          <input
-            className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400"
-            placeholder="Search by name or TIN..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium text-slate-700 placeholder:text-slate-400 shadow-sm"
+              placeholder="Search by name or TIN..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Desktop Table */}

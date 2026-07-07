@@ -45,7 +45,7 @@ BEGIN
         DELETE FROM public.transactions 
         WHERE item_id = v_inventory_id 
         AND transaction_type = 'outbound' 
-        AND reason ILIKE '%Inv: ' || (p_sale_payload->>'old_invoice_no') || '%';
+        AND remarks ILIKE '%Inv: ' || (p_sale_payload->>'old_invoice_no') || '%';
       END IF;
 
       -- ALWAYS Delete old sale
@@ -147,15 +147,14 @@ BEGIN
 
       -- Insert transaction log
       INSERT INTO public.transactions (
-        item_id, quantity, transaction_type, module_type, performed_by, reason, branch_id
+        item_id, quantity, transaction_type, module_type, performed_by, remarks
       ) VALUES (
         v_inventory_id,
         (v_new_item->>'quantity')::decimal,
         'outbound',
         'paints',
-        p_user_id,
-        'Sales Inv: ' || (p_sale_payload->>'invoice_no'),
-        v_branch_id
+        COALESCE(p_user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        'Sale to ' || (p_sale_payload->>'customer_name') || ' (Inv: ' || (p_sale_payload->>'invoice_no') || ')'
       );
     END IF;
   END LOOP;

@@ -209,7 +209,12 @@ export default function NewStockInPage() {
     }
   };
 
-  const filteredInventory = inventory.filter(i => i.product_name.toLowerCase().includes(itemSearch.toLowerCase())).slice(0, 5);
+  const itemSearchTokens = itemSearch.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredInventory = inventory.filter(i => {
+    if (itemSearchTokens.length === 0) return true;
+    const searchableText = i.product_name.toLowerCase();
+    return itemSearchTokens.every(token => searchableText.includes(token));
+  }).slice(0, 5);
 
   return (
     <div className="pb-24 w-full md:w-fit md:min-w-[768px] max-w-[95vw] mx-auto space-y-6">

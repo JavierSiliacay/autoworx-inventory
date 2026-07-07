@@ -1,20 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2, Save, Plus, Package, Calendar, FileText, User } from "lucide-react";
+import { X, Loader2, Save, Plus, Package, Calendar, FileText, User, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface EditSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoiceData: any; // The grouped sale
   inventory: any[];
+  customers: { id: string; name: string }[];
   onSuccess: () => void;
   session: any;
 }
 
-export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory, onSuccess, session }: EditSaleModalProps) {
+export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory, customers, onSuccess, session }: EditSaleModalProps) {
   const [loading, setLoading] = useState(false);
+  const [removedItems, setRemovedItems] = useState<any[]>([]);
   const [currentSale, setCurrentSale] = useState({
     date: "",
     invoice_no: "",
@@ -45,6 +48,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
           old_quantity: item.quantity // to track reverting
         }))
       });
+      setRemovedItems([]);
     }
   }, [isOpen, invoiceData]);
 
@@ -57,6 +61,11 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     if (field === 'item_id') {
       const invItem = inventory.find(i => i.id === value);
       if (invItem) {
+        if (invItem.quantity <= 0) {
+          if (!window.confirm("Are you sure you want to add this no stock product ?")) {
+            return;
+          }
+        }
         item.unit_price = invItem.price;
         item.subtotal = Number(item.quantity || 0) * Number(invItem.price || 0);
         
@@ -88,8 +97,29 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
 
   const removeRow = (index: number) => {
     if (currentSale.items.length <= 1) return;
-    const newItems = currentSale.items.filter((_, i) => i !== index);
-    setCurrentSale({ ...currentSale, items: newItems });
+    if (window.confirm("Are you sure you want to remove this item?")) {
+      const itemToRemove = currentSale.items[index];
+      setRemovedItems(prev => [...prev, itemToRemove]);
+      const newItems = currentSale.items.filter((_, i) => i !== index);
+      setCurrentSale({ ...currentSale, items: newItems });
+    }
+  };
+
+  const undoRemoveRow = () => {
+    if (removedItems.length === 0) return;
+    const itemToRestore = removedItems[removedItems.length - 1];
+    setRemovedItems(prev => prev.slice(0, -1));
+    setCurrentSale({
+      ...currentSale,
+      items: [...currentSale.items, itemToRestore]
+    });
+  };
+
+  const handleClose = () => {
+    if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+      setRemovedItems([]);
+      onClose();
+    }
   };
 
   const calculateTotal = () => {
@@ -200,7 +230,8 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
             </div>
           </div>
           <button 
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
           >
             <X className="w-5 h-5" />
@@ -241,12 +272,12 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                <SearchableSelect
+                  options={customers?.map(c => ({ value: c.name, label: c.name })) || []}
                   value={currentSale.customer_name}
-                  onChange={(e) => setCurrentSale({...currentSale, customer_name: e.target.value})}
+                  onChange={(val) => setCurrentSale({...currentSale, customer_name: val})}
+                  placeholder="Select a customer..."
+                  className="pl-8"
                 />
               </div>
             </div>
@@ -274,14 +305,26 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                 <Package className="w-4 h-4 text-blue-600" />
                 Sold Items Ledger
               </label>
-              <button 
-                type="button"
-                onClick={addRow}
-                className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
-              >
-                <Plus className="w-3 h-3" />
-                Add Entry
-              </button>
+              <div className="flex items-center gap-2">
+                {removedItems.length > 0 && (
+                  <button 
+                    type="button"
+                    onClick={undoRemoveRow}
+                    className="flex items-center gap-1.5 text-[10px] font-black uppercase text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    <Undo2 className="w-3 h-3" />
+                    Undo Remove
+                  </button>
+                )}
+                <button 
+                  type="button"
+                  onClick={addRow}
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Entry
+                </button>
+              </div>
             </div>
 
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
@@ -302,19 +345,18 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                     {currentSale.items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-white transition-colors group">
                         <td className="px-4 py-3 text-[10px] font-bold text-slate-400">{idx + 1}</td>
-                        <td className="px-2 py-2">
-                          <select
-                            className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm focus:ring-0 focus:bg-white font-medium"
-                            value={item.item_id}
-                            onChange={(e) => handleRowChange(idx, 'item_id', e.target.value)}
-                          >
-                            <option value="">- Select Product -</option>
-                            {inventory.map((inv) => (
-                              <option key={inv.id} value={inv.id}>
-                                {inv.product_name} ({inv.sku})
-                              </option>
-                            ))}
-                          </select>
+                        <td className="p-2">
+                           <SearchableSelect
+                              options={inventory.map(inv => ({ 
+                                 value: inv.id, 
+                                 label: inv.product_name,
+                                 subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
+                                 danger: inv.quantity <= 0
+                              }))}
+                              value={item.item_id}
+                              onChange={(val) => handleRowChange(idx, 'item_id', val)}
+                              placeholder="- Select Product -"
+                           />
                         </td>
                         <td className="px-2 py-2">
                           <input
@@ -363,7 +405,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all"
               >
                 Cancel

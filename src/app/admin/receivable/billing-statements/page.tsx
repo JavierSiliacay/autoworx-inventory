@@ -171,10 +171,12 @@ export default function BillingStatementsPage() {
     }
   }
 
-  const filtered = statements.filter(c => 
-    (c.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (c.statement_number || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  const filtered = statements.filter(c => {
+    if (searchTokens.length === 0) return true;
+    const searchableText = `${c.customer_name || ''} ${c.statement_number || ''}`.toLowerCase();
+    return searchTokens.every(token => searchableText.includes(token));
+  });
 
   return (
     <div className="pb-20 animate-in fade-in duration-500" style={{ fontFamily: "'Inter', sans-serif" }}>

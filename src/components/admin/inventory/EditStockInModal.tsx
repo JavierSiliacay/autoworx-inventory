@@ -166,7 +166,12 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     }
   };
 
-  const filteredInventory = inventory.filter(i => i.product_name.toLowerCase().includes(itemSearch.toLowerCase())).slice(0, 5);
+  const itemSearchTokens = itemSearch.toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredInventory = inventory.filter(i => {
+    if (itemSearchTokens.length === 0) return true;
+    const searchableText = i.product_name.toLowerCase();
+    return itemSearchTokens.every(token => searchableText.includes(token));
+  }).slice(0, 5);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
