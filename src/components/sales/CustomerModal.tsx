@@ -167,7 +167,7 @@ export default function CustomerModal({ isOpen, onClose, onSuccess, customer }: 
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                   <input
                     type="text"
-                    placeholder="e.g. (088) 123-4567"
+                    placeholder="e.g. 0912 345 6789"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                     value={formData.contact_number || ''}
                     onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}

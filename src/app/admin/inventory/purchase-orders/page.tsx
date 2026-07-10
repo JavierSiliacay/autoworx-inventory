@@ -352,6 +352,7 @@ export default function PurchaseOrdersPage() {
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">PO #</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
@@ -359,7 +360,7 @@ export default function PurchaseOrdersPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 && !loading && (
-                <tr><td colSpan={6} className="px-6 py-16 text-center text-sm text-slate-400">No purchase orders found.</td></tr>
+                <tr><td colSpan={7} className="px-6 py-16 text-center text-sm text-slate-400">No purchase orders found.</td></tr>
               )}
               {filtered.map((po) => {
                 const cfg = statusConfig[po.status] || statusConfig.pending;
@@ -374,6 +375,9 @@ export default function PurchaseOrdersPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
                       {new Date(po.order_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700 font-medium">
+                      {po.terms || "—"}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${cfg.bg} ${cfg.text}`}>

@@ -344,6 +344,13 @@ export default function AdminSalesPage() {
       const q = Number(field === 'quantity' ? value : item.quantity || 0);
       const p = Number(field === 'unit_price' ? value : item.unit_price || 0);
       item.subtotal = q * p;
+    } else if (field === 'subtotal') {
+      // allow string with commas and decimals
+      let strVal = String(value).replace(/[^\d.]/g, '');
+      const parts = strVal.split('.');
+      if (parts.length > 2) strVal = parts[0] + '.' + parts[1];
+      if (parts[0]) parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      (item as any).subtotal = parts.join('.');
     }
 
     newItems[index] = item;
@@ -385,14 +392,19 @@ export default function AdminSalesPage() {
   };
 
   const calculateTotal = () => {
-    return currentSale.items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+    return currentSale.items.reduce((sum, item) => {
+      const val = typeof item.subtotal === 'string' ? (item.subtotal as string).replace(/,/g, '') : item.subtotal;
+      return sum + (Number(val) || 0);
+    }, 0);
   };
 
   const handleSaveSale = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Filter out rows that don't have an item selected
-    const validItems = currentSale.items.filter(item => item.item_id && item.quantity > 0);
+    const validItems = currentSale.items.map(item => ({
+      ...item,
+      subtotal: typeof item.subtotal === 'string' ? Number((item.subtotal as string).replace(/,/g, '')) : item.subtotal
+    })).filter(item => item.item_id && item.quantity > 0);
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
       alert("Please add at least one valid item and an invoice number.");
@@ -1205,17 +1217,19 @@ export default function AdminSalesPage() {
                                 onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                               />
                             </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
-                                value={item.unit_price === undefined ? "" : item.unit_price}
-                                onChange={(e) => handleRowChange(idx, 'unit_price', e.target.value === "" ? ("" as any) : e.target.value as any)}
-                              />
+                            <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
+                              {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
                             </td>
-                            <td className="px-4 py-2 text-right text-sm font-bold text-[#1a1b20]">
-                              ₱{(item.subtotal || 0).toLocaleString()}
+                            <td className="px-2 py-2">
+                              <div className="relative flex items-center justify-end w-full">
+                                <span className="absolute left-3 text-slate-400 text-sm font-medium">₱</span>
+                                <input
+                                  type="text"
+                                  className="w-full pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
+                                  value={item.subtotal === undefined ? "" : item.subtotal}
+                                  onChange={(e) => handleRowChange(idx, 'subtotal', e.target.value)}
+                                />
+                              </div>
                             </td>
                             <td className="px-2 py-2 text-right">
                               <button 
