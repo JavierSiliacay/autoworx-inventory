@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783663442209",
+    version: "v1.7.10",
+    date: "2026-07-10",
+    type: "feature",
+    title: "Improved Inventory Search and Sales Validation",
+    description: "Staff can locate products more quickly thanks to an enhanced search interface, and sales entries are now automatically validated to catch mistakes before they happen."
+  },
+
+  {
     id: "update-1783661332924",
     version: "v1.7.10",
     date: "2026-07-10",
