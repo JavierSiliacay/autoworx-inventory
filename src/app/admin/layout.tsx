@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { adminConfig } from "@/config/admin-config";
 import MaintenanceGuard from "@/components/admin/MaintenanceGuard";
 import { PresenceProvider } from "@/context/PresenceContext";
+import ForceRefreshListener from "@/components/admin/ForceRefreshListener";
 
 export default async function AdminLayout({
   children,
@@ -32,6 +33,7 @@ export default async function AdminLayout({
       isMaintenance={!adminConfig.developerAvailable} 
       userRole={role}
     >
+      <ForceRefreshListener />
       <PresenceProvider>
         <AdminShell>{children}</AdminShell>
       </PresenceProvider>

@@ -21,7 +21,8 @@ import {
   ClipboardList,
   Truck,
   CreditCard,
-  History
+  History,
+  Code2
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -98,6 +99,7 @@ export default function Sidebar() {
       { name: "Branches", href: "/admin/branches", icon: Store },
       { name: "Staff", href: "/admin/staff", icon: Users },
       { name: "Delete History", href: "/admin/delete-history", icon: History },
+      ...(role === 'developer' ? [{ name: "Developer Settings", href: "/admin/developer", icon: Code2 }] : []),
     ] : []),
   ];
 
