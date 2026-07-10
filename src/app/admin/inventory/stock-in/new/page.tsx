@@ -11,9 +11,25 @@ import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 
 interface Supplier { id: string; name: string; }
-interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; }
+interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; quantity?: number; }
 interface POHeader { id: string; po_number: string; supplier_id: string; items: any[]; }
 interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; }
+
+const HighlightMatch = ({ text, query }: { text: string; query: string }) => {
+  if (!query) return <>{text}</>;
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return <>{text}</>;
+  const regex = new RegExp(`(${tokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isMatch = tokens.some(token => part.toLowerCase() === token);
+        return isMatch ? <span key={i} className="text-[#16a34a] font-bold">{part}</span> : <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
 
 const compressImage = async (file: File): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -66,6 +82,10 @@ export default function NewStockInPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [itemSearch, setItemSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  useEffect(() => { setFocusedIndex(-1); }, [itemSearch]);
 
   useEffect(() => { fetchData(); }, [selectedBranchId]);
 
@@ -73,7 +93,7 @@ export default function NewStockInPage() {
     const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
     const [sRes, iRes, pRes] = await Promise.all([
       supabase.from("suppliers").select("id, name").order("name"),
-      supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id").eq("branch_id", branchId).order("product_name"),
+      supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id, quantity").eq("branch_id", branchId).order("product_name"),
       supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("branch_id", branchId).eq("status", "pending"),
     ]);
 
@@ -141,7 +161,8 @@ export default function NewStockInPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supplierId || items.length === 0) { alert("Supplier and items are required."); return; }
+    setHasSubmitted(true);
+    if (!supplierId || !invoiceNumber || items.length === 0) { alert("Supplier, Invoice No, and at least one item are required."); return; }
     try {
       setLoading(true);
       let imageUrl = null;
@@ -214,7 +235,7 @@ export default function NewStockInPage() {
     if (itemSearchTokens.length === 0) return true;
     const searchableText = i.product_name.toLowerCase();
     return itemSearchTokens.every(token => searchableText.includes(token));
-  }).slice(0, 5);
+  }).slice(0, 50);
 
   return (
     <div className="pb-24 w-full md:w-fit md:min-w-[768px] max-w-[95vw] mx-auto space-y-6">
@@ -249,8 +270,8 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Supplier</label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <select required disabled={!!selectedPO} value={supplierId} onChange={e => setSupplierId(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""}`}>
+              <select disabled={!!selectedPO} value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
                 <option value="">Select supplier...</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -261,9 +282,9 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Invoice / Receipt No.</label>
             <div className="relative">
               <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input required type="text" placeholder="e.g. INV-9812" value={invoiceNumber}
+              <input type="text" placeholder="e.g. INV-9812" value={invoiceNumber}
                 onChange={e => setInvoiceNumber(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors uppercase placeholder:normal-case" />
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
             </div>
           </div>
           {/* Date */}
@@ -285,8 +306,8 @@ export default function NewStockInPage() {
               <Package className="w-4 h-4 text-slate-400" />
               <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Line Items</span>
             </div>
-            <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <div id="search-input-container" className={`relative w-full sm:w-64 transition-all duration-200 ${isSearchFocused ? "sm:w-80" : ""}`}>
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${hasSubmitted && items.length === 0 ? "text-red-400" : "text-slate-400"}`} />
               <input
                 type="text"
                 disabled={!!selectedPO}
@@ -294,15 +315,43 @@ export default function NewStockInPage() {
                 value={itemSearch}
                 onChange={(e) => setItemSearch(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                className={`w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#16a34a] focus:ring-2 focus:ring-[#16a34a]/10 transition-all bg-white ${selectedPO ? "opacity-50 cursor-not-allowed" : ""}`}
+                onBlur={() => setTimeout(() => { setIsSearchFocused(false); setFocusedIndex(-1); }, 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setFocusedIndex(i => {
+                      const next = Math.min(i + 1, filteredInventory.length - 1);
+                      document.getElementById(`search-item-${next}`)?.scrollIntoView({ block: 'nearest' });
+                      return next;
+                    });
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setFocusedIndex(i => {
+                      const prev = Math.max(i - 1, -1);
+                      if (prev === -1) {
+                        document.getElementById('search-input-container')?.scrollIntoView({ block: 'nearest' });
+                      } else {
+                        document.getElementById(`search-item-${prev}`)?.scrollIntoView({ block: 'nearest' });
+                      }
+                      return prev;
+                    });
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (focusedIndex >= 0 && filteredInventory[focusedIndex]) {
+                      addItem(filteredInventory[focusedIndex]);
+                      setFocusedIndex(-1);
+                    }
+                  }
+                }}
+                className={`w-full pl-9 pr-3 py-2 bg-white border rounded-xl text-sm outline-none transition-colors ${hasSubmitted && items.length === 0 ? "border-red-500 ring-1 ring-red-500 placeholder:text-red-300" : "border-slate-200 focus:border-[#16a34a]"} ${selectedPO ? "opacity-50 cursor-not-allowed" : ""}`}
               />
               {(itemSearch || isSearchFocused) && !selectedPO && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
-                  {filteredInventory.map(item => {
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-y-auto max-h-64 z-50">
+                  {filteredInventory.map((item, idx) => {
                     const isAdded = items.some(i => i.inventory_id === item.id);
+                    const isFocused = idx === focusedIndex;
                     return (
-                      <button key={item.id} type="button" onClick={() => addItem(item)}
+                      <button id={`search-item-${idx}`} key={item.id} type="button" onClick={() => addItem(item)}
                         onMouseEnter={() => {
                           const deskEl = document.getElementById(`desktop-row-${item.id}`);
                           const mobEl = document.getElementById(`mobile-row-${item.id}`);
@@ -341,10 +390,15 @@ export default function NewStockInPage() {
                         className={`w-full px-4 py-3 text-left flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0 ${
                           isAdded
                             ? "text-[#15803d] bg-green-50 ring-1 ring-inset ring-[#16a34a]"
+                            : isFocused 
+                            ? "bg-green-50 ring-1 ring-inset ring-[#16a34a]"
                             : "hover:bg-slate-50"
                         }`}>
-                        <p className={`text-xs font-semibold transition-colors ${isAdded ? "text-[#15803d]" : "text-slate-800 group-hover:text-[#16a34a]"}`}>{item.product_name}</p>
-                        <div className="flex items-center gap-2">
+                        <p className={`text-xs font-semibold transition-colors ${isAdded || isFocused ? "text-[#15803d]" : "text-slate-800 group-hover:text-[#16a34a]"}`}>
+                          <HighlightMatch text={item.product_name} query={itemSearch} />
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[10px] font-medium ${(item.quantity || 0) <= 0 ? "text-red-500" : (isAdded ? "text-[#16a34a]" : "text-slate-400")}`}>Stock: {item.quantity || 0} {item.unit}</span>
                           <span className={`text-[10px] font-mono ${isAdded ? "text-[#16a34a]" : "text-slate-400"}`}>₱{(item.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}</span>
                           {isAdded ? (
                             <CheckCircle2 className="w-3.5 h-3.5 text-[#16a34a]" />
@@ -496,7 +550,7 @@ export default function NewStockInPage() {
             className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
             Cancel
           </button>
-          <button type="submit" disabled={loading || items.length === 0 || !invoiceNumber}
+          <button type="submit" disabled={loading}
             className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white text-sm font-semibold rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-sm">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Finalize Stock-In

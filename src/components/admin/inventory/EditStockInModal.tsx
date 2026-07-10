@@ -14,10 +14,29 @@ interface EditStockInModalProps {
   session: any;
 }
 
+const HighlightMatch = ({ text, query }: { text: string; query: string }) => {
+  if (!query) return <>{text}</>;
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return <>{text}</>;
+  const regex = new RegExp(`(${tokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const isMatch = tokens.some(token => part.toLowerCase() === token);
+        return isMatch ? <span key={i} className="text-[#16a34a] font-bold">{part}</span> : <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 export default function EditStockInModal({ isOpen, onClose, logData, inventory, suppliers, onSuccess, session }: EditStockInModalProps) {
   const [loading, setLoading] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  useEffect(() => { setFocusedIndex(-1); }, [itemSearch]);
 
   const tableEndRef = useRef<HTMLDivElement>(null);
   
@@ -171,7 +190,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     if (itemSearchTokens.length === 0) return true;
     const searchableText = i.product_name.toLowerCase();
     return itemSearchTokens.every(token => searchableText.includes(token));
-  }).slice(0, 5);
+  }).slice(0, 50);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
@@ -241,7 +260,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
             {/* Search Bar for Add */}
             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between relative z-40">
               <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Line Items</span>
-              <div className="relative w-72">
+              <div id="search-input-container-edit" className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                 <input
                   type="text"
@@ -249,18 +268,47 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  onBlur={() => setTimeout(() => { setIsSearchFocused(false); setFocusedIndex(-1); }, 200)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setFocusedIndex(i => {
+                        const next = Math.min(i + 1, filteredInventory.length - 1);
+                        document.getElementById(`search-item-edit-${next}`)?.scrollIntoView({ block: 'nearest' });
+                        return next;
+                      });
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setFocusedIndex(i => {
+                        const prev = Math.max(i - 1, -1);
+                        if (prev === -1) {
+                          document.getElementById('search-input-container-edit')?.scrollIntoView({ block: 'nearest' });
+                        } else {
+                          document.getElementById(`search-item-edit-${prev}`)?.scrollIntoView({ block: 'nearest' });
+                        }
+                        return prev;
+                      });
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (focusedIndex >= 0 && filteredInventory[focusedIndex]) {
+                        addItem(filteredInventory[focusedIndex]);
+                        setFocusedIndex(-1);
+                      }
+                    }
+                  }}
                   className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                 />
                 {(itemSearch || isSearchFocused) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg overflow-y-auto max-h-64 z-50">
                     {filteredInventory.length === 0 ? (
                       <div className="p-3 text-xs text-center text-slate-400">No items found</div>
                     ) : (
-                      filteredInventory.map(prod => {
+                      filteredInventory.map((prod, idx) => {
                         const isAdded = currentLog.items.some(i => i.inventory_id === prod.id);
+                        const isFocused = idx === focusedIndex;
                         return (
                           <button
+                            id={`search-item-edit-${idx}`}
                             key={prod.id}
                             type="button"
                             onClick={() => addItem(prod)}
@@ -286,10 +334,14 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                             className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between group border-b border-slate-50 last:border-0 transition-colors ${
                               isAdded 
                                 ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-500 hover:bg-green-100" 
+                                : isFocused
+                                ? "bg-green-50 ring-1 ring-inset ring-green-500 text-green-700"
                                 : "text-slate-700 hover:bg-blue-50"
                             }`}
                           >
-                            <span>{prod.product_name}</span>
+                            <span className={isAdded || isFocused ? "text-green-700" : ""}>
+                              <HighlightMatch text={prod.product_name} query={itemSearch} />
+                            </span>
                             <div className="flex items-center gap-2">
                               <span className={`text-[10px] font-mono ${isAdded ? 'text-green-600' : 'text-slate-400'}`}>
                                 ₱{(prod.cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}

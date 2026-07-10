@@ -423,10 +423,16 @@ export default function AdminSalesPage() {
 
       // 1. Validate Stock first for all items (unless Cancelled)
       if (currentSale.payment_type !== 'Cancelled') {
-        for (const item of validItems) {
+        const outOfStockItems = validItems.filter(item => {
           const invItem = inventory.find(i => i.id === item.item_id);
-          if (!invItem || invItem.quantity < item.quantity) {
-            alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available: ${invItem?.quantity || 0}`);
+          return !invItem || invItem.quantity < item.quantity;
+        });
+
+        if (outOfStockItems.length > 0) {
+          const proceed = window.confirm(
+            "Some items have insufficient stock and will result in negative inventory. Are you sure you want to proceed?"
+          );
+          if (!proceed) {
             setSaving(false);
             return;
           }
@@ -439,7 +445,7 @@ export default function AdminSalesPage() {
         const sellingPrice = Number(item.unit_price || 0);
         const sellingQty = Number(item.quantity || 0);
         const resolvedCost = Number(invItem?.cost || 0);
-        const subtotal = sellingPrice * sellingQty;
+        const subtotal = Number(item.subtotal || 0);
 
         return {
           date: currentSale.date,
