@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783648901385",
+    version: "v1.7.10",
+    date: "2026-07-10",
+    type: "improvement",
+    title: "Enhanced Search Bar in Customer List",
+    description: "The search bar in the customer list now has a cleaner look and is easier to use, helping staff find customers more quickly."
+  },
+
+  {
     id: "update-1783405172927",
     version: "v1.7.7",
     date: "2026-07-07",
