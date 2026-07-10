@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783664109169",
+    version: "v1.7.10",
+    date: "2026-07-10",
+    type: "feature",
+    title: "Developer Settings and Real-Time Announcements Added",
+    description: "Staff can now adjust developer settings to tailor their experience and receive instant global announcements, keeping everyone informed of important updates as they happen."
+  },
+
+  {
     id: "update-1783663442209",
     version: "v1.7.10",
     date: "2026-07-10",
