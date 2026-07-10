@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783661332924",
+    version: "v1.7.10",
+    date: "2026-07-10",
+    type: "improvement",
+    title: "Edit Subtotal Directly",
+    description: "You can now change the subtotal directly, making price adjustments faster and more user-friendly."
+  },
+
+  {
     id: "update-1783648901385",
     version: "v1.7.10",
     date: "2026-07-10",
