@@ -55,6 +55,28 @@ const formatInputNumber = (v: string | number | undefined) => {
   return parts.join(".");
 };
 
+const HighlightText = ({ text, tokens }: { text: string; tokens: string[] }) => {
+  if (!tokens || tokens.length === 0) return <>{text}</>;
+  
+  const safeTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${safeTokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        tokens.some(t => t.toLowerCase() === part.toLowerCase()) ? (
+          <span key={i} className="text-[#16a34a] outline outline-[1.5px] outline-[#16a34a]/60 bg-emerald-50 rounded-[3px] px-[1px] shadow-sm">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
+
 export default function AdminInventoryPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
@@ -291,14 +313,38 @@ export default function AdminInventoryPage() {
 
       {/* Filter Row */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 flex items-center gap-2 bg-white border border-slate-100 rounded-xl px-4 py-2.5">
-          <Search className="w-4 h-4 text-slate-300 shrink-0" />
-          <input
-            className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400"
-            placeholder="Search by name, SKU, or category..."
-            value={filter}
-            onChange={e => { setFilter(e.target.value); setCurrentPage(1); }}
-          />
+        <div className="flex-1 relative rounded-2xl p-[2px] overflow-hidden group shadow-[0_0_20px_rgba(22,163,74,0.2)]">
+          {/* Animated Moving Circle/Gradient Border */}
+          <div className="absolute inset-[-1000%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#16a34a_0%,transparent_40%,transparent_60%,#16a34a_100%)] opacity-80 group-focus-within:opacity-100 transition-opacity" />
+          
+          <div className="relative flex items-center gap-3 bg-white rounded-2xl px-5 py-3.5 w-full h-full transition-all">
+            <style>{`
+              @keyframes type-flash {
+                0% { box-shadow: 0 0 0 0px rgba(22,163,74,0.5); border-color: rgba(22,163,74,1); opacity: 1; }
+                100% { box-shadow: 0 0 0 15px rgba(22,163,74,0); border-color: rgba(22,163,74,0); opacity: 0; }
+              }
+              .animate-type-flash {
+                animation: type-flash 0.4s ease-out forwards;
+              }
+            `}</style>
+            <div key={filter} className="absolute inset-0 rounded-2xl border-2 pointer-events-none animate-type-flash" />
+            
+            <Search className="w-5 h-5 text-[#16a34a] shrink-0" />
+            <input
+              className="bg-transparent border-none outline-none text-base w-full placeholder:text-slate-400 font-medium text-slate-800"
+              placeholder="Search master inventory..."
+              value={filter}
+              onChange={e => { setFilter(e.target.value); setCurrentPage(1); }}
+            />
+            {filter && (
+              <button 
+                onClick={() => { setFilter(""); setCurrentPage(1); }}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
           {CATEGORIES.map(cat => (
@@ -360,7 +406,9 @@ export default function AdminInventoryPage() {
                     <tr onClick={(e) => handleRowClick(product, e)} className={`hover:bg-slate-50 transition-colors group cursor-pointer ${isLow ? "bg-red-50/30" : ""} ${expandedRowId === product.id ? "bg-slate-50" : ""}`}>
                       <td className="px-6 py-4">
                         <div className="relative group/audit">
-                          <p className="text-sm font-semibold text-slate-900">{product.product_name}</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            <HighlightText text={product.product_name} tokens={searchTokens} />
+                          </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[10px] font-semibold text-[#1e40af]">{product.branch_name}</span>
                             {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
@@ -500,7 +548,9 @@ export default function AdminInventoryPage() {
                 {/* Row 1: Name + Actions */}
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{product.product_name}</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      <HighlightText text={product.product_name} tokens={searchTokens} />
+                    </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${categoryBadge[product.category] || "bg-slate-100 text-slate-500"}`}>
                         {product.category}

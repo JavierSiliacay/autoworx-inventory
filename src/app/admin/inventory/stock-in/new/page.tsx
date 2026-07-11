@@ -455,15 +455,22 @@ export default function NewStockInPage() {
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
                         <td className="px-4 py-3 text-right">
+                          <span className="text-sm font-medium text-slate-500">
+                            ₱{Number(item.unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
                           <div className="relative inline-flex items-center">
                             <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
-                            <input type="number" value={item.unit_cost}
-                              onChange={e => updateItem(idx, "unit_cost", e.target.value === "" ? "" : Number(e.target.value))}
-                              className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#16a34a]" />
+                            <input type="number" step="0.01"
+                              value={(item.quantity_received * item.unit_cost) || ""}
+                              onChange={e => {
+                                const newTotal = e.target.value === "" ? 0 : Number(e.target.value);
+                                const newCost = item.quantity_received > 0 ? newTotal / item.quantity_received : 0;
+                                updateItem(idx, "unit_cost", newCost);
+                              }}
+                              className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-[#16a34a]">
-                          ₱{(item.quantity_received * item.unit_cost).toLocaleString()}
                         </td>
                         {!selectedPO && (
                           <td className="px-4 py-3 text-right">
@@ -509,13 +516,21 @@ export default function NewStockInPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Cost</p>
-                        <input type="number" value={item.unit_cost}
-                          onChange={e => updateItem(idx, "unit_cost", e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
+                        <p className="py-1.5 text-sm font-medium text-slate-500">₱{Number(item.unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Total</p>
-                        <p className="py-1.5 text-sm font-semibold text-[#16a34a]">₱{(item.quantity_received * item.unit_cost).toLocaleString()}</p>
+                        <div className="relative inline-flex items-center w-full">
+                          <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
+                          <input type="number" step="0.01"
+                            value={(item.quantity_received * item.unit_cost) || ""}
+                            onChange={e => {
+                              const newTotal = e.target.value === "" ? 0 : Number(e.target.value);
+                              const newCost = item.quantity_received > 0 ? newTotal / item.quantity_received : 0;
+                              updateItem(idx, "unit_cost", newCost);
+                            }}
+                            className="w-full pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
+                        </div>
                       </div>
                     </div>
                   </div>
