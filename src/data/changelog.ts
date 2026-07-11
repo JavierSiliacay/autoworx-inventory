@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783751550030",
+    version: "v1.7.11",
+    date: "2026-07-11",
+    type: "feature",
+    title: "Clearer Numbers & Better Inventory Tracking",
+    description: "Amounts now display consistently across the app, and stock‑in purchases are recorded more accurately, giving staff clearer totals and more reliable inventory data."
+  },
+
+  {
     id: "update-1783745197837",
     version: "v1.7.11",
     date: "2026-07-11",
