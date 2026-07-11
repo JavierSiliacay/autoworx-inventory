@@ -148,7 +148,7 @@ export default function StockInPage() {
       let query = supabase
         .from("stock_in_logs")
         .select("*, supplier:suppliers(name), branch:branches(name), po:purchase_orders(po_number)")
-        .order("date_received", { ascending: false });
+        .order("created_at", { ascending: false });
       if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
       const { data, error } = await query;
       if (error) throw error;
@@ -228,7 +228,7 @@ export default function StockInPage() {
   };
 
   const fmt = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="space-y-6 pb-20">

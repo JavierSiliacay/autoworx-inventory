@@ -720,13 +720,13 @@ export default function AdminSalesPage() {
                 <FileText className="w-4 h-4" />
                 <span>Instructions for Administrator:</span>
              </div>
-             <p className="text-xs text-slate-500 leading-relaxed">
+             <div className="text-xs text-slate-500 leading-relaxed">
                1. Open your <strong>Supabase Dashboard</strong>.<br />
                2. Go to the <strong>SQL Editor</strong> section.<br />
                3. Open the file <code>MIGRATE_SALES_TABLE.sql</code> in your project root.<br />
                4. Copy the entire contents and <strong>Run</strong> them in Supabase.<br />
                5. Once finished, refresh this page to start tracking sales!
-             </p>
+             </div>
           </div>
         </div>
       </div>
@@ -1199,8 +1199,8 @@ export default function AdminSalesPage() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {currentSale.items.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-white transition-colors group">
-                            <td className="px-4 py-3 text-[10px] font-bold text-slate-400">{idx + 1}</td>
+                          <tr key={idx} className="hover:bg-white transition-colors group focus-within:bg-emerald-50/30">
+                            <td className="px-4 py-3 text-[10px] font-bold text-slate-400 group-focus-within:text-emerald-600 group-focus-within:scale-125 transition-all origin-left">{idx + 1}</td>
                             <td className="p-2">
                                <SearchableSelect
                                   options={inventory.map(inv => ({ 
@@ -1217,7 +1217,7 @@ export default function AdminSalesPage() {
                             <td className="px-2 py-2">
                               <input
                                 type="number"
-                                min="0.01" step="0.01"
+                                min="1" step="1"
                                 className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
                                 value={item.quantity === undefined ? "" : item.quantity}
                                 onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}

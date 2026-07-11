@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Building2,
   PackageCheck,
+  PackageMinus,
   ClipboardList,
   Truck,
   CreditCard,
@@ -70,6 +71,7 @@ export default function Sidebar() {
         { name: "Master Inventory", href: "/admin/inventory", icon: PackageCheck },
         { name: "Purchase Orders", href: "/admin/inventory/purchase-orders", icon: ClipboardList },
         { name: "Stock-In / Receiving", href: "/admin/inventory/stock-in", icon: Truck },
+        { name: "Stock-Out / Borrow", href: "/admin/inventory/stock-out", icon: PackageMinus },
         { name: "Suppliers", href: "/admin/inventory/suppliers", icon: Building2 },
       ]
     },

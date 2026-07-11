@@ -624,7 +624,7 @@ export default function PurchaseOrdersPage() {
                             </td>
                             <td className="px-2 py-1.5">
                               <input
-                                type="number" min="0.01" step="0.01"
+                                type="number" min="1" step="1"
                                 value={item.quantity}
                                 onChange={e => updateItem(i, "quantity", parseFloat(e.target.value) || 0)}
                                 className="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1e40af]/30 focus:border-[#1e40af]"

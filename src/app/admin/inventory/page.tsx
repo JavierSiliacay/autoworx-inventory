@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History
+  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History, PackageMinus
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -685,7 +685,7 @@ export default function AdminInventoryPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Quantity</label>
                   <input
-                    type="number" step="0.1"
+                    type="number" step="1"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors"
                     value={currentProduct.quantity === undefined ? "" : currentProduct.quantity}
                     onChange={e => setCurrentProduct({ ...currentProduct, quantity: e.target.value === "" ? ("" as any) : e.target.value as any })}
@@ -694,7 +694,7 @@ export default function AdminInventoryPage() {
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Low Stock At</label>
                   <input
-                    type="number" step="0.1" min="0"
+                    type="number" step="1" min="0"
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors"
                     value={currentProduct.low_stock_threshold === undefined ? "" : currentProduct.low_stock_threshold}
                     onChange={e => setCurrentProduct({ ...currentProduct, low_stock_threshold: e.target.value === "" ? ("" as any) : e.target.value as any })}

@@ -361,7 +361,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                         <td className="px-2 py-2">
                           <input
                             type="number"
-                            min="0.01" step="0.01"
+                            min="1" step="1"
                             className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
                             value={item.quantity === undefined ? "" : item.quantity}
                             onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}

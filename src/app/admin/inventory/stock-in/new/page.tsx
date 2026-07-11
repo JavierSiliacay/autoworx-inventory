@@ -162,7 +162,18 @@ export default function NewStockInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasSubmitted(true);
-    if (!supplierId || !invoiceNumber || items.length === 0) { alert("Supplier, Invoice No, and at least one item are required."); return; }
+    
+    if (!supplierId || !invoiceNumber || items.length === 0) { 
+      alert("Supplier, Invoice No, and at least one item are required."); 
+      return; 
+    }
+
+    const hasInvalidQuantity = items.some(i => Number(i.quantity_received) <= 0);
+    if (hasInvalidQuantity) {
+      alert("Error: All stock-in quantities must be greater than 0. You cannot input negative stocks here.");
+      return;
+    }
+
     try {
       setLoading(true);
       let imageUrl = null;
@@ -439,7 +450,7 @@ export default function NewStockInPage() {
                       <tr id={`desktop-row-${item.inventory_id}`} key={idx} className="transition-colors">
                         <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
                         <td className="px-4 py-3 text-center">
-                          <input type="number" step="0.1" value={item.quantity_received} min={0.1}
+                          <input type="number" step="1" value={item.quantity_received} min={1}
                             onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
@@ -492,7 +503,7 @@ export default function NewStockInPage() {
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
-                        <input type="number" step="0.1" value={item.quantity_received}
+                        <input type="number" step="1" min="1" value={item.quantity_received}
                           onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
                       </div>

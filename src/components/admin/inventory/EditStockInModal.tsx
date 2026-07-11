@@ -127,7 +127,13 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validItems = currentLog.items.filter(item => item.inventory_id && item.quantity_received > 0);
+    const hasInvalidQuantity = currentLog.items.some(item => item.inventory_id && Number(item.quantity_received) <= 0);
+    if (hasInvalidQuantity) {
+      alert("Error: All stock-in quantities must be greater than 0. You cannot input negative stocks here.");
+      return;
+    }
+
+    const validItems = currentLog.items.filter(item => item.inventory_id && Number(item.quantity_received) > 0);
     
     if (validItems.length === 0 || !currentLog.invoice_number || !currentLog.supplier_id) {
       alert("Please ensure Supplier, Invoice Number, and at least one valid item are provided.");

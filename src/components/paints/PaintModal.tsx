@@ -154,7 +154,7 @@ export default function PaintModal({ isOpen, onClose, paint }: PaintModalProps) 
               <input 
                 disabled={loading}
                 type="number" 
-                step="0.1"
+                step="1"
                 className="w-full px-5 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-primary-600 outline-none font-bold text-lg disabled:opacity-50"
                 value={formData.quantity}
                 onChange={(e) => setFormData({...formData, quantity: parseFloat(e.target.value)})}
