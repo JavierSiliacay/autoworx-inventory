@@ -9,6 +9,7 @@ import { useNetwork } from "@/context/NetworkContext";
 import SalesReportPrint from "@/components/sales/SalesReportPrint";
 import EditSaleModal from "@/components/admin/sales/EditSaleModal";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface SaleEntry {
   id: string;
@@ -344,13 +345,6 @@ export default function AdminSalesPage() {
       const q = Number(field === 'quantity' ? value : item.quantity || 0);
       const p = Number(field === 'unit_price' ? value : item.unit_price || 0);
       item.subtotal = q * p;
-    } else if (field === 'subtotal') {
-      // allow string with commas and decimals
-      let strVal = String(value).replace(/[^\d.]/g, '');
-      const parts = strVal.split('.');
-      if (parts.length > 2) strVal = parts[0] + '.' + parts[1];
-      if (parts[0]) parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      (item as any).subtotal = parts.join('.');
     }
 
     newItems[index] = item;
@@ -1192,8 +1186,8 @@ export default function AdminSalesPage() {
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32">Unit Price</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[120px]">Unit Price</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[150px] text-right">Subtotal</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
                         </tr>
                       </thead>
@@ -1226,16 +1220,14 @@ export default function AdminSalesPage() {
                             <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
                               {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
                             </td>
-                            <td className="px-2 py-2">
-                              <div className="relative flex items-center justify-end w-full">
-                                <span className="absolute left-3 text-slate-400 text-sm font-medium">₱</span>
-                                <input
-                                  type="text"
-                                  className="w-full pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
-                                  value={item.subtotal === undefined ? "" : item.subtotal}
-                                  onChange={(e) => handleRowChange(idx, 'subtotal', e.target.value)}
-                                />
-                              </div>
+                            <td className="px-2 py-2 text-right">
+                              <FormattedNumberInput
+                                autoSize
+                                prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
+                                className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
+                                value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
+                                onChange={(val) => handleRowChange(idx, 'subtotal', val)}
+                              />
                             </td>
                             <td className="px-2 py-2 text-right">
                               <button 

@@ -81,7 +81,7 @@ BEGIN
       v_branch_id,
       'IN',
       (v_new_item->>'quantity_received')::decimal,
-      (v_new_item->>'unit_cost')::decimal,
+      COALESCE((v_new_item->>'total_amount')::decimal / NULLIF((v_new_item->>'quantity_received')::decimal, 0), (v_new_item->>'unit_cost')::decimal),
       'Stock In Edited: ' || (p_log_payload->>'invoice_number')
     );
   END LOOP;

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, Package, AlertCircle, Trash2, Tag, Truck } from "lucide-react";
 import { Part } from "@/types";
 import { addPart, updatePart, deletePart } from "@/actions/inventory";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface PartModalProps {
   isOpen: boolean;
@@ -171,14 +172,12 @@ export default function PartModal({ isOpen, onClose, part }: PartModalProps) {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unit Price ($)</label>
-              <input 
+              <FormattedNumberInput 
                 disabled={loading}
-                type="number" 
-                step="0.01"
                 placeholder="0.00"
                 className="w-full px-5 py-4 rounded-2xl border border-slate-800 bg-slate-950 text-white focus:ring-2 focus:ring-primary-600/20 focus:border-primary-600 outline-none transition-all placeholder:text-slate-700 font-bold text-sm disabled:opacity-50"
-                value={formData.unit_price}
-                onChange={(e) => setFormData({...formData, unit_price: parseFloat(e.target.value)})}
+                value={formData.unit_price === ("" as any) || formData.unit_price === 0 ? undefined : Number(formData.unit_price)}
+                onChange={(val) => setFormData({...formData, unit_price: val || 0})}
               />
             </div>
           </div>

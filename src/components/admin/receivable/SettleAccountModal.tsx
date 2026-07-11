@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, ArrowRight, CheckCircle2, History } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface SettleAccountModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface SettleAccountModalProps {
 
 export default function SettleAccountModal({ isOpen, onClose, record, onSuccess }: SettleAccountModalProps) {
   const router = useRouter();
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [method, setMethod] = useState<"Cash" | "Cheque">("Cash");
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,21 +25,11 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
   useEffect(() => {
     if (isOpen && record?.id) {
       fetchPayments();
-      setAmount(""); // Reset amount when opened
+      setAmount(undefined); // Reset amount when opened
     }
   }, [isOpen, record]);
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let rawValue = e.target.value.replace(/[^0-9.]/g, '');
-    
-    const parts = rawValue.split('.');
-    const wholePart = parts[0];
-    const decimalPart = parts.length > 1 ? '.' + parts[1] : '';
-    
-    const formattedWhole = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    
-    setAmount(formattedWhole + decimalPart);
-  };
+
 
   const fetchPayments = async () => {
     try {
@@ -66,9 +57,9 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
       return;
     }
 
-    const numericAmount = Number(amount.replace(/,/g, ''));
+    const numericAmount = amount || 0;
 
-    if (!amount || isNaN(numericAmount) || numericAmount <= 0) return;
+    if (!numericAmount || numericAmount <= 0) return;
 
     try {
       setLoading(true);
@@ -233,12 +224,11 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Amount to Pay (PHP)</label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₱</span>
-                        <input
-                          type="text"
+                        <FormattedNumberInput
                           className="w-full pl-8 pr-4 py-3 bg-white border border-emerald-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl outline-none font-black text-slate-800 transition-all"
                           placeholder="0.00"
                           value={amount}
-                          onChange={handleAmountChange}
+                          onChange={setAmount}
                         />
                       </div>
                     </div>
@@ -254,7 +244,7 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
 
                     <button
                       onClick={handleProcess}
-                      disabled={loading || !amount || Number(amount.replace(/,/g, '')) <= 0}
+                      disabled={loading || !amount || amount <= 0}
                       className="w-full flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Process Cash Payment"}

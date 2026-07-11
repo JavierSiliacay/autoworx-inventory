@@ -13,7 +13,7 @@ import { useNetwork } from "@/context/NetworkContext";
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; quantity?: number; }
 interface POHeader { id: string; po_number: string; supplier_id: string; items: any[]; }
-interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; }
+interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; total_amount?: number; }
 
 const HighlightMatch = ({ text, query }: { text: string; query: string }) => {
   if (!query) return <>{text}</>;
@@ -60,7 +60,7 @@ const compressImage = async (file: File): Promise<Blob> => {
     reader.onerror = () => reject(new Error("Failed to read file"));
   });
 };
-
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 export default function NewStockInPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -157,7 +157,7 @@ export default function NewStockInPage() {
     if (file) { setReceiptImage(file); setPreviewUrl(URL.createObjectURL(file)); }
   };
 
-  const total = items.reduce((s, i) => s + i.quantity_received * i.unit_cost, 0);
+  const total = items.reduce((s, i) => s + (i.total_amount !== undefined ? Number(i.total_amount) : i.quantity_received * i.unit_cost), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +222,8 @@ export default function NewStockInPage() {
           unit: template?.unit || "Gallon",
           price: template?.price || (item.unit_cost * 1.3),
           quantity_received: item.quantity_received,
-          unit_cost: item.unit_cost
+          unit_cost: item.unit_cost,
+          total_amount: item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost)
         };
       });
 
@@ -460,17 +461,15 @@ export default function NewStockInPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="relative inline-flex items-center">
-                            <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
-                            <input type="number" step="0.01"
-                              value={(item.quantity_received * item.unit_cost) || ""}
-                              onChange={e => {
-                                const newTotal = e.target.value === "" ? 0 : Number(e.target.value);
-                                const newCost = item.quantity_received > 0 ? newTotal / item.quantity_received : 0;
-                                updateItem(idx, "unit_cost", newCost);
-                              }}
-                              className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
-                          </div>
+                          <FormattedNumberInput
+                            autoSize
+                            prefixElement={<span className="absolute left-2.5 text-slate-300 text-xs z-10">₱</span>}
+                            value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
+                            onChange={val => {
+                              updateItem(idx, "total_amount", val);
+                            }}
+                            className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" 
+                          />
                         </td>
                         {!selectedPO && (
                           <td className="px-4 py-3 text-right">
@@ -522,12 +521,10 @@ export default function NewStockInPage() {
                         <p className="text-[10px] text-slate-400 mb-1">Total</p>
                         <div className="relative inline-flex items-center w-full">
                           <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
-                          <input type="number" step="0.01"
-                            value={(item.quantity_received * item.unit_cost) || ""}
-                            onChange={e => {
-                              const newTotal = e.target.value === "" ? 0 : Number(e.target.value);
-                              const newCost = item.quantity_received > 0 ? newTotal / item.quantity_received : 0;
-                              updateItem(idx, "unit_cost", newCost);
+                          <FormattedNumberInput
+                            value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
+                            onChange={val => {
+                              updateItem(idx, "total_amount", val);
                             }}
                             className="w-full pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
                         </div>

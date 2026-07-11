@@ -97,7 +97,7 @@ BEGIN
       (log_payload->>'branch_id')::uuid,
       'IN',
       (v_item->>'quantity_received')::decimal,
-      (v_item->>'unit_cost')::decimal,
+      COALESCE((v_item->>'total_amount')::decimal / NULLIF((v_item->>'quantity_received')::decimal, 0), (v_item->>'unit_cost')::decimal),
       'Stock In: ' || (log_payload->>'invoice_number')
     );
   END LOOP;

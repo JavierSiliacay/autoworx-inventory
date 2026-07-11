@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2, Save, Plus, Package, Calendar, FileText, User, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface EditSaleModalProps {
   isOpen: boolean;
@@ -336,8 +337,8 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32">Unit Price</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[120px]">Unit Price</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[150px] text-right">Subtotal</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
                     </tr>
                   </thead>
@@ -368,12 +369,12 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                           />
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
-                            value={item.unit_price === undefined ? "" : item.unit_price}
-                            onChange={(e) => handleRowChange(idx, 'unit_price', e.target.value === "" ? ("" as any) : e.target.value as any)}
+                          <FormattedNumberInput
+                            autoSize
+                            prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
+                            className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
+                            value={item.unit_price === undefined ? undefined : Number(item.unit_price)}
+                            onChange={(val) => handleRowChange(idx, 'unit_price', val)}
                           />
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-bold text-[#1a1b20]">

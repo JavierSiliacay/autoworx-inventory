@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; unit: string; cost: number; }
@@ -352,12 +353,13 @@ export default function CreatePurchaseOrderPage() {
                         </td>
                         <td className="px-4 py-3 text-center text-xs text-slate-400 font-medium uppercase">{item.unit}</td>
                         <td className="px-4 py-3 text-right">
-                          <div className="relative inline-flex items-center">
-                            <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
-                            <input type="number" value={item.unit_price}
-                              onChange={e => updateItem(idx, "unit_price", e.target.value as any || 0)}
-                              className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#16a34a]" />
-                          </div>
+                          <FormattedNumberInput 
+                            autoSize
+                            prefixElement={<span className="absolute left-2.5 text-slate-300 text-xs z-10">₱</span>}
+                            value={item.unit_price === ("" as any) ? undefined : Number(item.unit_price)}
+                            onChange={val => updateItem(idx, "unit_price", val)}
+                            className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right outline-none focus:border-[#16a34a]" 
+                          />
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-slate-800">
                           ₱{(item.quantity * item.unit_price).toLocaleString()}
@@ -394,9 +396,11 @@ export default function CreatePurchaseOrderPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Price</p>
-                        <input type="number" value={item.unit_price}
-                          onChange={e => updateItem(idx, "unit_price", e.target.value as any || 0)}
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" />
+                        <FormattedNumberInput 
+                          value={item.unit_price === ("" as any) ? undefined : Number(item.unit_price)}
+                          onChange={val => updateItem(idx, "unit_price", val)}
+                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" 
+                        />
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Total</p>

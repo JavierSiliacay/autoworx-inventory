@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Loader2, Save, Plus, Package, Calendar, Building2, CheckCircle2, Trash2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
 interface EditStockInModalProps {
   isOpen: boolean;
@@ -165,7 +166,8 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       const newItemsPayload = validItems.map(item => ({
         inventory_id: item.inventory_id,
         quantity_received: Number(item.quantity_received),
-        unit_cost: Number(item.unit_cost)
+        unit_cost: Number(item.unit_cost),
+        total_amount: item.total_amount !== undefined ? Number(item.total_amount) : (Number(item.quantity_received) * Number(item.unit_cost))
       }));
 
       const userId = session?.user?.id || null;
@@ -398,12 +400,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unit_cost}
-                          onChange={(e) => handleRowChange(index, 'unit_cost', e.target.value === "" ? "" : Number(e.target.value))}
+                        <FormattedNumberInput
+                          value={item.unit_cost === "" ? undefined : Number(item.unit_cost)}
+                          onChange={(val) => handleRowChange(index, 'unit_cost', val)}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                         />
                       </td>
