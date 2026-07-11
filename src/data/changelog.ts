@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783737324599",
+    version: "v1.7.11",
+    date: "2026-07-11",
+    type: "feature",
+    title: "Keyboard Navigation Added to Select Component and Stock‑Out Feature",
+    description: "You can now use the keyboard to move through dropdowns and stock‑out options, improving accessibility and letting you work faster without needing a mouse."
+  },
+
+  {
     id: "update-1783664109169",
     version: "v1.7.10",
     date: "2026-07-10",
