@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783740664354",
+    version: "v1.7.11",
+    date: "2026-07-11",
+    type: "improvement",
+    title: "Auto‑formatted commas in amount fields",
+    description: "When entering amounts to pay, commas are now added automatically, making large numbers easier to read and reducing entry errors."
+  },
+
+  {
     id: "update-1783738043198",
     version: "v1.7.11",
     date: "2026-07-11",
