@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783738043198",
+    version: "v1.7.11",
+    date: "2026-07-11",
+    type: "feature",
+    title: "Help Button for Stock‑Out Records",
+    description: "A new info (i) button appears on stock‑out records, providing staff with quick instructional messages to guide them through the process and reduce errors."
+  },
+
+  {
     id: "update-1783737324599",
     version: "v1.7.11",
     date: "2026-07-11",
