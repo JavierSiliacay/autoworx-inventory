@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, PackageMinus, AlertCircle, Building2, Package, Search, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { X, PackageMinus, AlertCircle, Building2, Package, Search, Plus, Trash2, CheckCircle2, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
 import { useSession } from "next-auth/react";
@@ -192,8 +192,15 @@ export default function NewStockOutModal({ isOpen, onClose, inventory, branches,
           {/* Header Info */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 shadow-sm">
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Requesting Branch (Optional)
+                <div className="relative group cursor-help flex items-center">
+                  <Info className="w-3.5 h-3.5 text-emerald-500 hover:text-emerald-600 transition-colors drop-shadow-sm" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-52 p-2 bg-slate-800 text-white text-[10px] leading-tight rounded-lg shadow-lg normal-case tracking-normal z-50 text-center font-medium">
+                    This won't add stock to the selected branch; it's for documentation only.
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-800"></div>
+                  </div>
+                </div>
               </label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
