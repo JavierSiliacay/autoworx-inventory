@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1783745197837",
+    version: "v1.7.11",
+    date: "2026-07-11",
+    type: "improvement",
+    title: "Animated search bar and editable totals in stock‑in form",
+    description: "Staff can now see search terms highlighted as they type and edit totals directly in the stock‑in form, making data entry faster and more intuitive."
+  },
+
+  {
     id: "update-1783740664354",
     version: "v1.7.11",
     date: "2026-07-11",
