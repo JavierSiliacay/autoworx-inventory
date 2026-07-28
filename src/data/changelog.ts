@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1785223624865",
+    version: "v1.7.28",
+    date: "2026-07-28",
+    type: "feature",
+    title: "Facebook Login Enabled & Notification Badges Introduced",
+    description: "Staff and users can now log in using Facebook in the live environment, and pending notifications are highlighted with badges so you never miss an update."
+  },
+
+  {
     id: "update-1785209639121",
     version: "v1.7.28",
     date: "2026-07-28",
