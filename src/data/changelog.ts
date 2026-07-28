@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1785209639121",
+    version: "v1.7.28",
+    date: "2026-07-28",
+    type: "feature",
+    title: "New Stock Reservation System with Approval Workflow",
+    description: "Staff can now reserve inventory items, edit reservations easily, and require admin approval before stock is locked, reducing errors and ensuring better control over product availability."
+  },
+
+  {
     id: "update-1783751550030",
     version: "v1.7.11",
     date: "2026-07-11",
