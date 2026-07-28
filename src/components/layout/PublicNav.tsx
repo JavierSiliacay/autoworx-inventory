@@ -56,7 +56,7 @@ export default function PublicNav() {
               suppressHydrationWarning
               className="bg-[#16a34a] text-white px-8 py-3 rounded-full font-bold text-sm shadow-xl shadow-[#16a34a]/20 hover:bg-[#15803d] active:scale-95 transition-all"
             >
-              Staff Login
+              Login
             </button>
           </Link>
         </div>
@@ -102,12 +102,9 @@ export default function PublicNav() {
             <div className="h-px bg-slate-100 w-full" />
             <Link href="/login" onClick={() => setIsOpen(false)}>
               <button className="w-full bg-[#1e40af] text-white py-6 rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-[#1e40af]/30 active:scale-95 transition-all flex items-center justify-center gap-3">
-                Authorize Personnel Access
+                Login
               </button>
             </Link>
-            <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-              Secured Administrative Control Panel
-            </p>
           </div>
         </div>
       </div>

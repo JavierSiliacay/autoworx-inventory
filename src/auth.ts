@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Facebook from "next-auth/providers/facebook";
 import { createClient } from "@supabase/supabase-js";
 
 // Initialize Supabase admin client for auth sync
@@ -35,33 +36,56 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
+    Facebook({
+      clientId: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    }),
   ],
   callbacks: {
-    async signIn({ user }) {
-      if (!user.email) return false;
+    async signIn({ user, account, profile }) {
+      console.log("=== NEXTAUTH SIGNIN CALLBACK STRUCK ===");
+      console.log("User:", user);
+      console.log("Account Provider:", account?.provider);
       
-      const isDeveloper = DEVELOPERS.includes(user.email);
-      const isOwner = OWNERS.includes(user.email);
-      const isManager = MANAGERS.includes(user.email);
-      
-      // Check if user is pre-registered in Supabase staff management (/admin/staff)
-      const { data: dbUser } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('email', user.email)
-        .single();
-
-      // Block access if not a Developer, Owner, Manager, or pre-registered Staff
-      if (!isDeveloper && !isOwner && !isManager && !dbUser) {
-        console.warn(`Unauthorized login attempt blocked: ${user.email}`);
-        return false;
+      if (!user.email) {
+        const providerId = account?.providerAccountId;
+        if (providerId) {
+          user.email = `${providerId}@${account?.provider || 'oauth'}.com`;
+          console.log(`LOGIN FALLBACK: No email provided, generating fallback email using provider ID: ${user.email}`);
+        } else {
+          console.error("LOGIN FAILED: No email address and no provider ID provided by OAuth provider.");
+          return false;
+        }
       }
+      
+      try {
+        const isDeveloper = DEVELOPERS.includes(user.email);
+        const isOwner = OWNERS.includes(user.email);
+        const isManager = MANAGERS.includes(user.email);
+        
+        console.log(`Checking DB for pre-registered email: ${user.email}`);
+        // Check if user is pre-registered in Supabase staff management (/admin/staff)
+        const { data: dbUser, error: dbError } = await supabase
+          .from('users')
+          .select('id, role')
+          .eq('email', user.email)
+          .single();
 
-      let computedRole = 'staff';
+        if (dbError && dbError.code !== 'PGRST116') {
+           console.error("DB Error fetching user:", dbError);
+        }
+
+        let computedRole = 'new_user_setup';
+      
       if (isDeveloper) computedRole = 'developer';
       else if (isOwner) computedRole = 'owner';
       else if (isManager) computedRole = 'manager';
       else if (dbUser) computedRole = dbUser.role;
+
+      // Log the login attempt
+      if (computedRole === 'new_user_setup') {
+        console.log(`New user sign up detected: ${user.email}. Assigning new_user_setup role for onboarding.`);
+      }
 
       // Find the branches for this user (for hardcoded mappings)
       const assignedBranchNames = STAFF_MAPPING[user.email] || [];
@@ -95,6 +119,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (error) console.error("Error syncing user to Supabase:", error);
       return true;
+      } catch (err) {
+         console.error("SIGNIN EXCEPTION:", err);
+         return false;
+      }
     },
     async session({ session, token }) {
       if (session.user && token.sub) {

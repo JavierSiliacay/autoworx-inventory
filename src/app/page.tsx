@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, ArrowRight, Loader2, MapPin, Shield } from "lucide-react";
+import { Search, ArrowRight, Loader2, MapPin, Shield, Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import PublicNav from "@/components/layout/PublicNav";
 
@@ -15,9 +16,67 @@ interface GroupedProduct {
   branches: { b: string; v: string; low: boolean }[];
 }
 
-export default function HomePage() {
+export default function PublicLanding() {
+  const router = useRouter();
   const [products, setProducts] = useState<GroupedProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Search UX State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [placeholderText, setPlaceholderText] = useState("");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  // Animated Placeholder Effect
+  useEffect(() => {
+    const hints = [
+      "Search for 'Clearcoat'...",
+      "Search for 'Thinner'...",
+      "Search for 'Sandpaper'...",
+      "Search for 'Hardener'...",
+      "Reference code or location..."
+    ];
+    let currentHint = hints[placeholderIndex];
+    let isDeleting = false;
+    let charIndex = 0;
+    let typingTimer: any;
+    
+    const type = () => {
+      currentHint = hints[placeholderIndex];
+      if (isDeleting) {
+        setPlaceholderText(currentHint.substring(0, charIndex - 1));
+        charIndex--;
+      } else {
+        setPlaceholderText(currentHint.substring(0, charIndex + 1));
+        charIndex++;
+      }
+
+      let speed = isDeleting ? 30 : 60;
+
+      if (!isDeleting && charIndex === currentHint.length) {
+        speed = 2000; // Pause at end of word
+        isDeleting = true;
+      } else if (isDeleting && charIndex === 0) {
+        isDeleting = false;
+        setPlaceholderIndex((prev) => (prev + 1) % hints.length);
+        speed = 500; // Pause before new word
+      }
+
+      typingTimer = setTimeout(type, speed);
+    };
+
+    typingTimer = setTimeout(type, 100);
+    return () => clearTimeout(typingTimer);
+  }, [placeholderIndex]);
+
+  const handleSearch = () => {
+    setIsSearching(true);
+    if (searchQuery.trim()) {
+      router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/products');
+    }
+  };
 
   useEffect(() => {
     fetchLiveInventory();
@@ -53,9 +112,7 @@ export default function HomePage() {
         acc[name].total += parseFloat(item.quantity.toString());
         acc[name].branches.push({
           b: (item.branches as any)?.name || "Unknown",
-          v: parseFloat(item.quantity.toString()) > 0
-            ? `${parseFloat(item.quantity.toString()).toFixed(1)} L`
-            : "Out of Stock",
+          v: `${parseFloat(item.quantity.toString()).toFixed(1).replace(/\.0$/, '')}`,
           low: parseFloat(item.quantity.toString()) < 5
         });
         return acc;
@@ -105,22 +162,37 @@ export default function HomePage() {
               Professional-grade automotive paint, synchronized across our 6-branch regional network. Discover the technical standard trusted by the region’s top body shops and ateliers.
             </p>
 
-            {/* Search Protocol */}
+            {/* Search */}
             <div className="relative max-w-2xl mx-auto mt-8 md:mt-16 w-full">
               <div className="flex flex-col md:flex-row items-stretch md:items-center bg-white p-2 rounded-3xl shadow-2xl shadow-slate-200 border border-slate-100 group transition-all focus-within:ring-8 focus-within:ring-[#16a34a]/5">
                 <div className="flex items-center flex-1 px-4 py-3 md:py-0">
                   <Search className="w-5 h-5 text-slate-300 group-focus-within:text-[#16a34a] transition-colors" />
                   <input
                     suppressHydrationWarning
-                    className="w-full border-none focus:ring-0 bg-transparent px-4 text-sm md:text-base font-semibold text-slate-900 placeholder:text-slate-300 outline-none"
-                    placeholder="Reference code or product location..."
+                    className="w-full border-none focus:ring-0 bg-transparent px-4 text-sm md:text-base font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
+                    placeholder={placeholderText || "Search..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSearch();
+                    }}
+                    disabled={isSearching}
                   />
                 </div>
                 <button
                   suppressHydrationWarning
-                  className="bg-[#16a34a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all hover:bg-[#15803d] active:scale-95 shadow-xl shadow-[#16a34a]/20"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  className="bg-[#16a34a] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all hover:bg-[#15803d] active:scale-95 shadow-xl shadow-[#16a34a]/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed min-w-[180px]"
                 >
-                  Search Inventory
+                  {isSearching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Locating...
+                    </>
+                  ) : (
+                    "Find Products"
+                  )}
                 </button>
               </div>
               <div className="flex justify-center gap-4 mt-6">
@@ -141,8 +213,8 @@ export default function HomePage() {
         <section className="max-w-[1440px] mx-auto px-6 md:px-16 pb-24 md:pb-40">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 md:mb-16">
             <div>
-              <h2 className="text-2xl md:text-4xl font-manrope font-black tracking-tight text-[#111827]">Professional Inventory</h2>
-              <p className="text-sm md:text-base text-slate-500 font-medium tracking-tight mt-1 md:mt-2">Live stock availability for our high-performance automotive coating network.</p>
+              <h2 className="text-2xl md:text-4xl font-manrope font-black tracking-tight text-[#111827]">Top Products</h2>
+              <p className="text-sm md:text-base text-slate-500 font-medium tracking-tight mt-1 md:mt-2">Real-time stock availability across our branches.</p>
             </div>
             <Link href="/products" className="group flex items-center gap-2 text-xs font-black text-[#16a34a] uppercase tracking-widest hover:translate-x-1 transition-all">
               Browse Full Catalog <ArrowRight className="w-4 h-4" />
@@ -150,57 +222,118 @@ export default function HomePage() {
           </div>
 
           {loading ? (
-            <div className="w-full flex flex-col items-center justify-center py-24 gap-4">
-              <Loader2 className="w-12 h-12 text-[#16a34a] animate-spin opacity-40" />
-              <p className="text-[10px] font-bold text-[#16a34a] uppercase tracking-[0.2em]">Acquiring Archives...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white rounded-[2rem] p-8 md:p-10 border border-slate-100 shadow-sm animate-pulse">
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="space-y-3 w-1/2">
+                      <div className="h-2 w-16 bg-slate-200 rounded"></div>
+                      <div className="h-6 w-full bg-slate-200 rounded"></div>
+                      <div className="h-6 w-2/3 bg-slate-200 rounded"></div>
+                    </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="h-8 w-16 bg-slate-200 rounded"></div>
+                      <div className="h-2 w-20 bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="h-2 w-24 bg-slate-200 rounded mb-4"></div>
+                    {[1, 2, 3].map((j) => (
+                      <div key={j} className="flex justify-between items-center py-3 px-4 bg-slate-50 rounded-xl">
+                        <div className="h-3 w-20 bg-slate-200 rounded"></div>
+                        <div className="h-3 w-12 bg-slate-200 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="w-full h-12 bg-slate-200 rounded-2xl mt-10"></div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
-              {products.map((card, i) => (
-                <div key={i} className="bg-white rounded-[2rem] p-8 md:p-10 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#16a34a]/30 transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500" />
+              {products.map((card, i) => {
+                const isOutOfStock = card.total <= 0;
+                return (
+                <div key={i} className={`bg-white rounded-[2rem] p-8 md:p-10 border shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden ${isOutOfStock ? 'border-red-200 hover:border-red-400' : 'border-slate-100 hover:border-[#16a34a]/30'}`}>
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${isOutOfStock ? 'from-red-500/5' : 'from-[#16a34a]/5'} to-transparent rounded-bl-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500`} />
 
                   <div className="flex justify-between items-start mb-8 relative z-10">
                     <div className="space-y-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-[#16a34a]/60">{card.category}</span>
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${isOutOfStock ? 'text-red-500/60' : 'text-[#16a34a]/60'}`}>{card.category}</span>
                       <h3 className="text-xl md:text-2xl font-manrope font-extrabold text-[#111827] group-hover:text-[#1e40af] transition-colors">{card.name}</h3>
                     </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-manrope font-black text-[#16a34a] leading-none">{Math.round(card.total)}</div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Unit Volume (L)</span>
+                    <div className="text-right flex flex-col items-end">
+                      <div className={`text-3xl font-manrope font-black ${isOutOfStock ? 'text-red-500' : 'text-[#16a34a]'} leading-none`}>
+                        {Math.round(card.total)}
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Total Network Stock</span>
                     </div>
                   </div>
 
-                  <div className="space-y-3 relative z-10">
+                  {/* Desktop View */}
+                  <div className="space-y-3 relative z-10 hidden md:block">
                     <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1">Stock Distribution</p>
                     {card.branches.map((b, bi) => (
                       <div key={bi} className="flex justify-between items-center py-3 px-4 bg-slate-50/50 rounded-xl border border-slate-50 group-hover:bg-white transition-all">
                         <span className="text-xs font-bold text-slate-600">{b.b}</span>
-                        <span className={`text-xs font-black tracking-tight ${b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
-                          {b.v}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-black tracking-tight ${parseFloat(b.v) <= 0 ? "text-red-500" : b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                            {b.v}
+                          </span>
+                          {parseFloat(b.v) > 0 && (
+                            <a href="tel:+639000000000" className="w-7 h-7 rounded-full bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a] hover:bg-[#16a34a] hover:text-white transition-colors" title="Call Branch">
+                              <Phone className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Mobile View */}
+                  <details className="space-y-3 relative z-10 group/details md:hidden block">
+                    <summary className="list-none cursor-pointer flex justify-center items-center gap-2 py-3 mt-4 bg-slate-50 rounded-xl text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:bg-slate-100 transition-all select-none">
+                      Tap to view distribution
+                      <svg className="w-3 h-3 group-open/details:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    </summary>
+                    <div className="space-y-3 pt-2">
+                      {card.branches.map((b, bi) => (
+                        <div key={bi} className="flex justify-between items-center py-3 px-4 bg-slate-50/50 rounded-xl border border-slate-50 transition-all">
+                          <span className="text-xs font-bold text-slate-600">{b.b}</span>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs font-black tracking-tight ${parseFloat(b.v) <= 0 ? "text-red-500" : b.low ? "text-[#ba1a1a]" : "text-[#111827]"}`}>
+                              {b.v}
+                            </span>
+                            {parseFloat(b.v) > 0 && (
+                              <a href="tel:+639000000000" className="w-7 h-7 rounded-full bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a] hover:bg-[#16a34a] hover:text-white transition-colors" title="Call Branch">
+                                <Phone className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
 
                   <Link href="/products" className="block w-full mt-10 relative z-10">
                     <button
                       suppressHydrationWarning
                       className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:bg-[#16a34a] transition-all active:scale-95 leading-none"
                     >
-                      Technical Access
+                      View Full Catalog
                     </button>
                   </Link>
                 </div>
-              ))}
+                );
+              })}
               {products.length === 0 && (
                 <div className="col-span-full py-32 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center gap-4">
                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                     <Search className="w-8 h-8 text-slate-200" />
                   </div>
                   <div>
-                    <p className="text-slate-900 font-black text-xl tracking-tight">Archives Unavailable</p>
-                    <p className="text-sm text-slate-400 font-medium">Please verify local network connection or check back later.</p>
+                    <p className="text-slate-900 font-black text-xl tracking-tight">No Products Found</p>
+                    <p className="text-sm text-slate-400 font-medium">Please check your internet connection or try again later.</p>
                   </div>
                 </div>
               )}

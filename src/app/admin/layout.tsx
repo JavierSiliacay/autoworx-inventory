@@ -22,6 +22,17 @@ export default async function AdminLayout({
   const role = (session.user as any)?.role;
   const branchIds = (session.user as any)?.branch_ids || [];
 
+  // Redirect agents out of the admin panel
+  if (role === 'sales_agent') {
+    redirect("/agent");
+  }
+  if (role === 'new_user_setup') {
+    redirect("/onboarding");
+  }
+  if (role === 'pending_agent' || role === 'pending_staff') {
+    redirect("/pending");
+  }
+
   // 3. Enforce Branch Selection for Staff without a branch assigned
   // If role is staff or inventory clerk and no branch_ids, redirect to select-branch
   if ((role === "staff" || role === "inventory clerk") && branchIds.length === 0) {

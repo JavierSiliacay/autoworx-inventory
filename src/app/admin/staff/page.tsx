@@ -10,7 +10,7 @@ interface StaffMember {
   email: string;
   name: string;
   image?: string; // Google Profile Picture
-  role: 'developer' | 'owner' | 'manager' | 'staff' | 'inventory clerk';
+  role: 'developer' | 'owner' | 'manager' | 'staff' | 'inventory clerk' | 'pending_staff' | 'new_user_setup' | 'pending_agent' | 'sales_agent';
   branch_ids: string[];
 }
 
@@ -128,11 +128,30 @@ export default function StaffPage() {
   };
 
   const searchTokens = search.toLowerCase().split(/\s+/).filter(Boolean);
-  const filteredStaff = staff.filter(s => {
+  
+  const pendingStaffList = staff.filter(s => s.role === 'pending_staff');
+  const activeStaffList = staff.filter(s => s.role !== 'pending_staff' && s.role !== 'new_user_setup' && s.role !== 'pending_agent' && s.role !== 'sales_agent');
+
+  const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
+
+  const displayList = activeTab === 'active' ? activeStaffList : pendingStaffList;
+
+  const filteredStaff = displayList.filter(s => {
     if (searchTokens.length === 0) return true;
     const searchableText = `${s.email} ${s.name}`.toLowerCase();
     return searchTokens.every(token => searchableText.includes(token));
   });
+
+  async function approveStaff(id: string) {
+    if (!confirm("Approve this user for Staff access?")) return;
+    try {
+      const { error } = await supabase.from('users').update({ role: 'staff' }).eq('id', id);
+      if (error) throw error;
+      await fetchData();
+    } catch (e: any) {
+      alert("Error approving staff: " + e.message);
+    }
+  }
 
   return (
     <div className="pb-20" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -148,6 +167,25 @@ export default function StaffPage() {
         >
           <Plus className="w-5 h-5 mr-2" />
           Assign New Email
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-4 mb-6 border-b border-slate-200">
+        <button 
+          onClick={() => setActiveTab('active')}
+          className={`pb-4 px-2 font-bold text-sm border-b-2 transition-colors ${activeTab === 'active' ? 'border-[#1e40af] text-[#1e40af]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Active Staff ({activeStaffList.length})
+        </button>
+        <button 
+          onClick={() => setActiveTab('pending')}
+          className={`pb-4 px-2 font-bold text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'pending' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+        >
+          Pending Approval 
+          {pendingStaffList.length > 0 && (
+            <span className="bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-[10px]">{pendingStaffList.length}</span>
+          )}
         </button>
       </div>
 
@@ -182,11 +220,18 @@ export default function StaffPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {filteredStaff.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-slate-400 font-medium text-sm">
+                    No users found in this tab.
+                  </td>
+                </tr>
+              )}
               {filteredStaff.map((s) => (
                 <tr 
                   key={s.id} 
                   className="hover:bg-slate-50/80 transition-all group cursor-pointer"
-                  onClick={() => setPerformanceStaff(s)}
+                  onClick={() => activeTab === 'active' ? setPerformanceStaff(s) : null}
                 >
                   <td className="px-6 md:px-10 py-5 md:py-7">
                     <div className="flex items-center gap-3 md:gap-4">
@@ -207,6 +252,7 @@ export default function StaffPage() {
                       <span className={`px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
                         s.role === 'owner' ? "bg-purple-50 text-purple-700 ring-1 ring-purple-100" : 
                         s.role === 'manager' ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" :
+                        s.role === 'pending_staff' ? "bg-amber-50 text-amber-700 ring-1 ring-amber-100" :
                         "bg-[#eff6ff] text-[#1e40af] ring-1 ring-blue-100"
                       }`}>
                         {s.role}
@@ -215,7 +261,9 @@ export default function StaffPage() {
                   <td className="px-6 md:px-10 py-5 md:py-7">
                      <div className="flex flex-wrap gap-1 md:gap-2">
                         {s.branch_ids.length === 0 ? (
-                          <span className="text-[10px] text-slate-400 font-medium italic opacity-60">No branches synchronized</span>
+                          <span className="text-[10px] text-slate-400 font-medium italic opacity-60">
+                            {activeTab === 'pending' ? 'Will select branches upon approval' : 'No branches synchronized'}
+                          </span>
                         ) : (
                           s.branch_ids.map(bid => {
                              const b = branches.find(curr => curr.id === bid);
@@ -230,9 +278,16 @@ export default function StaffPage() {
                   </td>
                   <td className="px-6 md:px-10 py-5 md:py-7 text-right">
                     <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => openModal(s)} className="p-2 md:p-3 hover:bg-[#1e40af]/10 text-[#1e40af] rounded-xl transition-all active:scale-90">
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      {activeTab === 'pending' ? (
+                        <button onClick={() => approveStaff(s.id)} className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-sm">
+                          Approve
+                        </button>
+                      ) : (
+                        <button onClick={() => openModal(s)} className="p-2 md:p-3 hover:bg-[#1e40af]/10 text-[#1e40af] rounded-xl transition-all active:scale-90">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      
                       <button onClick={() => deleteStaff(s.id)} className="p-2 md:p-3 hover:bg-[#ba1a1a]/10 text-[#ba1a1a] rounded-xl transition-all active:scale-90">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -330,7 +385,7 @@ export default function StaffPage() {
               </div>
 
               <div className="px-8 md:px-10 py-8 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-end gap-4">
-                 <button onClick={closeModal} className="text-xs font-black text-slate-400 hover:text-slate-600 uppercase tracking-[0.2em] transition-colors py-4 px-8 order-2 md:order-1">Terminate Request</button>
+                 <button onClick={closeModal} className="text-xs font-black text-slate-400 hover:text-slate-600 uppercase tracking-[0.2em] transition-colors py-4 px-8 order-2 md:order-1">Cancel</button>
                  <button 
                    onClick={saveStaff}
                    disabled={saving}

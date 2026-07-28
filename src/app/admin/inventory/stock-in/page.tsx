@@ -96,22 +96,9 @@ export default function StockInPage() {
     if (!confirm(`Are you sure you want to delete this stock-in? \n\nThis will SUBTRACT the quantities from your current inventory to reverse the entry.`)) return;
     try {
       setLoading(true);
-      const { data: items } = await supabase.from("stock_in_items").select("inventory_id, quantity_received").eq("stock_in_id", log.id);
-      if (items) {
-        for (const item of items) {
-          const { data: inv } = await supabase.from("inventory").select("quantity").eq("id", item.inventory_id).single();
-          if (inv) {
-            await supabase.from("inventory").update({
-              quantity: Math.max(0, inv.quantity - item.quantity_received)
-            }).eq("id", item.inventory_id);
-          }
-        }
-      }
-      const { error } = await supabase.from("stock_in_logs").delete().eq("id", log.id);
+      const { error } = await supabase.rpc('undo_stock_in', { p_log_id: log.id });
       if (error) throw error;
-      if (log.invoice_number) {
-        await supabase.from("stock_transactions").delete().like("reason", `%${log.invoice_number}%`);
-      }
+      
       if (expandedId === log.id) setExpandedId(null);
       alert("Stock-in deleted and inventory reversed successfully.");
       fetchLogs();

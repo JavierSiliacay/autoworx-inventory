@@ -100,6 +100,7 @@ export default function Sidebar() {
     ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },
       { name: "Staff", href: "/admin/staff", icon: Users },
+      { name: "Agents", href: "/admin/agents", icon: User },
       { name: "Delete History", href: "/admin/delete-history", icon: History },
       ...(role === 'developer' ? [{ name: "Developer Settings", href: "/admin/developer", icon: Code2 }] : []),
     ] : []),

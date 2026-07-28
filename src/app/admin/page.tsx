@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
         .subscribe();
       return () => { supabase.removeChannel(sub); };
     }
-  }, [session, selectedBranchId, filterMonth]); // Re-fetch when filter changes
+  }, [session, selectedBranchId, filterMonth, distPage]); // Re-fetch when filters or page changes
 
   async function fetchDashboardData() {
     try {
@@ -78,33 +78,35 @@ export default function AdminDashboardPage() {
       
       const { data: branchDocs, error: branchError } = await branchQuery;
       
-      // 2. Fetch Inventory (Determine stats and row data)
-      let invQuery = supabase.from('inventory').select('*, branches(name)').order('updated_at', { ascending: false });
-      
-      if (filterBranch) {
-        if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
-          setDistribution([]);
-          setRecentLogs([]);
-          setStats({ products: 0, stock: 0, value: 0, currentStockValue: 0, branches: 0 });
-          return;
-        }
-        invQuery = invQuery.eq('branch_id', filterBranch);
-      } else if (isStaff && userBranchIds.length > 0) {
-        invQuery = invQuery.in('branch_id', userBranchIds);
-      }
-      const { data: invDocs, error: invError } = await invQuery;
+      // 2. Dashboard Stats (Replaces manual invDocs math)
+      const { data: statsData } = await supabase.rpc('get_dashboard_stats', {
+        p_branch_id: filterBranch || null,
+        p_month: filterMonth === "all" ? null : filterMonth
+      });
+
+      // 3. Recent Logs (Top 5 only, no need for full table)
+      let recentQuery = supabase.from('inventory').select('*, branches(name)').order('updated_at', { ascending: false }).limit(5);
+      if (filterBranch) recentQuery = recentQuery.eq('branch_id', filterBranch);
+      else if (isStaff && userBranchIds.length > 0) recentQuery = recentQuery.in('branch_id', userBranchIds);
+      const { data: recentInvDocs, error: invError } = await recentQuery;
       
       if (branchError || invError) {
         console.error("Supabase Error [Admin Dashboard]:", (branchError || invError)?.message, branchError || invError);
         return;
       }
 
-      if (!branchDocs || !invDocs) return;
+      if (!branchDocs) return;
 
       const bList = branchDocs.map(b => ({ id: b.id, name: b.name }));
       setBranches(bList);
 
-      const uniqueNames = Array.from(new Set(invDocs.map(i => i.product_name)));
+      // 4. Distribution Table 
+      const { data: distData } = await supabase.rpc('get_paginated_inventory', {
+        p_search_tokens: [],
+        p_branch_id: filterBranch || null,
+        p_page: distPage,
+        p_limit: distItemsPerPage
+      });
 
       // Fetch Staff Map to convert emails to names
       let staffMap: Record<string, string> = {};
@@ -121,32 +123,34 @@ export default function AdminDashboardPage() {
       } catch (e) { console.warn("Staff map fetch error"); }
 
       // Recent 5 updates (map email to name)
-      const logs = invDocs.slice(0, 5).map(log => ({
+      const logs = (recentInvDocs || []).map(log => ({
         ...log,
         last_modified_by_name: log.last_modified_by ? (staffMap[log.last_modified_by.toLowerCase()] || log.last_modified_by) : "System"
       }));
       setRecentLogs(logs);
 
-      const rows = uniqueNames.map(name => {
-        const productInv = invDocs.filter(i => i.product_name === name);
-        const globalStock = productInv.reduce((acc, i) => acc + parseFloat(i.quantity.toString()), 0);
-        const branchStocks: Record<string, string> = {};
-        
-        bList.forEach(branch => {
-          const entry = productInv.find(i => (i.branches as any)?.name === branch.name);
-          branchStocks[branch.name] = entry ? `${parseFloat(entry.quantity.toString()).toFixed(0)}L` : "-";
+      if (distData) {
+        const rows = distData.map((d: any) => {
+          const rowObj: any = {
+            name: d.product_name,
+            sku: "N/A", 
+            global: `${Math.round(d.total_quantity)}L`,
+            unit_cost: 0
+          };
+          if (d.branches) {
+            d.branches.forEach((b: any) => {
+              rowObj[b.name] = b.stock;
+            });
+          }
+          bList.forEach(branch => {
+            if (!rowObj[branch.name]) rowObj[branch.name] = "-";
+          });
+          return rowObj;
         });
-
-        return {
-          name,
-          sku: productInv[0]?.sku || "N/A",
-          global: `${Math.round(globalStock)}L`,
-          unit_cost: productInv[0]?.unit_cost || 0,
-          ...branchStocks
-        };
-      });
-
-      setDistribution(rows);
+        setDistribution(rows);
+      } else {
+        setDistribution([]);
+      }
 
       // 1. Fetch Sales Sources Individually (Fail-Soft)
       let allOutHistory: any[] = [];
@@ -184,44 +188,13 @@ export default function AdminDashboardPage() {
       } catch (err) { console.warn("Official Sales table failed:", err); }
 
       // 2. Current Stock Value (Liquid Assets) - This one DOES decrease on sale
-      const currentStockCost = (invDocs as any[]).reduce((acc, item) => {
-        const cost = item.unit_cost ?? item.cost ?? item.unit_price ?? 0;
-        return acc + (Number(item.quantity || 0) * Number(cost));
-      }, 0);
+      const currentStockCost = statsData ? Number(statsData.currentStockCost ?? statsData.currentstockcost ?? 0) : 0;
 
       // 3. Historical Total Purchase (Investment Reconciliation)
-      // Total Purchase = Accumulation of all inbound transactions (non-deductible)
-      let totalPurchaseValue = 0;
-      try {
-        // We only use the new stock_transactions table to avoid double-counting
-        let stQuery = supabase
-          .from('stock_transactions')
-          .select('quantity, unit_price, created_at, inventory(branch_id, cost, price)')
-          .eq('type', 'IN');
+      const totalPurchaseValue = statsData ? Number(statsData.totalPurchaseValue ?? statsData.totalpurchasevalue ?? 0) : 0;
 
-        const { data: stData, error: stError } = await stQuery;
-        if (stError) console.warn("Stock transactions query error:", stError);
-        
-        if (stData) {
-          const validStData = stData.filter(tx => {
-            if (!tx.inventory) return false;
-            const bId = (tx.inventory as any).branch_id;
-            if (filterBranch && bId !== filterBranch) return false;
-            if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(bId)) return false;
-            if (tx.created_at && filterMonth !== "all" && !tx.created_at.startsWith(filterMonth)) return false;
-            return true;
-          });
-          totalPurchaseValue += validStData.reduce((acc, tx) => {
-            const cost = tx.unit_price ?? (tx.inventory as any)?.cost ?? (tx.inventory as any)?.price ?? 0;
-            return acc + (Number(tx.quantity || 0) * Number(cost));
-          }, 0);
-        }
-      } catch (err) {
-        console.warn("Error calculating total purchase:", err);
-      }
-
-      const totalVolume = (invDocs as any[]).reduce((acc, item) => acc + (parseFloat(item.quantity) || 0), 0);
-      const uniqueProdCount = new Set((invDocs as any[]).map(i => i.product_name)).size;
+      const totalVolume = statsData ? Number(statsData.totalVolume ?? statsData.totalvolume ?? 0) : 0;
+      const uniqueProdCount = statsData ? Number(statsData.uniqueProdCount ?? statsData.uniqueprodcount ?? 0) : 0;
 
       // 3. Official Sales Fetch (With Graceful Fallback)
       let salesDocs = null;
