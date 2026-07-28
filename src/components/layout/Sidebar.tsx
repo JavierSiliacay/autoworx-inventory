@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabase";
 
 const LOGO_URL = "/logo.png";
 
@@ -35,11 +36,69 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [pendingStaffCount, setPendingStaffCount] = useState<number>(0);
+  const [pendingAgentCount, setPendingAgentCount] = useState<number>(0);
   const collapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    async function fetchCounts() {
+      try {
+        // Pending staff
+        let staffCount = 0;
+        try {
+          const { count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'pending_staff');
+          staffCount = count || 0;
+        } catch {}
+
+        setPendingStaffCount(staffCount);
+
+        // Pending agents (pending_agent role + pending_approval stock reservations)
+        let agentUserCount = 0;
+        try {
+          const { count } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'pending_agent');
+          agentUserCount = count || 0;
+        } catch {}
+
+        let resCount = 0;
+        try {
+          const { count: reservationCount } = await supabase
+            .from('agent_reservations')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending_approval');
+          resCount = reservationCount || 0;
+        } catch {
+          // fallback to localStorage if table cache not ready
+          if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('autoworx_agent_reservations');
+            if (saved) {
+              const list = JSON.parse(saved);
+              resCount = list.filter((r: any) => r.status === 'pending_approval').length;
+            }
+          }
+        }
+
+        setPendingAgentCount(agentUserCount + resCount);
+      } catch (e) {
+        console.error("Error fetching pending counts:", e);
+      }
+    }
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 8000);
+    return () => clearInterval(interval);
+  }, [mounted]);
 
   const handleMouseEnter = () => {
     if (collapseTimeoutRef.current) {
@@ -99,8 +158,8 @@ export default function Sidebar() {
     // Only show these to Owners/Developers after mounting or if session is available on server
     ...(mounted && !isStaff ? [
       { name: "Branches", href: "/admin/branches", icon: Store },
-      { name: "Staff", href: "/admin/staff", icon: Users },
-      { name: "Agents", href: "/admin/agents", icon: User },
+      { name: "Staff", href: "/admin/staff", icon: Users, badge: pendingStaffCount },
+      { name: "Agents", href: "/admin/agents", icon: User, badge: pendingAgentCount },
       { name: "Delete History", href: "/admin/delete-history", icon: History },
       ...(role === 'developer' ? [{ name: "Developer Settings", href: "/admin/developer", icon: Code2 }] : []),
     ] : []),
@@ -195,10 +254,22 @@ export default function Sidebar() {
                        : "text-[#64748b] font-medium hover:bg-slate-50"
                   }`}
                 >
-                  <item.icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
+                  <div className="relative shrink-0">
+                    <item.icon className={`w-5 h-5 transition-transform ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
+                    {isCollapsed && item.badge && item.badge > 0 ? (
+                      <span className="absolute -top-1.5 -right-2 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#ef4444] text-white font-extrabold text-[9px] ring-2 ring-white shadow-md animate-pulse">
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    ) : null}
+                  </div>
                   {!isCollapsed && (
-                    <span className="whitespace-nowrap opacity-100 transition-opacity duration-300">{item.name}</span>
+                    <span className="whitespace-nowrap opacity-100 transition-opacity duration-300 flex-1">{item.name}</span>
                   )}
+                  {!isCollapsed && item.badge && item.badge > 0 ? (
+                    <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#ef4444] text-white font-extrabold text-[11px] leading-none shadow-sm ring-2 ring-white/80 transition-transform duration-200 hover:scale-110">
+                      {item.badge}
+                    </span>
+                  ) : null}
                   {isActive && !isCollapsed && (
                     <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#16a34a] rounded-l-full" />
                   )}
