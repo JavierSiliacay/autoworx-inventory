@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1785395570223",
+    version: "v1.7.30",
+    date: "2026-07-30",
+    type: "feature",
+    title: "Enhanced Editing & New Reservation Features",
+    description: "Staff can now edit stock‑in and sale lines with custom totals that stay saved, quickly undo mistakes with a Reset Edits button, and manage reservations using new Sign Out, Cancel, Client Stats, and Reservation Details modals for a smoother workflow."
+  },
+
+  {
     id: "update-1785223624865",
     version: "v1.7.28",
     date: "2026-07-28",
