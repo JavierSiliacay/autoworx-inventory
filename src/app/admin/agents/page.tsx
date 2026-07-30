@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { Search, Trash2, CheckCircle, XCircle, UserX, Loader2, UserCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AgentDetailsModal from "@/components/admin/AgentDetailsModal";
+import ReservationDetailsModal from "@/components/inventory/ReservationDetailsModal";
+import CancelReservationModal from "@/components/agent/CancelReservationModal";
 
 interface Agent {
   id: string;
@@ -19,6 +22,10 @@ export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'reservations'>('active');
   const [reservations, setReservations] = useState<any[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<any | null>(null);
+  const [inlineDecline, setInlineDecline] = useState<any | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAgents();
@@ -40,12 +47,18 @@ export default function AgentsPage() {
       const { data, error } = await supabase
         .from('agent_reservations')
         .select('*')
+        .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        const dbIds = new Set(data.map((d: any) => d.id));
-        const uniqueLocal = combined.filter((c) => !dbIds.has(c.id));
-        combined = [...data, ...uniqueLocal];
+      if (!error && data) {
+        // Completely overwrite combined with fresh data from database
+        combined = data;
+        // Save the fresh data to local storage to keep it in sync
+        try {
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(data));
+        } catch (e) {
+          console.warn("Local storage write error:", e);
+        }
       }
 
       setReservations(combined);
@@ -56,34 +69,92 @@ export default function AgentsPage() {
     }
   }
 
-  async function updateReservationStatus(id: string, newStatus: 'approved' | 'declined' | 'cancelled') {
-    const actionName = newStatus === 'approved' ? 'Approve' : newStatus === 'declined' ? 'Decline' : 'Revoke';
-    if (!confirm(`${actionName} this stock reservation request?`)) return;
+  const updateReservationStatus = async (id: string, newStatus: string, reason?: string) => {
+    // For approve or revoke, we want a simple confirm dialog if reason is missing.
+    // If reason is present, it came from the CancelReservationModal which acts as confirmation.
+    if (!reason && newStatus !== 'declined') {
+      const actionName = newStatus === 'approved' ? 'Approve' : newStatus === 'declined' ? 'Decline' : 'Revoke';
+      if (!confirm(`${actionName} this stock reservation request?`)) return;
+    }
 
     try {
-      // Sync with localStorage
+      const existingRes = reservations.find(r => r.id === id);
+      let updatedNotes = existingRes?.notes || undefined;
+      
+      if (reason) {
+        const currentNotes = existingRes?.notes || "";
+        updatedNotes = currentNotes 
+          ? `${currentNotes}\n\n[Cancellation Reason: ${reason}]`
+          : `[Cancellation Reason: ${reason}]`;
+      }
+
       try {
         const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
-        const updatedLocal = local.map((item: any) => (item.id === id ? { ...item, status: newStatus } : item));
+        const updatedLocal = local.map((item: any) => (item.id === id ? { ...item, status: newStatus, ...(updatedNotes !== undefined ? { notes: updatedNotes } : {}) } : item));
         localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
       } catch (err) {
         console.warn("Local storage update error:", err);
       }
 
+      const updateData: any = { status: newStatus };
+      if (updatedNotes !== undefined) {
+        updateData.notes = updatedNotes;
+      }
+
       const { error } = await supabase
         .from('agent_reservations')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', id);
 
       if (error && error.code !== "42P01" && !error.message?.includes("schema cache")) {
         console.warn("Supabase update notice:", error);
       }
-      setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus, ...(updatedNotes !== undefined ? { notes: updatedNotes } : {}) } : r));
     } catch (e: any) {
       console.warn(`Reservation update warning:`, e);
       setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
     }
   }
+
+  const deleteReservation = async (id: string) => {
+    if (!confirm("Are you sure you want to completely delete this reservation? This action cannot be undone.")) return;
+
+    setDeletingId(id);
+
+    try {
+      // RLS blocks DELETE, so we perform a soft-delete instead
+      const { error } = await supabase
+        .from('agent_reservations')
+        .update({ status: 'deleted' })
+        .eq('id', id);
+
+      if (error && error.code !== "42P01") {
+        console.error("Supabase delete error:", error);
+      }
+
+      // Update local storage
+      try {
+        const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
+        const updatedLocal = local.filter((item: any) => item.id !== id);
+        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
+      } catch (err) {
+        console.warn("Local storage update error:", err);
+      }
+      
+      // If we had this selected in the modal, close it
+      if (selectedReservation?.id === id) {
+        setSelectedReservation(null);
+      }
+
+      // Remove from state only after successful deletion
+      setReservations(prev => prev.filter(r => r.id !== id));
+
+    } catch (e: any) {
+      console.error("Error deleting reservation:", e);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   async function fetchAgents() {
     try {
@@ -225,8 +296,36 @@ export default function AgentsPage() {
                     </td>
                   </tr>
                 )}
-                {reservations.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50/80 transition-all">
+                {reservations.map((r) => r.id === deletingId ? (
+                  <tr key={`skeleton-${r.id}`} className="animate-pulse bg-red-50/20 border-l-4 border-red-500">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
+                        <div className="h-4 bg-slate-200 rounded w-24"></div>
+                      </div>
+                      <div className="h-3 bg-slate-200 rounded w-16"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-slate-200 rounded w-28 mb-2"></div>
+                      <div className="h-3 bg-slate-200 rounded w-20"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-slate-200 rounded w-12 mb-2"></div>
+                      <div className="h-8 bg-slate-200 rounded w-full max-w-[150px]"></div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="h-6 bg-slate-200 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="h-8 bg-slate-200 rounded-lg w-8 ml-auto"></div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr 
+                    key={r.id} 
+                    className="hover:bg-slate-50/80 transition-all cursor-pointer"
+                    onClick={() => setSelectedReservation(r)}
+                  >
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-900 text-sm">{r.product_name}</div>
                       <div className="text-[11px] text-blue-600 font-semibold">{r.branch_name}</div>
@@ -253,13 +352,13 @@ export default function AgentsPage() {
                         {r.status === 'pending_approval' && (
                           <>
                             <button
-                              onClick={() => updateReservationStatus(r.id, 'approved')}
+                              onClick={(e) => { e.stopPropagation(); updateReservationStatus(r.id, 'approved'); }}
                               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors cursor-pointer"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => updateReservationStatus(r.id, 'declined')}
+                              onClick={(e) => { e.stopPropagation(); setInlineDecline(r); }}
                               className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
                             >
                               Decline
@@ -268,10 +367,19 @@ export default function AgentsPage() {
                         )}
                         {r.status === 'approved' && (
                           <button
-                            onClick={() => updateReservationStatus(r.id, 'cancelled')}
+                            onClick={(e) => { e.stopPropagation(); updateReservationStatus(r.id, 'cancelled'); }}
                             className="px-3 py-1.5 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold rounded-lg text-xs border border-slate-200 transition-colors cursor-pointer"
                           >
                             Revoke Approval
+                          </button>
+                        )}
+                        {(r.status === 'cancelled' || r.status === 'declined') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteReservation(r.id); }}
+                            className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                            title="Delete permanently"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -302,7 +410,11 @@ export default function AgentsPage() {
                   </tr>
                 )}
                 {filteredAgents.map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-50/80 transition-all group">
+                  <tr 
+                    key={a.id} 
+                    className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                    onClick={() => setSelectedAgent(a)}
+                  >
                     <td className="px-6 md:px-10 py-5 md:py-7">
                       <div className="flex items-center gap-3 md:gap-4">
                         <div className="w-9 md:w-11 h-9 md:h-11 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 font-black text-xs md:text-sm shadow-inner overflow-hidden border border-amber-100">
@@ -330,14 +442,14 @@ export default function AgentsPage() {
                       {a.role === 'pending_agent' ? (
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            onClick={() => approveAgent(a.id)}
+                            onClick={(e) => { e.stopPropagation(); approveAgent(a.id); }}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-emerald-600/20 active:scale-95 cursor-pointer"
                           >
                             <UserCheck className="w-3.5 h-3.5" />
                             Approve
                           </button>
                           <button 
-                            onClick={() => rejectAgent(a.id)}
+                            onClick={(e) => { e.stopPropagation(); rejectAgent(a.id); }}
                             className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 font-bold py-2 px-3 rounded-xl text-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                           >
                             <UserX className="w-3.5 h-3.5" />
@@ -346,7 +458,7 @@ export default function AgentsPage() {
                         </div>
                       ) : (
                         <button 
-                          onClick={() => revokeAgent(a.id)}
+                          onClick={(e) => { e.stopPropagation(); revokeAgent(a.id); }}
                           className="bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 font-bold py-2 px-3 rounded-xl text-xs flex items-center gap-1.5 transition-all opacity-0 group-hover:opacity-100 active:scale-95 cursor-pointer"
                         >
                           <UserX className="w-3.5 h-3.5" />
@@ -361,6 +473,39 @@ export default function AgentsPage() {
           </div>
         )}
       </div>
+
+      {selectedAgent && (
+        <AgentDetailsModal 
+          agent={selectedAgent} 
+          onClose={() => setSelectedAgent(null)} 
+        />
+      )}
+
+      {selectedReservation && (
+        <ReservationDetailsModal
+          reservation={selectedReservation}
+          agentData={agents.find(a => a.id === selectedReservation.agent_id)}
+          isAdmin={true}
+          onUpdateStatus={updateReservationStatus}
+          onClose={() => setSelectedReservation(null)}
+        />
+      )}
+
+      {inlineDecline && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <CancelReservationModal
+            isOpen={!!inlineDecline}
+            reservationId={inlineDecline.id}
+            productName={inlineDecline.product_name}
+            isAdmin={true}
+            onClose={() => setInlineDecline(null)}
+            onConfirm={(id, reason) => {
+              setInlineDecline(null);
+              updateReservationStatus(id, 'declined', reason);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

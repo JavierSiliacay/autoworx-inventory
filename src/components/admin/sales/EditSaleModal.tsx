@@ -116,6 +116,29 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     });
   };
 
+  const handleResetChanges = () => {
+    if (window.confirm("Are you sure you want to reset all edits back to their original values?")) {
+      setCurrentSale({
+        date: new Date(invoiceData.date).toISOString().split('T')[0],
+        invoice_no: invoiceData.invoice_no,
+        old_invoice_no: invoiceData.invoice_no,
+        customer_name: invoiceData.customer_name || "",
+        payment_type: invoiceData.payment_type || "Cash",
+        old_payment_type: invoiceData.payment_type || "Cash",
+        branch_id: invoiceData.items[0]?.branch_id || "",
+        items: invoiceData.items.map((item: any) => ({
+          id: item.id,
+          item_id: item.item_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.total_amount,
+          old_quantity: item.quantity
+        }))
+      });
+      setRemovedItems([]);
+    }
+  };
+
   const handleClose = () => {
     if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
       setRemovedItems([]);
@@ -183,7 +206,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         const sellingPrice = Number(item.unit_price || 0);
         const sellingQty = Number(item.quantity || 0);
         const resolvedCost = Number(invItem?.cost || 0);
-        const subtotal = sellingPrice * sellingQty;
+        const subtotal = Number(item.subtotal || 0);
         
         return {
           item_id: item.item_id,
@@ -319,6 +342,14 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                 )}
                 <button 
                   type="button"
+                  onClick={handleResetChanges}
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  <Undo2 className="w-3 h-3" />
+                  Reset Edits
+                </button>
+                <button 
+                  type="button"
                   onClick={addRow}
                   className="flex items-center gap-1.5 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"
                 >
@@ -368,17 +399,17 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                             onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                           />
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
+                          {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
+                        </td>
+                        <td className="px-2 py-2 text-right">
                           <FormattedNumberInput
                             autoSize
                             prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
-                            className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-medium"
-                            value={item.unit_price === undefined ? undefined : Number(item.unit_price)}
-                            onChange={(val) => handleRowChange(idx, 'unit_price', val)}
+                            className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
+                            value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
+                            onChange={(val) => handleRowChange(idx, 'subtotal', val)}
                           />
-                        </td>
-                        <td className="px-4 py-2 text-right text-sm font-bold text-[#1a1b20]">
-                          ₱{(item.subtotal || 0).toLocaleString()}
                         </td>
                         <td className="px-2 py-2 text-right">
                           <button 

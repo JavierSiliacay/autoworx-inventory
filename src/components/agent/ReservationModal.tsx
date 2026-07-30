@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { X, CheckCircle2, Package, User, Phone, FileText, Send, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "next-auth/react";
 
 export interface InventoryItem {
   id: string;
@@ -29,6 +30,23 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [selectedBranch, setSelectedBranch] = useState("");
+
+  const { data: session } = useSession();
+
+  // Reset states when modal opens/item changes
+  React.useEffect(() => {
+    if (item) {
+      if (Array.isArray(item.branches) && item.branches.length > 0) {
+        setSelectedBranch(item.branches[0].name);
+      } else if (item.branches && !Array.isArray(item.branches)) {
+        setSelectedBranch((item.branches as any).name || "Main Distribution");
+      } else {
+        setSelectedBranch("Main Distribution");
+      }
+    }
+  }, [item, isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -61,9 +79,10 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
     try {
       const newReservation = {
         id: "res_" + Date.now(),
+        agent_id: session?.user?.id || undefined,
         item_id: item.id,
         product_name: item.product_name,
-        branch_name: Array.isArray(item.branches) ? (item.branches[0]?.name || "Main Distribution") : (item.branches?.name || "Main Distribution"),
+        branch_name: selectedBranch,
         client_name: clientName,
         client_phone: clientPhone,
         quantity: requestedQty,
@@ -84,6 +103,19 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
       const { error } = await supabase.from("agent_reservations").insert([newReservation]);
       if (error && error.code !== "42P01") {
         console.warn("Supabase reservation insert notice:", error);
+      }
+
+      // Log activity event for Admin Dashboard audit
+      if (session?.user?.id) {
+        supabase.from("agent_activity_logs").insert([{
+          agent_id: session.user.id,
+          action_type: "SUBMITTED_RESERVATION",
+          description: `Submitted reservation for ${requestedQty} unit(s) of ${item.product_name} for ${clientName}`,
+          metadata: { product_name: item.product_name, quantity: requestedQty, client_name: clientName, branch: selectedBranch },
+          created_at: new Date().toISOString()
+        }]).then(({ error: logErr }) => {
+          if (logErr && logErr.code !== "42P01") console.warn("Notice inserting activity log:", logErr);
+        });
       }
 
       setIsSuccess(true);
@@ -144,11 +176,27 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
 
             {/* Selected Item Summary Pill */}
             <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-3.5 mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[220px]">{item.product_name}</p>
-                <p className="text-[11px] text-slate-500">
-                  {Array.isArray(item.branches) ? (item.branches[0]?.name || "Main Branch") : (item.branches?.name || "Main Branch")} &bull; SKU: {item.sku || "N/A"}
-                </p>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[220px] mb-1">{item.product_name}</p>
+                {Array.isArray(item.branches) && item.branches.length > 1 ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Branch:</span>
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="bg-white border border-slate-200 text-xs font-bold text-blue-700 rounded-md py-1 px-2 outline-none focus:ring-1 focus:ring-blue-500 shadow-sm cursor-pointer"
+                    >
+                      {item.branches.map((b: any, idx: number) => (
+                        <option key={idx} value={b.name}>{b.name}</option>
+                      ))}
+                    </select>
+                    <span className="text-[11px] text-slate-400">&bull; SKU: {item.sku || "N/A"}</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    {selectedBranch} &bull; SKU: {item.sku || "N/A"}
+                  </p>
+                )}
               </div>
               <div className="text-right shrink-0">
                 <span className="inline-block px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg">

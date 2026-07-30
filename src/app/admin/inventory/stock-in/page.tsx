@@ -174,12 +174,18 @@ export default function StockInPage() {
     try {
       const { data, error } = await supabase
         .from("stock_in_items")
-        .select("id, inventory_id, quantity_received, unit_cost, inventory:inventory(product_name, sku, category)")
-        .eq("stock_in_id", logId)
-        .order("id");
+        .select("*, inventory(product_name, sku, category)")
+        .eq("stock_in_id", logId);
 
       if (error) throw error;
-      setExpandedItems((data as any) || []);
+      
+      const sortedItems = (data || []).sort((a: any, b: any) => {
+        const nameA = a.inventory?.product_name || "";
+        const nameB = b.inventory?.product_name || "";
+        return nameA.localeCompare(nameB);
+      });
+      
+      setExpandedItems(sortedItems);
     } catch (e) {
       console.error("Failed to load items:", e);
     } finally {
@@ -371,7 +377,7 @@ export default function StockInPage() {
                               setLoading(true);
                               const { data, error } = await supabase
                                 .from("stock_in_items")
-                                .select("id, inventory_id, quantity_received, unit_cost, inventory:inventory(product_name)")
+                                .select("id, inventory_id, quantity_received, unit_cost, total_cost, inventory:inventory(product_name)")
                                 .eq("stock_in_id", log.id)
                                 .order("id");
                               setLoading(false);
@@ -379,7 +385,13 @@ export default function StockInPage() {
                                 alert("Failed to fetch items for edit.");
                                 return;
                               }
-                              setSelectedEditLog({ ...log, items: data });
+                              
+                              const itemsWithTotal = data?.map((item: any) => ({
+                                ...item,
+                                total_amount: item.total_cost !== undefined ? item.total_cost : (item.quantity_received * item.unit_cost)
+                              })) || [];
+                              
+                              setSelectedEditLog({ ...log, items: itemsWithTotal });
                               setIsEditModalOpen(true);
                             }}
                             className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"

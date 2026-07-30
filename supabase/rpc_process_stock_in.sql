@@ -73,12 +73,13 @@ BEGIN
 
     -- Insert stock_in_items
     INSERT INTO public.stock_in_items (
-      stock_in_id, inventory_id, quantity_received, unit_cost
+      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost
     ) VALUES (
       v_log_id,
       v_inventory_id,
       (v_item->>'quantity_received')::decimal,
-      (v_item->>'unit_cost')::decimal
+      (v_item->>'unit_cost')::decimal,
+      COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * (v_item->>'unit_cost')::decimal)
     );
 
     -- Update inventory quantities and latest cost

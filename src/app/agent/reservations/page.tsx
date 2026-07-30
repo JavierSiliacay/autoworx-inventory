@@ -16,10 +16,13 @@ import {
   Building2, 
   Trash2,
   Filter,
-  Pencil
+  Pencil,
+  Loader2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import EditReservationModal from "@/components/agent/EditReservationModal";
+import ReservationDetailsModal from "@/components/inventory/ReservationDetailsModal";
+import CancelReservationModal from "@/components/agent/CancelReservationModal";
 
 interface AgentReservation {
   id: string;
@@ -39,7 +42,10 @@ export default function AgentReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "cancelled">("all");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancellingReservation, setCancellingReservation] = useState<AgentReservation | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingReservation, setEditingReservation] = useState<AgentReservation | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<AgentReservation | null>(null);
 
   const handleSaveEdit = (updatedItem: AgentReservation) => {
     setReservations((prev) =>
@@ -66,13 +72,18 @@ export default function AgentReservationsPage() {
       const { data, error } = await supabase
         .from("agent_reservations")
         .select("*")
+        .neq('status', 'deleted')
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        // Merge Supabase rows with local items by id
-        const dbIds = new Set(data.map((d: any) => d.id));
-        const uniqueLocal = combined.filter((c) => !dbIds.has(c.id));
-        combined = [...(data as AgentReservation[]), ...uniqueLocal];
+      if (!error && data) {
+        // Completely overwrite combined with fresh data from database
+        combined = data as AgentReservation[];
+        // Save the fresh data to local storage to keep it in sync
+        try {
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(data));
+        } catch (e) {
+          console.warn("Local storage write error:", e);
+        }
       }
 
       setReservations(combined);
@@ -85,19 +96,56 @@ export default function AgentReservationsPage() {
 
   useEffect(() => {
     fetchReservations();
+
+    const channel = supabase
+      .channel('agent-reservations-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agent_reservations' },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setReservations(prev => {
+              const next = prev.filter(r => r.id !== deletedId);
+              localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+              return next;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as AgentReservation;
+            setReservations(prev => {
+              const next = prev.map(r => r.id === updated.id ? updated : r);
+              localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+              return next;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleCancelReservation = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this reservation? The stock will be released back to the branch.")) {
-      return;
-    }
+  const handleCancelClick = (item: AgentReservation) => {
+    setCancellingReservation(item);
+  };
 
+  const confirmCancelReservation = async (id: string, reason: string) => {
     setCancellingId(id);
+    
+    // Find existing notes to append the reason
+    const existingRes = reservations.find(r => r.id === id);
+    const existingNotes = existingRes?.notes || "";
+    const updatedNotes = existingNotes 
+      ? `${existingNotes}\n\n[Cancellation Reason: ${reason}]`
+      : `[Cancellation Reason: ${reason}]`;
+
     try {
       // Update local storage
       try {
         const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
-        const updatedLocal = local.map((item: any) => (item.id === id ? { ...item, status: "cancelled" } : item));
+        const updatedLocal = local.map((item: any) => (item.id === id ? { ...item, status: "cancelled", notes: updatedNotes } : item));
         localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
       } catch (err) {
         console.warn("Local storage update error:", err);
@@ -106,7 +154,7 @@ export default function AgentReservationsPage() {
       // Update Supabase table
       const { error } = await supabase
         .from("agent_reservations")
-        .update({ status: "cancelled" })
+        .update({ status: "cancelled", notes: updatedNotes })
         .eq("id", id);
 
       if (error && error.code !== "42P01") {
@@ -115,12 +163,51 @@ export default function AgentReservationsPage() {
 
       // Update state
       setReservations((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status: "cancelled" as const } : item))
+        prev.map((item) => (item.id === id ? { ...item, status: "cancelled" as const, notes: updatedNotes } : item))
       );
     } catch (err) {
       console.error("Error cancelling:", err);
     } finally {
       setCancellingId(null);
+      setCancellingReservation(null);
+    }
+  };
+
+  const deleteReservation = async (id: string) => {
+    if (!confirm("Are you sure you want to completely delete this reservation? This action cannot be undone.")) return;
+
+    setDeletingId(id);
+
+    try {
+      // RLS blocks DELETE, so we perform a soft-delete instead
+      const { error } = await supabase
+        .from("agent_reservations")
+        .update({ status: 'deleted' })
+        .eq("id", id);
+
+      if (error && error.code !== "42P01") {
+        console.error("Error deleting reservation:", error);
+      }
+
+      // Update local storage
+      try {
+        const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
+        const updatedLocal = local.filter((item: any) => item.id !== id);
+        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
+      } catch (err) {
+        console.warn("Local storage delete error:", err);
+      }
+
+      // Update state
+      setReservations((prev) => prev.filter((item) => item.id !== id));
+      
+      if (selectedReservation?.id === id) {
+        setSelectedReservation(null);
+      }
+    } catch (err: any) {
+      console.error("Error deleting:", err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -282,10 +369,28 @@ export default function AgentReservationsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredReservations.map((item) => (
+            {filteredReservations.map((item) => item.id === deletingId ? (
+              <div key={`skeleton-${item.id}`} className="bg-red-50/20 rounded-3xl p-6 border-2 border-red-200 shadow-sm animate-pulse flex flex-col md:flex-row md:items-center justify-between gap-6 border-l-4 border-l-red-500">
+                <div className="space-y-4 flex-1">
+                  <div className="flex gap-2 items-center">
+                    <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
+                    <div className="h-5 w-20 bg-slate-200 rounded-full"/>
+                    <div className="h-5 w-24 bg-slate-200 rounded-full"/>
+                  </div>
+                  <div className="h-6 w-1/3 bg-slate-200 rounded-lg"/>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="h-12 bg-slate-100 rounded-xl"/>
+                    <div className="h-12 bg-slate-100 rounded-xl"/>
+                    <div className="h-12 bg-slate-100 rounded-xl"/>
+                  </div>
+                </div>
+                <div className="h-10 w-32 bg-slate-200 rounded-xl"/>
+              </div>
+            ) : (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+                onClick={() => setSelectedReservation(item)}
+                className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer"
               >
                 {/* Left side: Product & Client details */}
                 <div className="space-y-3 flex-1">
@@ -346,10 +451,10 @@ export default function AgentReservationsPage() {
 
                 {/* Right side: Cancellation / Edit Actions */}
                 <div className="flex sm:flex-col items-end justify-between md:justify-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  {item.status !== "cancelled" && item.status !== "declined" && (
+                  {item.status !== "cancelled" && item.status !== "declined" ? (
                     <>
                       <button
-                        onClick={() => setEditingReservation(item)}
+                        onClick={(e) => { e.stopPropagation(); setEditingReservation(item); }}
                         className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-xl border border-amber-200/60 transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         <Pencil className="w-4 h-4" />
@@ -357,14 +462,22 @@ export default function AgentReservationsPage() {
                       </button>
 
                       <button
-                        onClick={() => handleCancelReservation(item.id)}
+                        onClick={(e) => { e.stopPropagation(); handleCancelClick(item); }}
                         disabled={cancellingId === item.id}
                         className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200/60 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         <Trash2 className="w-4 h-4" />
-                        {cancellingId === item.id ? "Cancelling..." : "Cancel Reservation"}
+                        {cancellingId === item.id ? "Cancelling..." : "Cancel Request"}
                       </button>
                     </>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteReservation(item.id); }}
+                      className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/20 text-xs font-bold rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Permanently
+                    </button>
                   )}
                 </div>
               </div>
@@ -380,6 +493,23 @@ export default function AgentReservationsPage() {
         onClose={() => setEditingReservation(null)}
         onSave={handleSaveEdit}
       />
+
+      <CancelReservationModal
+        isOpen={cancellingReservation !== null}
+        reservationId={cancellingReservation?.id || null}
+        productName={cancellingReservation?.product_name}
+        onClose={() => setCancellingReservation(null)}
+        onConfirm={confirmCancelReservation}
+        isCancelling={cancellingId !== null}
+      />
+
+      {selectedReservation && (
+        <ReservationDetailsModal
+          reservation={selectedReservation}
+          isAdmin={false}
+          onClose={() => setSelectedReservation(null)}
+        />
+      )}
     </div>
   );
 }

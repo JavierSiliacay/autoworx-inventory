@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Loader2, Save, Plus, Package, Calendar, Building2, CheckCircle2, Trash2, Search } from "lucide-react";
+import { X, Loader2, Save, Plus, Package, Calendar, Building2, CheckCircle2, Trash2, Search, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 
@@ -58,14 +58,20 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         old_invoice_number: logData.invoice_number || "",
         supplier_id: logData.supplier_id || "",
         branch_id: logData.branch_id || "",
-        items: logData.items ? logData.items.map((item: any) => ({
-          id: item.id,
-          inventory_id: item.inventory_id,
-          product_name: item.inventory?.product_name || item.product_name || "Unknown Item",
-          quantity_received: item.quantity_received,
-          unit_cost: item.unit_cost,
-          old_quantity: item.quantity_received
-        })) : []
+        items: logData.items ? logData.items.map((item: any) => {
+          const qty = Number(item.quantity_received) || 0;
+          const cost = Number(item.unit_cost) || 0;
+          const totalAmt = item.total_amount !== undefined ? Number(item.total_amount) : (qty * cost);
+          return {
+            id: item.id,
+            inventory_id: item.inventory_id,
+            product_name: item.inventory?.product_name || item.product_name || "Unknown Item",
+            quantity_received: qty,
+            unit_cost: cost,
+            total_amount: totalAmt,
+            old_quantity: qty
+          };
+        }) : []
       });
     }
   }, [isOpen, logData]);
@@ -74,9 +80,47 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
   const handleRowChange = (index: number, field: string, value: any) => {
     const newItems = [...currentLog.items];
-    const item = { ...newItems[index], [field]: value };
+    const item = { ...newItems[index] };
+
+    if (field === 'total_amount') {
+      const totalVal = value === "" || value === undefined ? "" : Number(value);
+      item.total_amount = totalVal;
+    } else if (field === 'quantity_received') {
+      const qty = value === "" || value === undefined ? "" : Number(value);
+      item.quantity_received = qty;
+    } else {
+      item[field] = value;
+    }
+
+    newItems[index] = item;
     newItems[index] = item;
     setCurrentLog({ ...currentLog, items: newItems });
+  };
+
+  const handleResetChanges = () => {
+    if (window.confirm("Are you sure you want to reset all edits back to their original values?")) {
+      setCurrentLog({
+        date_received: new Date(logData.date_received).toISOString().split('T')[0],
+        invoice_number: logData.invoice_number || "",
+        old_invoice_number: logData.invoice_number || "",
+        supplier_id: logData.supplier_id || "",
+        branch_id: logData.branch_id || "",
+        items: logData.items ? logData.items.map((item: any) => {
+          const qty = Number(item.quantity_received) || 0;
+          const cost = Number(item.unit_cost) || 0;
+          const totalAmt = item.total_amount !== undefined ? Number(item.total_amount) : (qty * cost);
+          return {
+            id: item.id,
+            inventory_id: item.inventory_id,
+            product_name: item.inventory?.product_name || item.product_name || "Unknown Item",
+            quantity_received: qty,
+            unit_cost: cost,
+            total_amount: totalAmt,
+            old_quantity: qty
+          };
+        }) : []
+      });
+    }
   };
 
   const addItem = (product: any) => {
@@ -93,6 +137,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
           product_name: product.product_name, 
           quantity_received: 1, 
           unit_cost: product.cost || 0,
+          total_amount: product.cost || 0,
           old_quantity: 0 
         }
       ]
@@ -122,7 +167,10 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   };
 
   const calculateTotal = () => {
-    return currentLog.items.reduce((sum, item) => sum + (Number(item.quantity_received || 0) * Number(item.unit_cost || 0)), 0);
+    return currentLog.items.reduce((sum, item) => {
+      const itemTotal = item.total_amount === "" || item.total_amount === undefined ? 0 : Number(item.total_amount);
+      return sum + itemTotal;
+    }, 0);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -163,12 +211,18 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         quantity_received: item.quantity_received
       }));
 
-      const newItemsPayload = validItems.map(item => ({
-        inventory_id: item.inventory_id,
-        quantity_received: Number(item.quantity_received),
-        unit_cost: Number(item.unit_cost),
-        total_amount: item.total_amount !== undefined ? Number(item.total_amount) : (Number(item.quantity_received) * Number(item.unit_cost))
-      }));
+      const newItemsPayload = validItems.map(item => {
+        const qty = Number(item.quantity_received) || 1;
+        const itemTotal = item.total_amount !== undefined && item.total_amount !== ""
+          ? Number(item.total_amount)
+          : (qty * Number(item.unit_cost || 0));
+        return {
+          inventory_id: item.inventory_id,
+          quantity_received: qty,
+          unit_cost: Number(item.unit_cost || 0),
+          total_amount: itemTotal
+        };
+      });
 
       const userId = session?.user?.id || null;
 
@@ -267,7 +321,17 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col">
             {/* Search Bar for Add */}
             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between relative z-40">
-              <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Line Items</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Line Items</span>
+                <button 
+                  type="button"
+                  onClick={handleResetChanges}
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  <Undo2 className="w-3 h-3" />
+                  Reset Edits
+                </button>
+              </div>
               <div id="search-input-container-edit" className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                 <input
@@ -399,17 +463,15 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                           className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                         />
                       </td>
-                      <td className="px-4 py-3">
-                        <FormattedNumberInput
-                          value={item.unit_cost === "" ? undefined : Number(item.unit_cost)}
-                          onChange={(val) => handleRowChange(index, 'unit_cost', val)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
-                        />
+                      <td className="px-4 py-3 font-medium text-slate-500 text-right">
+                        ₱{Number(item.unit_cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="font-bold text-slate-800">
-                          {(Number(item.quantity_received) * Number(item.unit_cost)).toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                        </span>
+                        <FormattedNumberInput
+                          value={item.total_amount === "" || item.total_amount === undefined ? undefined : Number(item.total_amount)}
+                          onChange={(val) => handleRowChange(index, 'total_amount', val)}
+                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-right"
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button

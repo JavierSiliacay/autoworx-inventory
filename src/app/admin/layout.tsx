@@ -22,6 +22,11 @@ export default async function AdminLayout({
   const role = (session.user as any)?.role;
   const branchIds = (session.user as any)?.branch_ids || [];
 
+  // Redirect revoked/banned users out of the system immediately
+  if (!role || role === 'revoked' || role === 'banned') {
+    redirect("/login");
+  }
+
   // Redirect agents out of the admin panel
   if (role === 'sales_agent') {
     redirect("/agent");
