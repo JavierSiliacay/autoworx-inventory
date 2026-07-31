@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1785460550061",
+    version: "v1.7.31",
+    date: "2026-07-31",
+    type: "feature",
+    title: "New AI Chat Assistant",
+    description: "Staff can now get instant help and answers through an integrated AI assistant, making it easier to find information and complete tasks faster."
+  },
+
+  {
     id: "update-1785395570223",
     version: "v1.7.30",
     date: "2026-07-30",
