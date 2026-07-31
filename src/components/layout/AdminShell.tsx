@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { Menu, X } from "lucide-react";
+import PrimerAiChatWidget from "../ai/PrimerAiChatWidget";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,6 +58,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
         </main>
       </div>
+
+      <PrimerAiChatWidget />
     </div>
   );
 }
