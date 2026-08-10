@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786325745142",
+    version: "v1.8.10",
+    date: "2026-08-10",
+    type: "improvement",
+    title: "Isuzu Database Migration Support Added",
+    description: "Staff can now apply Isuzu database updates smoothly, ensuring data stays current with less manual effort."
+  },
+
+  {
     id: "update-1785460550061",
     version: "v1.7.31",
     date: "2026-07-31",
