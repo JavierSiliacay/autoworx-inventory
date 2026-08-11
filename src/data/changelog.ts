@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786432920588",
+    version: "v1.8.11",
+    date: "2026-08-11",
+    type: "feature",
+    title: "Automated Payables & Smart Alerts",
+    description: "Payables are now processed automatically, and you receive smart notifications about upcoming payments and status changes, reducing manual work and keeping you informed effortlessly."
+  },
+
+  {
     id: "update-1786325745142",
     version: "v1.8.10",
     date: "2026-08-10",
