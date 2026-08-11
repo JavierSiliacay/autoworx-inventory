@@ -108,6 +108,7 @@ export default function PayablesPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<PayableStatus | "All">("All");
+  const [showUrgentOnly, setShowUrgentOnly] = useState(false);
   const [sortField, setSortField] = useState<SortField>("due_date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -184,7 +185,18 @@ export default function PayablesPage() {
       const searchableText = `${r.supplier_name} ${r.reference_no}`.toLowerCase();
       const matchSearch = searchTokens.length === 0 || searchTokens.every(token => searchableText.includes(token));
       const matchStatus = statusFilter === "All" || r.status === statusFilter;
-      return matchSearch && matchStatus;
+      
+      let matchUrgent = true;
+      if (showUrgentOnly) {
+        if (r.status === 'Paid') return false;
+        const today = new Date();
+        const due = new Date(r.due_date);
+        const fourteenDays = new Date(today);
+        fourteenDays.setDate(fourteenDays.getDate() + 14);
+        matchUrgent = due <= fourteenDays;
+      }
+
+      return matchSearch && matchStatus && matchUrgent;
     });
 
     list = [...list].sort((a, b) => {
@@ -200,7 +212,7 @@ export default function PayablesPage() {
     });
 
     return list;
-  }, [records, search, statusFilter, sortField, sortDir]);
+  }, [records, search, statusFilter, showUrgentOnly, sortField, sortDir]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => (d === "asc" ? "desc" : "asc"));
@@ -423,6 +435,15 @@ export default function PayablesPage() {
                 </button>
               )}
             </div>
+            {/* Urgent Filter Toggle */}
+            <button 
+              onClick={() => setShowUrgentOnly(!showUrgentOnly)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-sm border ${showUrgentOnly ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'}`}
+              title="Show only overdue and due within 14 days"
+            >
+              <AlertCircle className={`w-4 h-4 ${showUrgentOnly ? 'text-red-500' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">Urgent Only</span>
+            </button>
             {/* Status Filter */}
             <div className="relative">
               <select
@@ -449,6 +470,7 @@ export default function PayablesPage() {
                   )}
                   <th className="px-10 py-6"><SortBtn field="supplier_name" label="Supplier" /></th>
                 <th className="px-6 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reference No.</th>
+                <th className="px-6 py-6 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terms</th>
                 <th className="px-6 py-6"><SortBtn field="due_date" label="Due Date" /></th>
                 <th className="px-6 py-6 text-center"><SortBtn field="status" label="Status" /></th>
                 <th className="px-6 py-6 text-right"><SortBtn field="balance" label="Balance Due" /></th>
@@ -501,6 +523,14 @@ export default function PayablesPage() {
                           {record.reference_no || "—"}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-6 py-7 text-center">
+                      <span className="text-xs font-semibold text-slate-500">
+                        {(() => {
+                          const days = Math.round((new Date(record.due_date).getTime() - new Date(record.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                          return days > 0 ? `${days} Days` : "COD";
+                        })()}
+                      </span>
                     </td>
                     <td className="px-6 py-7">
                       <div className={`flex items-center gap-1.5 text-sm font-bold ${isOverdue ? "text-red-500" : "text-slate-600"}`}>
@@ -578,6 +608,12 @@ export default function PayablesPage() {
                   <div>
                     <p className={`text-xs font-bold flex items-center gap-1 ${isOverdue ? "text-red-500" : "text-slate-500"}`}>
                       <CalendarDays className="w-3 h-3" /> Due: {formatDate(record.due_date)}
+                      <span className="text-[10px] font-medium text-slate-400 ml-1">
+                        ({(() => {
+                          const days = Math.round((new Date(record.due_date).getTime() - new Date(record.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                          return days > 0 ? `${days} Days` : "COD";
+                        })()})
+                      </span>
                     </p>
                     {isOverdue && <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-0.5">Overdue</p>}
                   </div>

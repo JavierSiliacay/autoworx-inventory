@@ -10,6 +10,8 @@ interface Supplier {
   tin?: string;
   address?: string;
   contact_number?: string;
+  contact_person?: string;
+  due_days?: number;
 }
 
 interface SupplierModalProps {
@@ -25,18 +27,22 @@ export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: 
     name: "",
     tin: "",
     address: "",
-    contact_number: ""
+    contact_number: "",
+    contact_person: "",
+    due_days: 0
   });
 
   useEffect(() => {
     if (supplier) {
-      setFormData(supplier);
+      setFormData({ ...supplier, due_days: supplier.due_days || 0 });
     } else {
       setFormData({
         name: "",
         tin: "",
         address: "",
-        contact_number: ""
+        contact_number: "",
+        contact_person: "",
+        due_days: 0
       });
     }
   }, [supplier, isOpen]);
@@ -55,7 +61,9 @@ export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: 
             name: formData.name,
             tin: formData.tin,
             address: formData.address,
-            contact_number: formData.contact_number
+            contact_number: formData.contact_number,
+            contact_person: formData.contact_person,
+            due_days: formData.due_days
           })
           .eq("id", supplier.id);
         if (error) throw error;
@@ -137,6 +145,22 @@ export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">Contact Person</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Juan Dela Cruz"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-[#16a34a] transition-all outline-none"
+                    value={formData.contact_person || ""}
+                    onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">Contact Number</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
@@ -160,6 +184,20 @@ export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: 
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-[#16a34a] transition-all outline-none"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block px-1">Payment Terms (Days)</label>
+                <div className="relative">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 30"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-green-500/10 focus:border-[#16a34a] transition-all outline-none"
+                    value={formData.due_days || 0}
+                    onChange={(e) => setFormData({ ...formData, due_days: Number(e.target.value) })}
                   />
                 </div>
               </div>

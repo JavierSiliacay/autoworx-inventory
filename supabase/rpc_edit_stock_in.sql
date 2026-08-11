@@ -20,6 +20,8 @@ DECLARE
   v_new_item jsonb;
   v_inventory_id uuid;
   v_branch_id uuid;
+  v_supplier_name text;
+  v_supplier_due_days int;
 BEGIN
   v_branch_id := (p_log_payload->>'branch_id')::uuid;
 
@@ -86,6 +88,23 @@ BEGIN
       'Stock In Edited: ' || (p_log_payload->>'invoice_number')
     );
   END LOOP;
+
+  -- 5. Synchronize Supplier Payable if it exists and is not 'INVENTORY'
+  SELECT name, COALESCE(due_days, 0) INTO v_supplier_name, v_supplier_due_days
+  FROM public.suppliers
+  WHERE id = (p_log_payload->>'supplier_id')::uuid;
+
+  -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE'
+  IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' THEN
+    UPDATE public.supplier_payables
+    SET 
+      supplier_name = v_supplier_name,
+      reference_no = p_log_payload->>'invoice_number',
+      amount_due = (p_log_payload->>'total_amount')::decimal,
+      balance = (p_log_payload->>'total_amount')::decimal - paid_amount,
+      due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
+    WHERE reference_no = p_log_payload->>'old_invoice_number';
+  END IF;
 
 END;
 $$;

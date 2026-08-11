@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Building2, Search, Plus, Edit, Trash2, Loader2, Hash, Phone, MapPin } from "lucide-react";
+import { Building2, Search, Plus, Edit, Trash2, Loader2, Hash, Phone, MapPin, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SupplierModal from "@/components/inventory/SupplierModal";
 
@@ -11,6 +11,8 @@ interface Supplier {
   tin?: string;
   address?: string;
   contact_number?: string;
+  contact_person?: string;
+  due_days?: number;
   created_at: string;
 }
 
@@ -48,7 +50,7 @@ export default function SuppliersPage() {
   const searchTokens = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
   const filteredItems = suppliers.filter(s => {
     if (searchTokens.length === 0) return true;
-    const searchableText = `${s.name} ${s.tin}`.toLowerCase();
+    const searchableText = `${s.name} ${s.tin} ${s.contact_person || ""}`.toLowerCase();
     return searchTokens.every(token => searchableText.includes(token));
   });
 
@@ -111,12 +113,13 @@ export default function SuppliersPage() {
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">TIN</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms (Days)</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredItems.length === 0 && !loading && (
-                <tr><td colSpan={4} className="px-6 py-16 text-center text-sm text-slate-400">No suppliers found.</td></tr>
+                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-400">No suppliers found.</td></tr>
               )}
               {filteredItems.map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
@@ -133,7 +136,12 @@ export default function SuppliersPage() {
                       {s.tin || "—"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{s.contact_number || s.address || "—"}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-semibold text-slate-700">{s.contact_person || "—"}</div>
+                    {s.contact_number && <div className="text-xs text-slate-500 mt-0.5">{s.contact_number}</div>}
+                    {!s.contact_person && s.address && <div className="text-xs text-slate-500 mt-0.5">{s.address}</div>}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-600">{s.due_days ? `${s.due_days} Days` : "COD"}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => { setSelectedSupplier(s); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-[#16a34a] hover:bg-green-50 rounded-lg transition-colors">
@@ -169,11 +177,19 @@ export default function SuppliersPage() {
                         <Hash className="w-3 h-3" />{s.tin}
                       </span>
                     )}
+                    {s.contact_person && (
+                      <span className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
+                        <User className="w-3 h-3" />{s.contact_person}
+                      </span>
+                    )}
                     {s.contact_number && (
                       <span className="flex items-center gap-1 text-[10px] text-slate-400">
                         <Phone className="w-3 h-3" />{s.contact_number}
                       </span>
                     )}
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-500">
+                      Terms: {s.due_days ? `${s.due_days} Days` : "COD"}
+                    </span>
                   </div>
                 </div>
               </div>

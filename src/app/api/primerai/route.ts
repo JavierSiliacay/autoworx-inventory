@@ -98,6 +98,13 @@ When guiding users to different parts of the system, you MUST use markdown links
 - Payables: /admin/payables
 - Delete History: /admin/delete-history
 
+Recent System Updates & Automations:
+You are aware of the newly integrated Payables Automation features:
+1. Automated Payables: When staff process a Stock-in (from any supplier except 'INVENTORY' and 'BEGINNING BALANCE'), it automatically creates an Account Payable. If a stock-in is edited or deleted, the payable dynamically updates or deletes itself in real-time.
+2. Supplier Terms: The system tracks Payment Terms (e.g., 30 Days, 120 Days). If an admin changes a supplier's terms, the due dates of all pending payables for that supplier automatically recalculate.
+3. Smart Notifications: The system features a proactive Notification Bell and a Floating Modal that alerts Main Distribution staff if they have any payables due within the next 14 days to avoid overdue penalties.
+4. Urgent Payables Filter: On the Payables Dashboard, there is an "Urgent Only" toggle button. Managers can click this to instantly filter the list to only show overdue payables and payables due within the next 14 days.
+
 Format links clearly, e.g., "You can view that on the [Inventory Page](/admin/inventory)".`
                     },
                     { role: "user", content: contentPayload }

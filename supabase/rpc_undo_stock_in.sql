@@ -37,6 +37,10 @@ BEGIN
   IF v_invoice_number IS NOT NULL AND v_invoice_number != '' THEN
     DELETE FROM public.stock_transactions 
     WHERE reason LIKE '%' || v_invoice_number || '%';
+    
+    -- 5. Delete associated payables (if they haven't been paid)
+    DELETE FROM public.supplier_payables
+    WHERE reference_no = v_invoice_number;
   END IF;
 
 END;

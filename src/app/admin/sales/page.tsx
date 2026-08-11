@@ -25,6 +25,7 @@ interface SaleEntry {
   payment_type: "Cash" | "Charge" | "Delivery";
   performed_by: string;
   created_at: string;
+  color_code?: string | null;
   inventory?: {
     product_name: string;
     sku: string;
@@ -72,7 +73,8 @@ export default function AdminSalesPage() {
       item_id: "",
       quantity: 1,
       unit_price: 0,
-      subtotal: 0
+      subtotal: 0,
+      color_code: ""
     }))
   });
 
@@ -354,7 +356,7 @@ export default function AdminSalesPage() {
   const addRow = () => {
     setCurrentSale({
       ...currentSale,
-      items: [...currentSale.items, { item_id: "", quantity: 1, unit_price: 0, subtotal: 0 }]
+      items: [...currentSale.items, { item_id: "", quantity: 1, unit_price: 0, subtotal: 0, color_code: "" }]
     });
   };
 
@@ -452,6 +454,7 @@ export default function AdminSalesPage() {
           unit_price: sellingPrice,
           unit_cost: resolvedCost,
           total_amount: subtotal,
+          color_code: item.color_code || null,
           performed_by: session?.user?.email || 'Anonymous'
         };
       });
@@ -521,7 +524,8 @@ export default function AdminSalesPage() {
           item_id: "",
           quantity: 1,
           unit_price: 0,
-          subtotal: 0
+          subtotal: 0,
+          color_code: ""
         }))
       });
       fetchSales();
@@ -651,7 +655,7 @@ export default function AdminSalesPage() {
   const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
   const filteredSales = (sales || []).filter(s => {
     if (searchTokens.length === 0) return true;
-    const searchableText = `${s.invoice_no} ${s.customer_name} ${s.inventory?.product_name}`.toLowerCase();
+    const searchableText = `${s.invoice_no} ${s.customer_name} ${s.inventory?.product_name} ${s.color_code || ''}`.toLowerCase();
     return searchTokens.every(token => searchableText.includes(token));
   });
 
@@ -971,6 +975,7 @@ export default function AdminSalesPage() {
                                   <tr className="text-slate-400 font-bold border-b border-slate-50">
                                      <th className="px-4 py-2">Item Name</th>
                                      <th className="px-4 py-2 text-center">Qty</th>
+                                     <th className="px-4 py-2 text-center">Color Code</th>
                                      <th className="px-4 py-2 text-right">Price</th>
                                      <th className="px-4 py-2 text-right">Subtotal</th>
                                      {role === 'developer' && <th className="px-4 py-2 text-right"></th>}
@@ -992,6 +997,13 @@ export default function AdminSalesPage() {
                                            </div>
                                         </td>
                                         <td className="px-4 py-3 text-center font-black text-blue-600 italic">{item.quantity}L</td>
+                                        <td className="px-4 py-3 text-center text-xs font-medium text-slate-500">
+                                          {item.color_code ? (
+                                            <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-bold">{item.color_code}</span>
+                                          ) : (
+                                            <span className="text-slate-300">-</span>
+                                          )}
+                                        </td>
                                         <td className="px-4 py-3 text-right font-medium">₱{item.unit_price.toLocaleString()}</td>
                                         <td className="px-4 py-3 text-right">
                                            <div className="flex flex-col items-end">
@@ -1186,6 +1198,7 @@ export default function AdminSalesPage() {
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32">Color Code (Optional)</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[120px]">Unit Price</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[150px] text-right">Subtotal</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
@@ -1215,6 +1228,15 @@ export default function AdminSalesPage() {
                                 className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
                                 value={item.quantity === undefined ? "" : item.quantity}
                                 onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                type="text"
+                                placeholder="e.g. ARC WHITE"
+                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold text-slate-600"
+                                value={item.color_code || ""}
+                                onChange={(e) => handleRowChange(idx, 'color_code', e.target.value)}
                               />
                             </td>
                             <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">

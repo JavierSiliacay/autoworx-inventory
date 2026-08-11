@@ -17,6 +17,8 @@ DECLARE
   v_item jsonb;
   v_inventory_id uuid;
   v_po_id uuid;
+  v_supplier_name text;
+  v_supplier_due_days int;
 BEGIN
   -- 1. Parse PO ID if it exists (and is not empty string)
   IF (log_payload->>'reference_po_id') IS NOT NULL AND (log_payload->>'reference_po_id') != '' THEN
@@ -108,6 +110,39 @@ BEGIN
     UPDATE public.purchase_orders
     SET status = 'received'
     WHERE id = v_po_id;
+  END IF;
+
+  -- 5. Automatically create Supplier Payable if applicable
+  -- Fetch supplier name and due_days
+  SELECT name, COALESCE(due_days, 0) INTO v_supplier_name, v_supplier_due_days
+  FROM public.suppliers
+  WHERE id = (log_payload->>'supplier_id')::uuid;
+
+  -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE'
+  IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' THEN
+    INSERT INTO public.supplier_payables (
+      supplier_name,
+      reference_no,
+      branch_id,
+      amount_due,
+      paid_amount,
+      balance,
+      due_date,
+      status,
+      notes,
+      created_by
+    ) VALUES (
+      v_supplier_name,
+      log_payload->>'invoice_number',
+      (log_payload->>'branch_id')::uuid,
+      (log_payload->>'total_amount')::decimal,
+      0,
+      (log_payload->>'total_amount')::decimal,
+      ((log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval),
+      'Pending',
+      'Auto-generated from Stock-In',
+      log_payload->>'received_by'
+    );
   END IF;
 
 END;

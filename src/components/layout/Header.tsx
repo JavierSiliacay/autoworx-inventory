@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X } from "lucide-react";
 import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
@@ -108,6 +110,63 @@ export default function Header() {
     setHasCheckedStorage(true);
   }, []);
 
+  const [upcomingPayables, setUpcomingPayables] = useState<{id: string, supplier_name: string, due_date: string}[]>([]);
+  const [isPayablesModalOpen, setIsPayablesModalOpen] = useState(false);
+
+  useEffect(() => {
+    let channel: any;
+
+    async function checkPayables() {
+      // 1. Check if user is admin/developer or has "Main Distribution" branch
+      const hasMainAccess = role !== 'staff' || branches.some(b => b.name.toLowerCase().includes("main distribution"));
+      if (!hasMainAccess) return;
+
+      const fetchPayables = async () => {
+        const today = new Date();
+        const fourteenDaysFromNow = new Date();
+        fourteenDaysFromNow.setDate(today.getDate() + 14);
+
+        const { data, error } = await supabase
+          .from('supplier_payables')
+          .select('id, supplier_name, due_date')
+          .neq('status', 'Paid')
+          .lte('due_date', fourteenDaysFromNow.toISOString())
+          .order('due_date', { ascending: true });
+
+        if (data) {
+          setUpcomingPayables(data);
+          
+          // Audio & Modal (only once per session)
+          if (data.length > 0 && !sessionStorage.getItem('autoworx_payables_alerted')) {
+            setIsPayablesModalOpen(true);
+            try {
+              const audio = new Audio('/sounds/notification.mp3');
+              audio.play().catch(() => console.log('Audio blocked by browser'));
+            } catch(e) {}
+            sessionStorage.setItem('autoworx_payables_alerted', 'true');
+          }
+        }
+      };
+
+      await fetchPayables();
+
+      // Listen for real-time changes to the payables table!
+      channel = supabase.channel('payables-header-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
+          fetchPayables();
+        })
+        .subscribe();
+    }
+
+    if (mounted && branches.length > 0) {
+      checkPayables();
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [mounted, branches, role]);
+
   const unreadUpdates = SYSTEM_UPDATES.filter(u => !readUpdates.includes(u.id));
 
   useEffect(() => {
@@ -199,7 +258,7 @@ export default function Header() {
               className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative"
             >
               <Bell className={`w-5 h-5 ${isNotificationsOpen ? 'text-[#1e40af]' : 'text-[#64748b]'}`} />
-              {mounted && unreadUpdates.length > 0 && (
+              {mounted && (unreadUpdates.length > 0 || (upcomingPayables.length > 0 && !sessionStorage.getItem('autoworx_payables_opened'))) && (
                 <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse" />
               )}
             </button>
@@ -209,6 +268,37 @@ export default function Header() {
               <>
                 <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsNotificationsOpen(false)} />
                 <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  
+                  {upcomingPayables.length > 0 && (
+                    <>
+                      <div className="p-4 border-b border-red-100 bg-red-50 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-extrabold text-red-900">Action Required</h3>
+                          <p className="text-[10px] text-red-600 font-medium">Upcoming payables due soon</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                          <AlertTriangle className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="p-3 bg-white border-b border-slate-100">
+                        <p className="text-xs text-slate-700 mb-3 font-semibold px-1">
+                          You have <span className="text-red-500">{upcomingPayables.length}</span> payables due within 14 days.
+                        </p>
+                        <Link 
+                          href="/admin/payables" 
+                          onClick={() => {
+                            setIsNotificationsOpen(false);
+                            sessionStorage.setItem('autoworx_payables_opened', 'true');
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                        >
+                          <CalendarDays className="w-3.5 h-3.5" />
+                          Review Payables
+                        </Link>
+                      </div>
+                    </>
+                  )}
+
                   <div className="p-4 border-b border-slate-50 bg-[#f8fafc] flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-extrabold text-[#0f172a]">What's New</h3>
@@ -259,6 +349,67 @@ export default function Header() {
           </button>
         </div>
       </div>
+
+      {/* Floating Alert Modal for Payables */}
+      {isPayablesModalOpen && upcomingPayables.length > 0 && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsPayablesModalOpen(false)} />
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="bg-red-50 p-6 flex flex-col items-center text-center border-b border-red-100 relative">
+              <button 
+                onClick={() => setIsPayablesModalOpen(false)}
+                className="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white rounded-full text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-extrabold text-red-950 mb-1">Action Required</h2>
+              <p className="text-sm font-medium text-red-600/80">You have upcoming supplier payables!</p>
+            </div>
+            
+            <div className="p-6">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6">
+                <p className="text-center text-slate-600 text-sm mb-4">
+                  There are <strong className="text-red-500 text-lg">{upcomingPayables.length}</strong> payables due within the next 14 days. Please review them to avoid overdue penalties.
+                </p>
+                <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+                  {upcomingPayables.slice(0, 3).map(p => (
+                    <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm text-xs">
+                      <span className="font-bold text-slate-700 truncate mr-2">{p.supplier_name}</span>
+                      <span className="text-red-500 font-extrabold whitespace-nowrap">{new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    </div>
+                  ))}
+                  {upcomingPayables.length > 3 && (
+                    <div className="text-center text-[10px] font-bold text-slate-400 mt-2">
+                      + {upcomingPayables.length - 3} more
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsPayablesModalOpen(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors"
+                >
+                  Dismiss
+                </button>
+                <Link 
+                  href="/admin/payables" 
+                  onClick={() => setIsPayablesModalOpen(false)}
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-red-500/25 flex items-center justify-center gap-2"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Review Now
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </header>
   );
 }
