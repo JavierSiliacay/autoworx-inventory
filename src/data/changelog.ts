@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786506886105",
+    version: "v1.8.12",
+    date: "2026-08-12",
+    type: "fix",
+    title: "Billing statements now print perfectly on A4",
+    description: "Billing statements are formatted to fit A4 paper exactly, so printing no longer cuts off content or leaves blank pages, giving staff clean, ready‑to‑use statements every time."
+  },
+
+  {
     id: "update-1786432920588",
     version: "v1.8.11",
     date: "2026-08-11",
