@@ -225,7 +225,11 @@ export default function AdminSalesPage() {
   }
 
   async function fetchCustomers() {
-    const { data } = await supabase.from('customers').select('id, name').order('name');
+    let query = supabase.from('customers').select('id, name').order('name');
+    if (filterBranch) {
+      query = query.eq('branch_id', filterBranch);
+    }
+    const { data } = await query;
     setCustomers(data || []);
   }
 

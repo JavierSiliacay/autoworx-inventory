@@ -56,9 +56,15 @@ export default function AgingReportPage() {
       if (arError) throw arError;
       
       // 2. Fetch customers to get terms
-      const { data: custData, error: custError } = await supabase
+      let custQuery = supabase
         .from('customers')
         .select('name, terms');
+        
+      if (selectedBranchId !== "all") {
+        custQuery = custQuery.eq('branch_id', selectedBranchId);
+      }
+        
+      const { data: custData, error: custError } = await custQuery;
         
       if (custError) throw custError;
       

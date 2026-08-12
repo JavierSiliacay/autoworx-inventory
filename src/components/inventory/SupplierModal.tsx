@@ -19,9 +19,10 @@ interface SupplierModalProps {
   onClose: () => void;
   onSuccess: () => void;
   supplier?: Supplier | null;
+  branchId?: string;
 }
 
-export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: SupplierModalProps) {
+export default function SupplierModal({ isOpen, onClose, onSuccess, supplier, branchId }: SupplierModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Supplier>({
     name: "",
@@ -68,9 +69,13 @@ export default function SupplierModal({ isOpen, onClose, onSuccess, supplier }: 
           .eq("id", supplier.id);
         if (error) throw error;
       } else {
+        const payload: any = { ...formData };
+        if (branchId && branchId !== "all") {
+          payload.branch_id = branchId;
+        }
         const { error } = await supabase
           .from("suppliers")
-          .insert([formData]);
+          .insert([payload]);
         if (error) throw error;
       }
 

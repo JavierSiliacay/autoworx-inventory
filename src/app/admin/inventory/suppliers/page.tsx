@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Building2, Search, Plus, Edit, Trash2, Loader2, Hash, Phone, MapPin, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useNetwork } from "@/context/NetworkContext";
 import SupplierModal from "@/components/inventory/SupplierModal";
 
 interface Supplier {
@@ -23,12 +24,18 @@ export default function SuppliersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
-  useEffect(() => { fetchSuppliers(); }, []);
+  const { selectedBranchId } = useNetwork();
+
+  useEffect(() => { fetchSuppliers(); }, [selectedBranchId]);
 
   async function fetchSuppliers() {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from("suppliers").select("*").order("name", { ascending: true });
+      let query = supabase.from("suppliers").select("*").order("name", { ascending: true });
+      if (selectedBranchId !== "all") {
+        query = query.eq("branch_id", selectedBranchId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setSuppliers(data || []);
     } catch (e) {
@@ -211,6 +218,7 @@ export default function SuppliersPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchSuppliers}
         supplier={selectedSupplier}
+        branchId={selectedBranchId}
       />
     </div>
   );

@@ -19,9 +19,10 @@ interface CustomerModalProps {
   onClose: () => void;
   onSuccess: () => void;
   customer?: Customer | null;
+  branchId?: string;
 }
 
-export default function CustomerModal({ isOpen, onClose, onSuccess, customer }: CustomerModalProps) {
+export default function CustomerModal({ isOpen, onClose, onSuccess, customer, branchId }: CustomerModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Customer>({
     customer_id: "",
@@ -68,9 +69,13 @@ export default function CustomerModal({ isOpen, onClose, onSuccess, customer }: 
           .eq("id", customer.id);
         if (error) throw error;
       } else {
+        const payload: any = { ...formData };
+        if (branchId && branchId !== "all") {
+          payload.branch_id = branchId;
+        }
         const { error } = await supabase
           .from("customers")
-          .insert([formData]);
+          .insert([payload]);
         if (error) throw error;
       }
 

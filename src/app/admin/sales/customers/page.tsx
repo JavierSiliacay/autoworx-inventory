@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { User, Search, Plus, Edit, Trash2, Loader2, Hash, Phone, MapPin, CreditCard } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useNetwork } from "@/context/NetworkContext";
 import CustomerModal, { Customer } from "@/components/sales/CustomerModal";
 
 export default function CustomersPage() {
@@ -18,12 +19,18 @@ export default function CustomersPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  useEffect(() => { fetchCustomers(); }, []);
+  const { selectedBranchId } = useNetwork();
+
+  useEffect(() => { fetchCustomers(); }, [selectedBranchId]);
 
   async function fetchCustomers() {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from("customers").select("*").order("name", { ascending: true });
+      let query = supabase.from("customers").select("*").order("name", { ascending: true });
+      if (selectedBranchId !== "all") {
+        query = query.eq("branch_id", selectedBranchId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setCustomers(data || []);
     } catch (e) {
@@ -243,6 +250,7 @@ export default function CustomersPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchCustomers}
         customer={selectedCustomer}
+        branchId={selectedBranchId}
       />
     </div>
   );

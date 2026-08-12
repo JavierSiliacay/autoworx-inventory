@@ -37,10 +37,16 @@ export default function BillingStatementsPage() {
   async function fetchStatements() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('billing_statements')
         .select('*')
         .order('created_at', { ascending: false });
+        
+      if (selectedBranchId !== "all") {
+        query = query.eq('branch_id', selectedBranchId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setStatements(data || []);
@@ -94,13 +100,25 @@ export default function BillingStatementsPage() {
       // 2. Fetch customer details
       const { data: custInfo } = await supabase.from('customers').select('address, terms').ilike('name', selectedCustomerForCreate).limit(1).single();
 
-      // 3. Insert Header
+      // 3. Determine Prepared By based on Branch
+      const activeBranchId = selectedBranchId !== "all" ? selectedBranchId : ars[0].branch_id;
+      const { data: branchData } = await supabase.from('branches').select('name').eq('id', activeBranchId).single();
+      
+      let preparedBy = (session?.user as any)?.name || 'Staff';
+      if (branchData?.name?.toUpperCase().includes('ISUZU')) {
+        preparedBy = 'RHONABYL MAGALLANES';
+      } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION')) {
+        preparedBy = 'CARLA B. VARIACION';
+      }
+
+      // 4. Insert Header
       const { data: bsHeader, error: bsError } = await supabase.from('billing_statements').insert({
         customer_name: selectedCustomerForCreate,
         address: custInfo?.address || null,
         terms: custInfo?.terms || null,
         status: 'Finalized',
-        prepared_by: (session?.user as any)?.name || 'Staff'
+        prepared_by: preparedBy,
+        branch_id: activeBranchId
       }).select().single();
 
       if (bsError) throw bsError;

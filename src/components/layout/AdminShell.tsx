@@ -10,7 +10,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="flex h-screen overflow-hidden bg-[#f8fafc] print:block print:h-auto print:overflow-visible print:bg-white">
       {/* Overlay for mobile sidebar */}
       {isMobileMenuOpen && (
         <div 
@@ -21,7 +21,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Sidebar - Persistent on desktop, drawer on mobile */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out print:hidden
         ${isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
       `}>
           <div className="relative h-full">
@@ -37,9 +37,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
       </div>
       
-      <div className="flex-1 flex flex-col overflow-hidden w-full relative">
+      <div className="flex-1 flex flex-col overflow-hidden w-full relative print:block print:overflow-visible print:h-auto">
         {/* Responsive Header Wrapper */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#e2e8f0]/10 flex items-center">
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#e2e8f0]/10 flex items-center print:hidden">
             {/* Mobile Hamburger Button */}
             <button 
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -52,14 +52,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </div>
         </div>
         
-        <main className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-8 pb-20 md:pb-8">
-          <div className="max-w-[1400px] mx-auto w-full">
+        <main className="flex-1 overflow-y-auto px-4 md:px-12 py-6 md:py-8 pb-20 md:pb-8 print:block print:overflow-visible print:h-auto print:p-0">
+          <div className="max-w-[1400px] mx-auto w-full print:block print:max-w-none print:m-0 print:p-0">
             {children}
           </div>
         </main>
       </div>
 
-      <PrimerAiChatWidget />
+      <div className="print:hidden">
+        <PrimerAiChatWidget />
+      </div>
     </div>
   );
 }
