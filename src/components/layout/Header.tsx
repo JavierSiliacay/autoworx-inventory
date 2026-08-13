@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X } from "lucide-react";
+import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X, Building2 } from "lucide-react";
 import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -110,31 +110,43 @@ export default function Header() {
     setHasCheckedStorage(true);
   }, []);
 
-  const [upcomingPayables, setUpcomingPayables] = useState<{id: string, supplier_name: string, due_date: string}[]>([]);
+  const [upcomingPayables, setUpcomingPayables] = useState<{
+    id: string;
+    supplier_name: string;
+    due_date: string;
+    branch_id?: string;
+    branches?: { id: string; name: string } | null;
+  }[]>([]);
   const [isPayablesModalOpen, setIsPayablesModalOpen] = useState(false);
 
   useEffect(() => {
     let channel: any;
 
     async function checkPayables() {
-      // 1. Check if user is admin/developer or has "Main Distribution" branch
-      const hasMainAccess = role !== 'staff' || branches.some(b => b.name.toLowerCase().includes("main distribution"));
-      if (!hasMainAccess) return;
+      // If staff has no branch assignments, do nothing
+      if (role === 'staff' && userBranchIds.length === 0) return;
 
       const fetchPayables = async () => {
         const today = new Date();
         const fourteenDaysFromNow = new Date();
         fourteenDaysFromNow.setDate(today.getDate() + 14);
 
-        const { data, error } = await supabase
+        let query = supabase
           .from('supplier_payables')
-          .select('id, supplier_name, due_date')
+          .select('id, supplier_name, due_date, branch_id, branches(id, name)')
           .neq('status', 'Paid')
           .lte('due_date', fourteenDaysFromNow.toISOString())
           .order('due_date', { ascending: true });
 
+        // Enforce branch scoping for staff
+        if (role === 'staff' && userBranchIds.length > 0) {
+          query = query.in('branch_id', userBranchIds);
+        }
+
+        const { data } = await query;
+
         if (data) {
-          setUpcomingPayables(data);
+          setUpcomingPayables(data as any);
           
           // Audio & Modal (only once per session)
           if (data.length > 0 && !sessionStorage.getItem('autoworx_payables_alerted')) {
@@ -190,6 +202,40 @@ export default function Header() {
       const newRead = [...readUpdates, ...unreadUpdates.map(u => u.id)];
       setReadUpdates(newRead);
       localStorage.setItem('autoworx_read_updates', JSON.stringify(newRead));
+    }
+  };
+
+  const handleReviewPayables = (specificBranchId?: string) => {
+    setIsPayablesModalOpen(false);
+    setIsNotificationsOpen(false);
+    sessionStorage.setItem('autoworx_payables_opened', 'true');
+
+    if (specificBranchId) {
+      setSelectedBranchId(specificBranchId);
+      router.push(`/admin/payables?branch=${specificBranchId}&urgent=true`);
+      return;
+    }
+
+    if (upcomingPayables.length > 0) {
+      const firstBranchId = upcomingPayables[0].branch_id;
+      const allSameBranch = upcomingPayables.every(p => p.branch_id === firstBranchId);
+      
+      if (allSameBranch && firstBranchId) {
+        setSelectedBranchId(firstBranchId);
+        router.push(`/admin/payables?branch=${firstBranchId}&urgent=true`);
+      } else {
+        if (role !== 'staff') {
+          setSelectedBranchId("all");
+          router.push(`/admin/payables?urgent=true`);
+        } else if (firstBranchId) {
+          setSelectedBranchId(firstBranchId);
+          router.push(`/admin/payables?branch=${firstBranchId}&urgent=true`);
+        } else {
+          router.push(`/admin/payables?urgent=true`);
+        }
+      }
+    } else {
+      router.push("/admin/payables?urgent=true");
     }
   };
 
@@ -280,21 +326,37 @@ export default function Header() {
                           <AlertTriangle className="w-4 h-4" />
                         </div>
                       </div>
-                      <div className="p-3 bg-white border-b border-slate-100">
-                        <p className="text-xs text-slate-700 mb-3 font-semibold px-1">
-                          You have <span className="text-red-500">{upcomingPayables.length}</span> payables due within 14 days.
+                      <div className="p-3 bg-white border-b border-slate-100 space-y-2.5">
+                        <p className="text-xs text-slate-700 font-semibold px-1">
+                          You have <span className="text-red-500 font-bold">{upcomingPayables.length}</span> payables due within 14 days.
                         </p>
-                        <Link 
-                          href="/admin/payables" 
-                          onClick={() => {
-                            setIsNotificationsOpen(false);
-                            sessionStorage.setItem('autoworx_payables_opened', 'true');
-                          }}
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {upcomingPayables.slice(0, 3).map(p => (
+                            <div 
+                              key={p.id} 
+                              onClick={() => handleReviewPayables(p.branch_id)}
+                              className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl text-xs hover:bg-red-50/60 transition-colors cursor-pointer border border-transparent hover:border-red-100 group"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <span className="font-bold text-slate-700 block truncate group-hover:text-red-700 transition-colors">{p.supplier_name}</span>
+                                <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                                  <Building2 className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                                  <span className="truncate">{p.branches?.name || "Main Distribution"}</span>
+                                </span>
+                              </div>
+                              <span className="text-red-500 font-bold whitespace-nowrap text-[11px] bg-white px-2 py-0.5 rounded-md border border-slate-100">
+                                {new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => handleReviewPayables()}
                           className="w-full flex items-center justify-center gap-2 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
                         >
                           <CalendarDays className="w-3.5 h-3.5" />
                           Review Payables
-                        </Link>
+                        </button>
                       </div>
                     </>
                   )}
@@ -374,16 +436,32 @@ export default function Header() {
                 <p className="text-center text-slate-600 text-sm mb-4">
                   There are <strong className="text-red-500 text-lg">{upcomingPayables.length}</strong> payables due within the next 14 days. Please review them to avoid overdue penalties.
                 </p>
-                <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
-                  {upcomingPayables.slice(0, 3).map(p => (
-                    <div key={p.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm text-xs">
-                      <span className="font-bold text-slate-700 truncate mr-2">{p.supplier_name}</span>
-                      <span className="text-red-500 font-extrabold whitespace-nowrap">{new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                  {upcomingPayables.slice(0, 4).map(p => (
+                    <div 
+                      key={p.id} 
+                      onClick={() => handleReviewPayables(p.branch_id)}
+                      className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm hover:border-red-200 hover:bg-red-50/20 transition-all cursor-pointer group"
+                    >
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="font-bold text-slate-800 text-xs truncate group-hover:text-red-700 transition-colors">
+                          {p.supplier_name}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
+                          <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate">{p.branches?.name || "Main Distribution"}</span>
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-red-600 font-extrabold text-xs whitespace-nowrap bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
+                          {new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
                     </div>
                   ))}
-                  {upcomingPayables.length > 3 && (
+                  {upcomingPayables.length > 4 && (
                     <div className="text-center text-[10px] font-bold text-slate-400 mt-2">
-                      + {upcomingPayables.length - 3} more
+                      + {upcomingPayables.length - 4} more
                     </div>
                   )}
                 </div>
@@ -396,14 +474,13 @@ export default function Header() {
                 >
                   Dismiss
                 </button>
-                <Link 
-                  href="/admin/payables" 
-                  onClick={() => setIsPayablesModalOpen(false)}
+                <button 
+                  onClick={() => handleReviewPayables()}
                   className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-red-500/25 flex items-center justify-center gap-2"
                 >
                   <CalendarDays className="w-4 h-4" />
                   Review Now
-                </Link>
+                </button>
               </div>
             </div>
           </div>
