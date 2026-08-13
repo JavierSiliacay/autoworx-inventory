@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786603500285",
+    version: "v1.8.13",
+    date: "2026-08-13",
+    type: "feature",
+    title: "Branch‑Specific Payable Alerts",
+    description: "Payable alerts and the interactive settlement modal now respect your selected branch, showing only relevant transactions and reducing noise so you can act faster."
+  },
+
+  {
     id: "update-1786506886105",
     version: "v1.8.12",
     date: "2026-08-12",
