@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786896717204",
+    version: "v1.8.16",
+    date: "2026-08-16",
+    type: "fix",
+    title: "Billing Statement Preparer Updated for Valencia",
+    description: "Updated the billing statements preparer for Valencia Coloursmile to CARLA B. VARIACION, ensuring correct staff assignment and accurate statements."
+  },
+
+  {
     id: "update-1786894932893",
     version: "v1.8.16",
     date: "2026-08-16",
