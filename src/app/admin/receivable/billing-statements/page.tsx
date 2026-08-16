@@ -107,7 +107,7 @@ export default function BillingStatementsPage() {
       let preparedBy = (session?.user as any)?.name || 'Staff';
       if (branchData?.name?.toUpperCase().includes('ISUZU')) {
         preparedBy = 'RHONABYL MAGALLANES';
-      } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION')) {
+      } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION') || branchData?.name?.toUpperCase().includes('VALENCIA')) {
         preparedBy = 'CARLA B. VARIACION';
       }
 
