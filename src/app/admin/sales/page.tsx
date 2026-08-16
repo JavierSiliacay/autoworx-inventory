@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2 } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -91,6 +91,13 @@ export default function AdminSalesPage() {
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
   const [mixBreakdownMap, setMixBreakdownMap] = useState<Record<string, string>>({});
   const [mixLoading, setMixLoading] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterMonth, filterBranch]);
 
   // Print Report States
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -703,7 +710,8 @@ export default function AdminSalesPage() {
     );
   };
 
-
+  const totalPages = Math.ceil(groupedSales.length / itemsPerPage);
+  const paginatedSales = groupedSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (showSetupAlert) {
     return (
@@ -894,7 +902,7 @@ export default function AdminSalesPage() {
                   </td>
                 </tr>
               ) : (
-                groupedSales.map((invoice: any) => (
+                paginatedSales.map((invoice: any) => (
                   <React.Fragment key={invoice.invoice_no}>
                   <tr 
                     onClick={() => toggleExpandSale(invoice.invoice_no)}
@@ -1074,6 +1082,49 @@ export default function AdminSalesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-slate-100 bg-white rounded-b-[2rem] gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-slate-500">Rows per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border-none bg-slate-50 text-sm font-bold text-slate-700 rounded-lg py-1 px-2 focus:ring-0 cursor-pointer"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={500}>500</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-slate-500">
+                Page <span className="font-bold text-slate-700">{currentPage}</span> of <span className="font-bold text-slate-700">{totalPages}</span>
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sale Modal */}

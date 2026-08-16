@@ -141,12 +141,12 @@ export default function SalesReportPrint({
     <>
       <div 
         id={isPreview ? 'sales-report-preview-container' : 'sales-report-print-container'}
-        className={`${isPreview ? 'block w-[1122px] shadow-2xl mx-auto rounded-none my-8' : 'hidden fixed inset-0 z-[999999] w-full print:fixed print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8 overflow-hidden`}
+        className={`${isPreview ? 'block w-[1122px] shadow-2xl mx-auto rounded-none my-8' : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
         style={reportType === 'daily' ? { 
            zoom: scaleFactor, 
-           height: isPreview ? '794px' : `100vh`,
-           maxHeight: isPreview ? '794px' : `100vh` 
-        } : { minHeight: isPreview ? '794px' : '100vh', height: isPreview ? 'auto' : 'auto' }}
+           minHeight: isPreview ? '794px' : '100%',
+           height: 'auto'
+        } : { minHeight: isPreview ? '794px' : '100%', height: 'auto' }}
       >
       <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
@@ -200,7 +200,7 @@ export default function SalesReportPrint({
           </tbody>
           {/* Footer Totals */}
           {filteredSales.length > 0 && (
-            <tfoot>
+            <tbody>
               <tr>
                 <td colSpan={3} className="border-l border-b border-black border-r-0 border-t-0 p-0 text-right pr-2"></td>
                 <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold uppercase">{paymentTypeFilter !== 'All' ? `${paymentTypeFilter} ` : ''}Total Revenue:</td>
@@ -208,7 +208,7 @@ export default function SalesReportPrint({
                   {totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
-            </tfoot>
+            </tbody>
           )}
         </table>
       ) : (
@@ -307,7 +307,7 @@ export default function SalesReportPrint({
               </>
             )}
           </tbody>
-          <tfoot>
+          <tbody>
             {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
               <tr>
                 <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
@@ -342,7 +342,7 @@ export default function SalesReportPrint({
               </td>
               <td className="border border-black bg-white px-2 py-1"></td>
             </tr>
-          </tfoot>
+          </tbody>
         </table>
 
          {(transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n)) && (
@@ -411,7 +411,7 @@ export default function SalesReportPrint({
       {/* Print Page Styles to force landscape and A4 */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          @page { size: A4 landscape; margin: 12mm; }
+          @page { size: A4 landscape; margin: 8mm; }
           
           body * {
             visibility: hidden !important;
@@ -422,14 +422,16 @@ export default function SalesReportPrint({
           }
           
           #sales-report-print-container {
-            position: fixed !important;
+            position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
+            min-height: 100% !important;
             display: block !important;
             background: white !important;
             z-index: 9999999 !important;
+            overflow: visible !important;
           }
 
           body { 
@@ -438,11 +440,13 @@ export default function SalesReportPrint({
             margin: 0; 
             padding: 0; 
             background: white !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           
-          .print-daily-table td, .print-daily-table th {
-             padding-top: max(3px, 0.6vh) !important;
-             padding-bottom: max(3px, 0.6vh) !important;
+          table td, table th {
+             padding-top: 2px !important;
+             padding-bottom: 2px !important;
           }
         }
       `}} />

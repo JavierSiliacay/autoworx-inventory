@@ -209,6 +209,17 @@ export default function AdminDashboardPage() {
         } else if (isStaff && userBranchIds.length > 0) {
           salesQuery = salesQuery.in('branch_id', userBranchIds);
         }
+        
+        if (filterMonth !== "all") {
+          const [year, month] = filterMonth.split('-');
+          const startDate = `${year}-${month}-01`;
+          const nextMonth = Number(month) === 12 ? 1 : Number(month) + 1;
+          const nextYear = Number(month) === 12 ? Number(year) + 1 : Number(year);
+          const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+          
+          // Using gte and lt for exact date range, as Postgres DATE type does not support the LIKE operator
+          salesQuery = salesQuery.gte('date', startDate).lt('date', endDate);
+        }
 
       const { data, error: sErr } = await salesQuery;
         
@@ -246,17 +257,14 @@ export default function AdminDashboardPage() {
             total_amount: Number(s.total_amount || 0) // Explicit cast to Number
           }));
           
-          const filteredMapped = mapped.filter((s: any) => {
-            if (s.payment_type === 'Cancelled') return false;
-            const d = s.created_at || s.date;
-            return filterMonth === "all" || (d && d.startsWith(filterMonth));
-          });
+          setSales(mapped);
           
-          setSales(filteredMapped);
-          
-          // SUM ALL matching sales for Gross Revenue
-          const totalRev = filteredMapped.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+          // SUM ALL matching sales for Gross Revenue (Now provided perfectly by the backend!)
+          const totalRev = statsData ? Number(statsData.totalSalesValue || statsData.totalsalesvalue || 0) : 0;
           setRevenue(totalRev);
+          
+          // Latest 5 Transactions for widget
+          setRecentLogs(mapped.slice(0, 5));
         }
       } catch (err) {
         console.error("Revenue Fetch error:", err);
@@ -465,28 +473,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* ── Available Stock Value ── */}
-        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#16a34a]/10 flex items-center justify-center shrink-0">
-              <Package className="w-4 h-4 text-[#16a34a]" />
-            </div>
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
-              Availability
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p
-              className="font-manrope font-extrabold text-[#111827]"
-              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-              title={formatCurrency((stats as any).currentStockValue ?? 0)}
-            >
-              {formatCurrency((stats as any).currentStockValue ?? 0)}
-            </p>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Available Stock Value</p>
-          </div>
-        </div>
-
         {/* ── Total Purchase ── */}
         <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3">
@@ -506,6 +492,28 @@ export default function AdminDashboardPage() {
               {formatCurrency(stats.value)}
             </p>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Total Purchase</p>
+          </div>
+        </div>
+
+        {/* ── Available Stock Value ── */}
+        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-4 flex flex-col gap-3 min-w-0 hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#16a34a]/10 flex items-center justify-center shrink-0">
+              <Package className="w-4 h-4 text-[#16a34a]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-snug">
+              Availability
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p
+              className="font-manrope font-extrabold text-[#111827]"
+              style={{ fontSize: '1.25rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={formatCurrency((stats as any).currentStockValue ?? 0)}
+            >
+              {formatCurrency((stats as any).currentStockValue ?? 0)}
+            </p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Available Stock Value</p>
           </div>
         </div>
 

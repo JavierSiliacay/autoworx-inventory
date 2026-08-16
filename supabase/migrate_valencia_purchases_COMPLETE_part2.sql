@@ -1,0 +1,9773 @@
+
+-- COMPLETE MIGRATION FOR VALENCIA PURCHASES (STOCK INS & ADJUSTMENTS) - PART 2
+DO $$
+DECLARE 
+  v_branch_id UUID;
+BEGIN
+  SELECT id INTO v_branch_id FROM public.branches WHERE name ILIKE '%Valencia ColourSmile%' LIMIT 1;
+  IF v_branch_id IS NULL THEN
+    RAISE EXCEPTION 'Branch Valencia ColourSmile not found!';
+  END IF;
+
+  DECLARE
+    v_item_id UUID;
+    v_supplier_id UUID;
+    v_stock_in_id UUID;
+  BEGIN
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-200', '2026-03-31', 950, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZVIO-20' OR product_name = 'PYLOX LAZER VIOLET 20') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER VIOLET 20', 'PLYZVIO-20', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 10, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 10, 95, 'Migration: ' || 'UNREF-200', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-201', '2026-03-31', 570, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZSKBL-22' OR product_name = 'PYLOX LAZER SKY BLUE 22') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER SKY BLUE 22', 'PLYZSKBL-22', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 95, 'Migration: ' || 'UNREF-201', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-202', '2026-03-31', 855, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZSIL-42' OR product_name = 'PYLOX LAZER SILVER 42') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER SILVER 42', 'PLYZSIL-42', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 95, 'Migration: ' || 'UNREF-202', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-203', '2026-03-31', 570, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZPRGR-145' OR product_name = 'PYLOX LAZER PRIMER GRAY 145') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER PRIMER GRAY 145', 'PLYZPRGR-145', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 95, 'Migration: ' || 'UNREF-203', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-204', '2026-03-31', 665, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZMTW-03' OR product_name = 'PYLOX LAZER MATT WHITE 03') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER MATT WHITE 03', 'PLYZMTW-03', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 7, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 95, 'Migration: ' || 'UNREF-204', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-205', '2026-03-31', 475, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZLTGR-33' OR product_name = 'PYLOX LAZER LIGHT GREEN 33') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER LIGHT GREEN 33', 'PLYZLTGR-33', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 95, 'Migration: ' || 'UNREF-205', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-206', '2026-03-31', 648, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZHTRSIL-709' OR product_name = 'PYLOX LAZER HEAT RESISTANT SILVER 709') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER HEAT RESISTANT SILVER 709', 'PLYZHTRSIL-709', v_branch_id, 0, 162) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 162);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 162, 'Migration: ' || 'UNREF-206', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-207', '2026-03-31', 1287, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZGLD-705' OR product_name = 'PYLOX LAZER GOLD 705') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER GOLD 705', 'PLYZGLD-705', v_branch_id, 0, 117) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 11, 117);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 11, 117, 'Migration: ' || 'UNREF-207', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-208', '2026-03-31', 950, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZGBLK-48' OR product_name = 'PYLOX LAZER GLOSS BLACK 48') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER GLOSS BLACK 48', 'PLYZGBLK-48', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 10, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 10, 95, 'Migration: ' || 'UNREF-208', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-209', '2026-03-31', 1215, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOUVIO-604' OR product_name = 'PYLOX LAZER FLOURESCENT VIOLET 604') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT VIOLET 604', 'PLYZFLOUVIO-604', v_branch_id, 0, 135) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 135);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 135, 'Migration: ' || 'UNREF-209', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-210', '2026-03-31', 1215, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOURANGE-601' OR product_name = 'PYLOX LAZER FLOURESCENT ORANGE 601') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT ORANGE 601', 'PLYZFLOURANGE-601', v_branch_id, 0, 135) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 135);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 135, 'Migration: ' || 'UNREF-210', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-211', '2026-03-31', 405, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOURPNK-603' OR product_name = 'PYLOX LAZER FLOURESCENT PINK 603') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT PINK 603', 'PLYZFLOURPNK-603', v_branch_id, 0, 135) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 135);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 135, 'Migration: ' || 'UNREF-211', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-212', '2026-03-31', 570, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZDR-17' OR product_name = 'PYLOX LAZER DEEP RED 17') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER DEEP RED 17', 'PLYZDR-17', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 95, 'Migration: ' || 'UNREF-212', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-213', '2026-03-31', 1210, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZCANRED-801' OR product_name = 'PYLOX LAZER CANDYTONE RED 801') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER CANDYTONE RED 801', 'PLYZCANRED-801', v_branch_id, 0, 110) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 11, 110);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 11, 110, 'Migration: ' || 'UNREF-213', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-214', '2026-03-31', 1170, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZDISIL-701' OR product_name = 'PYLOX LAZER DISTINGUISHED SILVER 701') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER DISTINGUISHED SILVER 701', 'PLYZDISIL-701', v_branch_id, 0, 117) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 10, 117);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 10, 117, 'Migration: ' || 'UNREF-214', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-215', '2026-03-31', 1140, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZCLR-01' OR product_name = 'PYLOX LAZER CLEAR 01') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER CLEAR 01', 'PLYZCLR-01', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 95, 'Migration: ' || 'UNREF-215', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-216', '2026-03-31', 760, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PYLZAY-06' OR product_name = 'PYLOX LAZER ART YELLOW 06') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER ART YELLOW 06', 'PYLZAY-06', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 8, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 8, 95, 'Migration: ' || 'UNREF-216', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-217', '2026-03-31', 475, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PYLZANTPR-12' OR product_name = 'PYLOX LAZER ANTI-RUST BROWN PRIMER 12') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER ANTI-RUST BROWN PRIMER 12', 'PYLZANTPR-12', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 95, 'Migration: ' || 'UNREF-217', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-218', '2026-03-31', 312, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PUTTYKNI #4' OR product_name = 'JAPAN PUTTY KNIFE #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('JAPAN PUTTY KNIFE #4', 'PUTTYKNI #4', v_branch_id, 0, 12) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 26, 12);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 26, 12, 'Migration: ' || 'UNREF-218', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-219', '2026-03-31', 330, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PUTTYKNI #6' OR product_name = 'JAPAN PUTTY KNIFE #6') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('JAPAN PUTTY KNIFE #6', 'PUTTYKNI #6', v_branch_id, 0, 15) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 22, 15);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 22, 15, 'Migration: ' || 'UNREF-219', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-220', '2026-03-31', 160, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TRAY' OR product_name = 'PAINT ROLLER TRAY') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT ROLLER TRAY', 'TRAY', v_branch_id, 0, 40) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 40);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 40, 'Migration: ' || 'UNREF-220', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-221', '2026-03-31', 1600, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MPJOINTCMPND-5L' OR product_name = 'NIPPON MULTI-PURPOSE JOINT COMPOUND 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON MULTI-PURPOSE JOINT COMPOUND 5L', 'MPJOINTCMPND-5L', v_branch_id, 0, 400) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 400);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 400, 'Migration: ' || 'UNREF-221', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-222', '2026-03-31', 217, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB-2' OR product_name = '2B PAINT BRUSH #2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH #2', '2B-PB-2', v_branch_id, 0, 31) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 7, 31);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 31, 'Migration: ' || 'UNREF-222', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-223', '2026-03-31', 891, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DPB-4' OR product_name = 'DRAGONFLY PAINT BRUSH #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DRAGONFLY PAINT BRUSH #4', 'DPB-4', v_branch_id, 0, 99) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 99);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 99, 'Migration: ' || 'UNREF-223', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-224', '2026-03-31', 3507.604167, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1/2' OR product_name = 'CROCO MASKING TAPE 1/2 12MM (1X96)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 1/2 12MM (1X96)', 'CRO-MT1/2', v_branch_id, 0, 15.7291666666) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 223, 15.7291666666);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 223, 15.7291666666, 'Migration: ' || 'UNREF-224', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-225', '2026-03-31', 4671.5625, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT3/4' OR product_name = 'CROCO MASKING TAPE 3/4 18MM (1X64)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 3/4 18MM (1X64)', 'CRO-MT3/4', v_branch_id, 0, 23.59375) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 198, 23.59375);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 198, 23.59375, 'Migration: ' || 'UNREF-225', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-226', '2026-03-31', 1920, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITSHLDALL-BOT' OR product_name = 'DO IT SHIELD ALL MULTI-PURPOSE WAX 250ML') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT SHIELD ALL MULTI-PURPOSE WAX 250ML', 'DOITSHLDALL-BOT', v_branch_id, 0, 160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 160);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 160, 'Migration: ' || 'UNREF-226', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-227', '2026-03-31', 990, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-4L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 4L', 'DOMBF-4L', v_branch_id, 0, 495) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 495);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 495, 'Migration: ' || 'UNREF-227', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-228', '2026-03-31', 450, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-1L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 1L', 'DOMBF-1L', v_branch_id, 0, 150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 150, 'Migration: ' || 'UNREF-228', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-229', '2026-03-31', 5265, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-4L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 4L', 'TOBF-4L', v_branch_id, 0, 585) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 585);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 585, 'Migration: ' || 'UNREF-229', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-230', '2026-03-31', 8624, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA60' OR product_name = 'EAGLE SANDPAPER #60') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #60', 'EA60', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 308, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 308, 28, 'Migration: ' || 'UNREF-230', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-231', '2026-03-31', 1147, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA120' OR product_name = 'EAGLE SANDPAPER #120') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #120', 'EA120', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 62, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 62, 18.5, 'Migration: ' || 'UNREF-231', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-232', '2026-03-31', 945, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT2' OR product_name = 'CROCO MASKING TAPE #2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #2', 'CRO-MT2', v_branch_id, 0, 63) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 15, 63);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 15, 63, 'Migration: ' || 'UNREF-232', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-233', '2026-03-31', 37, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA400' OR product_name = 'EAGLE SANDPAPER #400') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #400', 'EA400', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 18.5, 'Migration: ' || 'UNREF-233', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-234', '2026-03-31', 2627, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA800' OR product_name = 'EAGLE SANDPAPER #800') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #800', 'EA800', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 142, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 142, 18.5, 'Migration: ' || 'UNREF-234', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-235', '2026-03-31', 7048.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1000' OR product_name = 'EAGLE SANDPAPER #1000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1000', 'EA1000', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 381, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 381, 18.5, 'Migration: ' || 'UNREF-235', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-236', '2026-03-31', 647.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1200' OR product_name = 'EAGLE SANDPAPER #1200') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1200', 'EA1200', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 35, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 35, 18.5, 'Migration: ' || 'UNREF-236', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-237', '2026-03-31', 4984, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1500' OR product_name = 'EAGLE SANDPAPER #1500') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1500', 'EA1500', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 178, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 178, 28, 'Migration: ' || 'UNREF-237', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-238', '2026-03-31', 12460, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITWHITE-4L' OR product_name = 'DO IT URETHANE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE WHITE 4L', 'DOITWHITE-4L', v_branch_id, 0, 1780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 7, 1780);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 1780, 'Migration: ' || 'UNREF-238', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-239', '2026-03-31', 2655, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITH-4L' OR product_name = 'DO IT URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE THINNER 4L', 'DOITH-4L', v_branch_id, 0, 590) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4.5, 590);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4.5, 590, 'Migration: ' || 'UNREF-239', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-240', '2026-03-31', 2620, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT158' OR product_name = 'NAX NAT158 CINQUASIA VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT158 CINQUASIA VIOLET 1L', 'NAT158', v_branch_id, 0, 1310) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1310);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1310, 'Migration: ' || 'UNREF-240', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-241', '2026-03-31', 1688, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT705-1L' OR product_name = 'NAX NAT705 SUPER FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT705 SUPER FINE SILVER 1L', 'NAT705-1L', v_branch_id, 0, 422) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 422);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 422, 'Migration: ' || 'UNREF-241', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-242', '2026-03-31', 2532, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT706-1L' OR product_name = 'NAX NAT706 MEDIUM COARSE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT706 MEDIUM COARSE SILVER 1L', 'NAT706-1L', v_branch_id, 0, 422) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 422);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 422, 'Migration: ' || 'UNREF-242', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-243', '2026-03-31', 2905, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT707-1L' OR product_name = 'NAX NAT707 HI-SPARKLE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT707 HI-SPARKLE SILVER 1L', 'NAT707-1L', v_branch_id, 0, 581) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 581);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 581, 'Migration: ' || 'UNREF-243', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-244', '2026-03-31', 2712.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 70) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 38.75, 70);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 38.75, 70, 'Migration: ' || 'UNREF-244', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-245', '2026-03-31', 80.59, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-9033' OR product_name = 'PHTHALO GREEN TINTING COLOR PWTCO-9033 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PHTHALO GREEN TINTING COLOR PWTCO-9033 1/4L PREMIUM WELCOAT', 'PWTCO-9033', v_branch_id, 0, 80.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 80.59);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 80.59, 'Migration: ' || 'UNREF-245', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-246', '2026-03-31', 80.59, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-6133' OR product_name = 'BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT', 'PWTCO-6133', v_branch_id, 0, 80.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 80.59);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 80.59, 'Migration: ' || 'UNREF-246', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-247', '2026-03-31', 72.02, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-4333' OR product_name = 'RAW UMBER TINTING COLOR PWTCO-4333 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAW UMBER TINTING COLOR PWTCO-4333 1/4L PREMIUM WELCOAT', 'PWTCO-4333', v_branch_id, 0, 72.02) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 72.02);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 72.02, 'Migration: ' || 'UNREF-247', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-248', '2026-03-31', 90.88, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-5033' OR product_name = 'HANSA YELLOW OIL TINITNG COLOR PWTCO-5033 1/4L WELCOAT PREMIUM') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('HANSA YELLOW OIL TINITNG COLOR PWTCO-5033 1/4L WELCOAT PREMIUM', 'PWTCO-5033', v_branch_id, 0, 90.88) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 90.88);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 90.88, 'Migration: ' || 'UNREF-248', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-249', '2026-03-31', 4843.8, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEEKBOS-1L' OR product_name = 'MARINE EPOXY A & B 1L SET EL KAPITAN BOSTIK') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('MARINE EPOXY A & B 1L SET EL KAPITAN BOSTIK', 'MEEKBOS-1L', v_branch_id, 0, 538.2) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 538.2);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 538.2, 'Migration: ' || 'UNREF-249', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-250', '2026-03-31', 705, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-40-1L' OR product_name = 'HANSA YELLOW ACRY-COLOR AC-40 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('HANSA YELLOW ACRY-COLOR AC-40 1L DAVIES', 'AC-40-1L', v_branch_id, 0, 141) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 141);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 141, 'Migration: ' || 'UNREF-250', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-251', '2026-03-31', 460, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-90-1L' OR product_name = 'RAW SIENNA ACRY-COLOR AC-90 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAW SIENNA ACRY-COLOR AC-90 1L DAVIES', 'AC-90-1L', v_branch_id, 0, 115) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 115);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 115, 'Migration: ' || 'UNREF-251', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-252', '2026-03-31', 715.9, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTAC-3117-1L' OR product_name = 'PERMANENT ORANGE ACRY-COLOR PWTAC-3117 1L WELCOAT PREMIUM') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PERMANENT ORANGE ACRY-COLOR PWTAC-3117 1L WELCOAT PREMIUM', 'PWTAC-3117-1L', v_branch_id, 0, 143.18) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 143.18);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 143.18, 'Migration: ' || 'UNREF-252', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-253', '2026-03-31', 721, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-30-1L' OR product_name = 'THALO GREEN ACRY-COLOR AC-30 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('THALO GREEN ACRY-COLOR AC-30 1L DAVIES', 'AC-30-1L', v_branch_id, 0, 103) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 7, 103);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 103, 'Migration: ' || 'UNREF-253', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-254', '2026-03-31', 206, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-20-1L' OR product_name = 'THALO BLUE ACRY-COLOR AC-20 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('THALO BLUE ACRY-COLOR AC-20 1L DAVIES', 'AC-20-1L', v_branch_id, 0, 103) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 103);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 103, 'Migration: ' || 'UNREF-254', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-255', '2026-03-31', 432, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-11-1L' OR product_name = 'VENETIAN RED ACRY-COLOR COLOR AC-11 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('VENETIAN RED ACRY-COLOR COLOR AC-11 1L DAVIES', 'AC-11-1L', v_branch_id, 0, 108) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 108);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 108, 'Migration: ' || 'UNREF-255', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-256', '2026-03-31', 627.6, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTAC-6517-1L' OR product_name = 'BURNT SIENNA PREMIUM ACRY COLOR PWTAC-6517 1L WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BURNT SIENNA PREMIUM ACRY COLOR PWTAC-6517 1L WELCOAT', 'PWTAC-6517-1L', v_branch_id, 0, 104.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 104.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 104.6, 'Migration: ' || 'UNREF-256', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-257', '2026-03-31', 627.6, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTAC-4317-1L' OR product_name = 'RAW UMBER ACRY-COLOR PWTAC-4317 1L WELCOAT PREMIUM') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAW UMBER ACRY-COLOR PWTAC-4317 1L WELCOAT PREMIUM', 'PWTAC-4317-1L', v_branch_id, 0, 104.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 104.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 104.6, 'Migration: ' || 'UNREF-257', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-258', '2026-03-31', 627.6, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTAC-4617-1L' OR product_name = 'BURNT UMBER PREMIUM ACRY COLOR PWTAC-4617 1L WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BURNT UMBER PREMIUM ACRY COLOR PWTAC-4617 1L WELCOAT', 'PWTAC-4617-1L', v_branch_id, 0, 104.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 104.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 104.6, 'Migration: ' || 'UNREF-258', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-259', '2026-03-31', 432, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-10-1L' OR product_name = 'TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES', 'AC-10-1L', v_branch_id, 0, 108) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 108);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 108, 'Migration: ' || 'UNREF-259', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-260', '2026-03-31', 5304, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FRANELLA' OR product_name = 'FRANELLA CLOTH 1YARD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('FRANELLA CLOTH 1YARD', 'FRANELLA', v_branch_id, 0, 68) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 78, 68);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 78, 68, 'Migration: ' || 'UNREF-260', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-261', '2026-03-31', 3480, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 1160);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 1160, 'Migration: ' || 'UNREF-261', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-262', '2026-03-31', 3589, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA600' OR product_name = 'EAGLE SANDPAPER #600') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #600', 'EA600', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 194, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 194, 18.5, 'Migration: ' || 'UNREF-262', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-263', '2026-03-31', 8400, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MTX' OR product_name = 'SUPRA GLOSS (TURTLE WAX)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SUPRA GLOSS (TURTLE WAX)', 'MTX', v_branch_id, 0, 700) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 700);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 700, 'Migration: ' || 'UNREF-263', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-264', '2026-03-31', 9350, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXUMAGENTA-4L' OR product_name = 'NIPPON EXTREME MAGENTA 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME MAGENTA 4L', 'NXUMAGENTA-4L', v_branch_id, 0, 1870) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 1870);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 1870, 'Migration: ' || 'UNREF-264', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-265', '2026-03-31', 9780, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXUCINQVIO-4L' OR product_name = 'NIPPON EXTREME CINQUASA VIOLET 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME CINQUASA VIOLET 4L', 'NXUCINQVIO-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 1630);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 1630, 'Migration: ' || 'UNREF-265', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-266', '2026-03-31', 7210, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NMPREDOX-GAL' OR product_name = 'NIPPON METAL PRIMER RED OXIDE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON METAL PRIMER RED OXIDE GAL', 'NMPREDOX-GAL', v_branch_id, 0, 515) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 14, 515);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 14, 515, 'Migration: ' || 'UNREF-266', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-267', '2026-03-31', 441, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NMPREDOX-LTR' OR product_name = 'NIPPON METAL PRIMER RED OXIDE LITER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON METAL PRIMER RED OXIDE LITER', 'NMPREDOX-LTR', v_branch_id, 0, 147) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 147);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 147, 'Migration: ' || 'UNREF-267', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-268', '2026-03-31', 7300, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NCGVARNISH-GAL' OR product_name = 'NIPPON CLEAR GLOSS VARNISH GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON CLEAR GLOSS VARNISH GAL', 'NCGVARNISH-GAL', v_branch_id, 0, 1460) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 1460);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 1460, 'Migration: ' || 'UNREF-268', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-269', '2026-03-31', 1347, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NCGVARNISH-LTR' OR product_name = 'NIPPON CLEAR GLOSS VARNISH LITER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON CLEAR GLOSS VARNISH LITER', 'NCGVARNISH-LTR', v_branch_id, 0, 449) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 449);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 449, 'Migration: ' || 'UNREF-269', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-270', '2026-03-31', 7778.08, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-36' OR product_name = 'CUMI SUPREME FLOOR SANDING 36') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 36', 'CUMIFS-36', v_branch_id, 0, 55.36) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 140.5, 55.36);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 140.5, 55.36, 'Migration: ' || 'UNREF-270', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-271', '2026-03-31', 4240, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-80' OR product_name = 'CUMI SUPREME FLOOR SANDING 80') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 80', 'CUMIFS-80', v_branch_id, 0, 42.4) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 42.4);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 42.4, 'Migration: ' || 'UNREF-271', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-272', '2026-03-31', 2952.18, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-60' OR product_name = 'CUMI SUPREME FLOOR SANDING 60') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 60', 'CUMIFS-60', v_branch_id, 0, 44.73) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 66, 44.73);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 66, 44.73, 'Migration: ' || 'UNREF-272', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-273', '2026-03-31', 5015.355, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-100' OR product_name = 'CUMI SUPREME FLOOR SANDING 100') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 100', 'CUMIFS-100', v_branch_id, 0, 39.03) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 128.5, 39.03);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 128.5, 39.03, 'Migration: ' || 'UNREF-273', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-274', '2026-03-31', 128, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 32);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 32, 'Migration: ' || 'UNREF-274', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-275', '2026-03-31', 252, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA2000' OR product_name = 'EAGLE SANDPAPER #2000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #2000', 'EA2000', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 28, 'Migration: ' || 'UNREF-275', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-276', '2026-03-31', 8121.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA320' OR product_name = 'EAGLE SAND PAPER #320') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SAND PAPER #320', 'EA320', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 439, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 439, 18.5, 'Migration: ' || 'UNREF-276', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-277', '2026-03-31', 9196, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDEY-4L' OR product_name = 'PLATONE QDE YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE YELLOW 4L', 'PLQDEY-4L', v_branch_id, 0, 836) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 11, 836);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 11, 836, 'Migration: ' || 'UNREF-277', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-278', '2026-03-31', 496, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'VSEAL' OR product_name = 'VULCASEAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('VULCASEAL', 'VSEAL', v_branch_id, 0, 62) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 8, 62);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 8, 62, 'Migration: ' || 'UNREF-278', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-279', '2026-03-31', 6294, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEEKBOS-4L' OR product_name = 'EL KAPITAN A & B 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EL KAPITAN A & B 4L', 'MEEKBOS-4L', v_branch_id, 0, 2098) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 2098);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 2098, 'Migration: ' || 'UNREF-279', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-280', '2026-03-31', 1188, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'RUGBY' OR product_name = 'RUGBY') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RUGBY', 'RUGBY', v_branch_id, 0, 66) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18, 66);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 66, 'Migration: ' || 'UNREF-280', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-281', '2026-03-31', 2502, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSQDEW-GAL' OR product_name = 'BOYSEN QDE WHITE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN QDE WHITE GAL', 'BSQDEW-GAL', v_branch_id, 0, 834) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 834);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 834, 'Migration: ' || 'UNREF-281', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-282', '2026-03-31', 5439, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSFWEW-GAL' OR product_name = 'BOYSEN FWE WHITE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN FWE WHITE GAL', 'BSFWEW-GAL', v_branch_id, 0, 777) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 7, 777);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 777, 'Migration: ' || 'UNREF-282', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-283', '2026-03-31', 4320, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-701-4L' OR product_name = 'FLAT WHITE ACRYLIC LATEX B-701 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('FLAT WHITE ACRYLIC LATEX B-701 BOYSEN 4L', 'B-701-4L', v_branch_id, 0, 640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6.75, 640);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6.75, 640, 'Migration: ' || 'UNREF-283', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-284', '2026-03-31', 8811, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1705' OR product_name = 'ACRYTEX PRIMER WHITE B-1705 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ACRYTEX PRIMER WHITE B-1705 BOYSEN 4L', 'B-1705', v_branch_id, 0, 979) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 979);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 979, 'Migration: ' || 'UNREF-284', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-285', '2026-03-31', 1437, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1750' OR product_name = 'REDUCER ACRYTEX B-1750 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('REDUCER ACRYTEX B-1750 BOYSEN 4L', 'B-1750', v_branch_id, 0, 479) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 479);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 479, 'Migration: ' || 'UNREF-285', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-286', '2026-03-31', 1047, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-337' OR product_name = 'COTTA ELASTOMERIC WATER FROOFING PAINT R0S-SR-337 SUN ROOF RAIN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('COTTA ELASTOMERIC WATER FROOFING PAINT R0S-SR-337 SUN ROOF RAIN 4L', 'ROS-SR-337', v_branch_id, 0, 523.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 523.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 523.5, 'Migration: ' || 'UNREF-286', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-287', '2026-03-31', 1732.8, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-182' OR product_name = 'BEIGE SUN ROOF ROS-SR-182 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BEIGE SUN ROOF ROS-SR-182 RAIN OR SHINE 4L', 'ROS-SR-182', v_branch_id, 0, 577.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 577.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 577.6, 'Migration: ' || 'UNREF-287', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-288', '2026-03-31', 2776.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-EF-1130' OR product_name = 'BLACK ELASTO FLOOR ROS-EF-1130 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BLACK ELASTO FLOOR ROS-EF-1130 RAIN OR SHINE 4L', 'ROS-EF-1130', v_branch_id, 0, 925.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 925.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 925.5, 'Migration: ' || 'UNREF-288', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-289', '2026-03-31', 1155.2, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-183' OR product_name = 'SAMAR BEIGE SUN ROOF ROS-SR-183 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SAMAR BEIGE SUN ROOF ROS-SR-183 RAIN OR SHINE 4L', 'ROS-SR-183', v_branch_id, 0, 577.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 577.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 577.6, 'Migration: ' || 'UNREF-289', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-290', '2026-03-31', 1344.8, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-100' OR product_name = 'WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L', 'ROS-SR-100', v_branch_id, 0, 672.4) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 672.4);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 672.4, 'Migration: ' || 'UNREF-290', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-291', '2026-03-31', 595.7, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-777' OR product_name = 'BITTER SWEET SUN ROOF ROS-SR-777 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BITTER SWEET SUN ROOF ROS-SR-777 RAIN OR SHINE 4L', 'ROS-SR-777', v_branch_id, 0, 595.7) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 595.7);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 595.7, 'Migration: ' || 'UNREF-291', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-292', '2026-03-31', 3045, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-823' OR product_name = 'VIBRANT RUBY ROS-823 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('VIBRANT RUBY ROS-823 RAIN OR SHINE 4L', 'ROS-823', v_branch_id, 0, 1015) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 1015);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 1015, 'Migration: ' || 'UNREF-292', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-293', '2026-03-31', 681.4, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-238' OR product_name = 'PISTACHIO ELASTOMERIC WATER FROOFING PAINT ROS-238 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PISTACHIO ELASTOMERIC WATER FROOFING PAINT ROS-238 RAIN OR SHINE 4L', 'ROS-238', v_branch_id, 0, 681.4) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 681.4);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 681.4, 'Migration: ' || 'UNREF-293', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-294', '2026-03-31', 3305.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-353' OR product_name = 'LIGHT BEIGE ROS-353 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LIGHT BEIGE ROS-353 RAIN OR SHINE 4L', 'ROS-353', v_branch_id, 0, 661.1) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 661.1);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 661.1, 'Migration: ' || 'UNREF-294', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-295', '2026-03-31', 3871.8, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-678' OR product_name = 'GOLDEN BUTTER ROS-678 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GOLDEN BUTTER ROS-678 RAIN OR SHINE 4L', 'ROS-678', v_branch_id, 0, 645.3) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 645.3);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 645.3, 'Migration: ' || 'UNREF-295', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-296', '2026-03-31', 1534.2, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-529' OR product_name = 'GOLD RUSH ROS-529 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GOLD RUSH ROS-529 RAIN OR SHINE 4L', 'ROS-529', v_branch_id, 0, 767.1) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 767.1);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 767.1, 'Migration: ' || 'UNREF-296', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-297', '2026-03-31', 661.1, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-367' OR product_name = 'CANDY TUFF ROS-367 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CANDY TUFF ROS-367 RAIN OR SHINE 4L', 'ROS-367', v_branch_id, 0, 661.1) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 661.1);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 661.1, 'Migration: ' || 'UNREF-297', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-298', '2026-03-31', 1983.3, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-350' OR product_name = 'AMBER ROSE ROS-350 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('AMBER ROSE ROS-350 RAIN OR SHINE 4L', 'ROS-350', v_branch_id, 0, 661.1) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 661.1);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 661.1, 'Migration: ' || 'UNREF-298', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-299', '2026-03-31', 1920, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-1L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 1L', 'TOBF-1L', v_branch_id, 0, 160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 160);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 160, 'Migration: ' || 'UNREF-299', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-300', '2026-03-31', 3180, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOTHALOBLU-4L' OR product_name = 'TIMEOUT ACRYLIC THALO BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT ACRYLIC THALO BLUE 4L', 'TOTHALOBLU-4L', v_branch_id, 0, 1060) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 1060);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 1060, 'Migration: ' || 'UNREF-300', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-301', '2026-03-31', 100, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TLWAX' OR product_name = 'TIMELESS PREMIUM LIQUID WAX 5OML') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMELESS PREMIUM LIQUID WAX 5OML', 'TLWAX', v_branch_id, 0, 50) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 50);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 50, 'Migration: ' || 'UNREF-301', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-302', '2026-03-31', 33444, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP8100' OR product_name = 'NIPPON ULTRA 8100T FD 2K CLEAR W/HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ULTRA 8100T FD 2K CLEAR W/HARDENER 1L', 'NP8100', v_branch_id, 0, 1200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 27.87, 1200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 27.87, 1200, 'Migration: ' || 'UNREF-302', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-303', '2026-03-31', 3071, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA800' OR product_name = 'EAGLE SANDPAPER #800') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #800', 'EA800', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 166, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 166, 18.5, 'Migration: ' || 'UNREF-303', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-304', '2026-03-31', 2109, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1000' OR product_name = 'EAGLE SANDPAPER #1000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1000', 'EA1000', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 114, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 114, 18.5, 'Migration: ' || 'UNREF-304', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-305', '2026-03-31', 1715, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-#4' OR product_name = '2B PAINT ROLLER #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT ROLLER #4', '2B-#4', v_branch_id, 0, 35) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 49, 35);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 49, 35, 'Migration: ' || 'UNREF-305', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-306', '2026-03-31', 2170, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-#7' OR product_name = '2B PAINT ROLLER #7') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT ROLLER #7', '2B-#7', v_branch_id, 0, 62) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 35, 62);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 35, 62, 'Migration: ' || 'UNREF-306', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-307', '2026-03-31', 13140, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DV-5-525-4L' OR product_name = 'DAVIES LIQUID TILE GLOSS WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES LIQUID TILE GLOSS WHITE 4L', 'DV-5-525-4L', v_branch_id, 0, 1095) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 1095);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 1095, 'Migration: ' || 'UNREF-307', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-308', '2026-03-31', 1017.5, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA240' OR product_name = 'EAGLE SANDPAPER #240') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #240', 'EA240', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 55, 18.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 55, 18.5, 'Migration: ' || 'UNREF-308', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-309', '2026-03-31', 736, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B1490-1L' OR product_name = 'BOYSEN LTC LAMP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN LTC LAMP BLACK 1L', 'B1490-1L', v_branch_id, 0, 92) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 8, 92);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 8, 92, 'Migration: ' || 'UNREF-309', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-310', '2026-03-31', 760, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TC-21-1/4L' OR product_name = 'DAVIES OTC THALO BLUE 1/4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES OTC THALO BLUE 1/4L', 'TC-21-1/4L', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 8, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 8, 95, 'Migration: ' || 'UNREF-310', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-311', '2026-03-31', 95, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TC-33-1/4L' OR product_name = 'DAVIES OTC THALO GREEN 1/4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES OTC THALO GREEN 1/4L', 'TC-33-1/4L', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 95, 'Migration: ' || 'UNREF-311', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-312', '2026-03-31', 5580, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'OTH10AD-1L' OR product_name = 'NIPPON FLATTENING AGENT PASTE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FLATTENING AGENT PASTE 1L', 'OTH10AD-1L', v_branch_id, 0, 620) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 620);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 620, 'Migration: ' || 'UNREF-312', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-313', '2026-03-31', 1332, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWAC-7242-1/4L' OR product_name = 'WELCOAT ACRY-TILE TINTING COLOR PHTHALO BLUE PWAC-7242') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT ACRY-TILE TINTING COLOR PHTHALO BLUE PWAC-7242', 'PWAC-7242-1/4L', v_branch_id, 0, 111) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 111);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 111, 'Migration: ' || 'UNREF-313', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-314', '2026-03-31', 1206, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWAC-9042-1L' OR product_name = 'WELCOAT ACRY-TILE TINTING COLOR PHTHALO GREEN PWAC-9042') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT ACRY-TILE TINTING COLOR PHTHALO GREEN PWAC-9042', 'PWAC-9042-1L', v_branch_id, 0, 402) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 402);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 402, 'Migration: ' || 'UNREF-314', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-315', '2026-03-31', 922, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWAC-2142-1L' OR product_name = 'WELCOAT ACRY-TILE TINTING COLOR PERMANENT RED PWAC-2142') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT ACRY-TILE TINTING COLOR PERMANENT RED PWAC-2142', 'PWAC-2142-1L', v_branch_id, 0, 461) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 461);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 461, 'Migration: ' || 'UNREF-315', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-316', '2026-03-31', 1692, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWAC-5042-1/4L' OR product_name = 'WELCOAT ACRY-TILE TINTING COLOR HANSA YELLOW PWAC-5042') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT ACRY-TILE TINTING COLOR HANSA YELLOW PWAC-5042', 'PWAC-5042-1/4L', v_branch_id, 0, 141) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 141);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 141, 'Migration: ' || 'UNREF-316', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-317', '2026-03-31', 1230, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-791' OR product_name = 'BOYSEN PERMACOAT FLAT LATEX BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN PERMACOAT FLAT LATEX BLACK 4L', 'B-791', v_branch_id, 0, 615) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 615);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 615, 'Migration: ' || 'UNREF-317', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-318', '2026-03-31', 1197, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TCLT-11-1L' OR product_name = 'DAVIES LIQUID-TILE TINTING COLOR VENETIAN RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES LIQUID-TILE TINTING COLOR VENETIAN RED 1L', 'TCLT-11-1L', v_branch_id, 0, 399) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 399);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 399, 'Migration: ' || 'UNREF-318', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-319', '2026-03-31', 1197, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TCLT-60-1L' OR product_name = 'DAVIES LIQUID-TILE TINTING COLOR BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES LIQUID-TILE TINTING COLOR BLACK 1L', 'TCLT-60-1L', v_branch_id, 0, 399) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 399);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 399, 'Migration: ' || 'UNREF-319', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-320', '2026-03-31', 475, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TC-60-1/4L' OR product_name = 'DAVIES OIL TINTING COLOR TC-60 LAMP BLACK 1/4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES OIL TINTING COLOR TC-60 LAMP BLACK 1/4L', 'TC-60-1/4L', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 95);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 95, 'Migration: ' || 'UNREF-320', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-321', '2026-03-31', 162, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#1' OR product_name = 'PAINT BRUSH 2B #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT BRUSH 2B #1', '2B-PB#1', v_branch_id, 0, 18) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 18);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 18, 'Migration: ' || 'UNREF-321', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-322', '2026-03-31', 1635, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1711' OR product_name = 'BOYSEN ACRYTEX CAST 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX CAST 4L', 'B-1711', v_branch_id, 0, 545) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 545);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 545, 'Migration: ' || 'UNREF-322', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-323', '2026-03-31', 4590, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-710' OR product_name = 'BOYSEN PERMACOAT GLOSS LATEX B-710 WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN PERMACOAT GLOSS LATEX B-710 WHITE 4L', 'B-710', v_branch_id, 0, 765) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 765);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 765, 'Migration: ' || 'UNREF-323', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-324', '2026-03-31', 4384, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1710' OR product_name = 'BOYSEN ACRYTEX GLOSS WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX GLOSS WHITE 4L', 'B-1710', v_branch_id, 0, 1096) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 1096);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 1096, 'Migration: ' || 'UNREF-324', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-325', '2026-03-31', 7380, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DV400-WHITE-4L' OR product_name = 'DAVIES QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES QDE WHITE 4L', 'DV400-WHITE-4L', v_branch_id, 0, 820) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9, 820);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 820, 'Migration: ' || 'UNREF-325', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-326', '2026-03-31', 4779, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDG-4L' OR product_name = 'PLATONE QDE GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE GREEN 4L', 'PLQDG-4L', v_branch_id, 0, 1593) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 1593);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 1593, 'Migration: ' || 'UNREF-326', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-327', '2026-03-31', 1950, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BPAD' OR product_name = 'BUFFING PAD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BUFFING PAD', 'BPAD', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 650, 'Migration: ' || 'UNREF-327', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-328', '2026-03-31', 1140, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WQD1150-4L' OR product_name = 'WELCOAT REGULAR QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT REGULAR QDE BLACK 4L', 'WQD1150-4L', v_branch_id, 0, 570) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 570);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 570, 'Migration: ' || 'UNREF-328', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-329', '2026-03-31', 1883, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGRG-4L' OR product_name = 'POLYGLOSS PU RED GOLD 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU RED GOLD 4L', 'PGRG-4L', v_branch_id, 0, 1883) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1883);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1883, 'Migration: ' || 'UNREF-329', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-330', '2026-03-31', 1883, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGTG-4L' OR product_name = 'POLYGLOSS PU PHTHALO GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU PHTHALO GREEN 4L', 'PGTG-4L', v_branch_id, 0, 1883) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1883);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1883, 'Migration: ' || 'UNREF-330', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-331', '2026-03-31', 223, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGYG-4L' OR product_name = 'POLYGLOSS PU YELLOW GOLD 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU YELLOW GOLD 4L', 'PGYG-4L', v_branch_id, 0, 223) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 223);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 223, 'Migration: ' || 'UNREF-331', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-332', '2026-03-31', 3188, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGO-4L' OR product_name = 'POLYGLOSS PU GLEAMIST ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST ORANGE 4L', 'PGGO-4L', v_branch_id, 0, 3188) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 3188);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 3188, 'Migration: ' || 'UNREF-332', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-333', '2026-03-31', 546, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-7000' OR product_name = 'RAIN OR SHINE PREPA WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE PREPA WHITE 4L', 'ROS-7000', v_branch_id, 0, 546) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 546);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 546, 'Migration: ' || 'UNREF-333', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-334', '2026-03-31', 115, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB-1 1/2' OR product_name = '2B PAINT BRUSH 1 1/2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH 1 1/2', '2B-PB-1 1/2', v_branch_id, 0, 23) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 23);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 23, 'Migration: ' || 'UNREF-334', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-335', '2026-03-31', 650, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#3' OR product_name = '2B PAINT BRUSH #3') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH #3', '2B-PB#3', v_branch_id, 0, 65) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 10, 65);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 10, 65, 'Migration: ' || 'UNREF-335', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'INVENTORY - MARCH 31, 2026' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('INVENTORY - MARCH 31, 2026', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-336', '2026-03-31', 1500, '2026-03-31'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZHI-TBLCK' OR product_name = 'PYLOX HEAT RESISTANT BLACK') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX HEAT RESISTANT BLACK', 'PLYZHI-TBLCK', v_branch_id, 0, 150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 10, 150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 10, 150, 'Migration: ' || 'UNREF-336', '2026-03-31'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03653', '2026-04-16', 21540.760000000002, '2026-04-16'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-1L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 1L', 'DOMBF-1L', v_branch_id, 0, 150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 150, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT3/4' OR product_name = 'CROCO MASKING TAPE 3/4 18MM (1X64)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 3/4 18MM (1X64)', 'CRO-MT3/4', v_branch_id, 0, 23.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 64, 23.59);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 64, 23.59, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GLAZERB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL BLACK 4L', 'GLAZERB-4L', v_branch_id, 0, 855) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 855);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 855, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 1550);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 1550, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1493) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1493);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1493, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-739' OR product_name = 'COCONUT ELASTOMERIC WATER FROOFING PAINT ROS-739 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('COCONUT ELASTOMERIC WATER FROOFING PAINT ROS-739 RAIN OR SHINE 4L', 'ROS-739', v_branch_id, 0, 695) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 695);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 695, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PG888-4L' OR product_name = 'POLYGLOSS PU 888 RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU 888 RED 4L', 'PG888-4L', v_branch_id, 0, 2448) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2448);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2448, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGW-4L' OR product_name = 'POLYGLOSS PU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU WHITE 4L', 'PGW-4L', v_branch_id, 0, 1730) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1730);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1730, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGJB-4L' OR product_name = 'POLYGLOSS PU JET BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU JET BLACK 4L', 'PGJB-4L', v_branch_id, 0, 1830) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1830);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1830, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA2000' OR product_name = 'EAGLE SANDPAPER #2000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #2000', 'EA2000', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 28, 'Migration: ' || 'CSI-03653', '2026-04-16'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03654', '2026-04-16', 37354, '2026-04-16'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9200' OR product_name = 'NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L', 'NP9200', v_branch_id, 0, 920) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 920);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 920, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITH-4L' OR product_name = 'DO IT URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE THINNER 4L', 'DOITH-4L', v_branch_id, 0, 590) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 590);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 590, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 388) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 388);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 388, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI3634' OR product_name = 'NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L', 'PRI3634', v_branch_id, 0, 355) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 355);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 355, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1160);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1160, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT701' OR product_name = 'NAX PREMILA MT701 FAST VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT701 FAST VIOLET 1L', 'MT701', v_branch_id, 0, 1744) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1744);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1744, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1090);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1090, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 1668) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1668);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1668, 'Migration: ' || 'CSI-03654', '2026-04-16'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03656', '2026-04-17', 4595, '2026-04-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'RSW-4L' OR product_name = 'RAIN OR SHINE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE WHITE 4L', 'RSW-4L', v_branch_id, 0, 695) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 695);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 695, 'Migration: ' || 'CSI-03656', '2026-04-17'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLYGTHIN-4L' OR product_name = 'POLYGLOSS URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS URETHANE THINNER 4L', 'POLYGTHIN-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 650, 'Migration: ' || 'CSI-03656', '2026-04-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03680', '2026-05-09', 41238, '2026-05-09'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1159' OR product_name = 'NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L', 'NAT1159', v_branch_id, 0, 1120) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1120);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1120, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1600, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 600, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9200' OR product_name = 'NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L', 'NP9200', v_branch_id, 0, 1150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 1150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 1150, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WEBER' OR product_name = 'SPRAY GUN F-75G WEBER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SPRAY GUN F-75G WEBER', 'WEBER', v_branch_id, 0, 700) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 700);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 700, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 31) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 48, 31);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 48, 31, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLY- BT-ALUM-4L' OR product_name = 'POLYGLOSS-BRIGHT ALUMINUM 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS-BRIGHT ALUMINUM 4L', 'POLY- BT-ALUM-4L', v_branch_id, 0, 2050) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2050);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2050, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX301' OR product_name = 'NAX 301 NAX QDU FLAT CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 301 NAX QDU FLAT CLEAR WITH HARDENER 1L', 'NAX301', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 900);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 900, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2165) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2165);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2165, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PG888-4L' OR product_name = 'POLYGLOSS PU 888 RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU 888 RED 4L', 'PG888-4L', v_branch_id, 0, 2600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2600, 'Migration: ' || 'CSI-03680', '2026-05-09'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03681', '2026-05-11', 47294, '2026-05-11'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROBRC-1KG' OR product_name = 'ROBERLO RUBBING COMPOUND 1KG') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ROBERLO RUBBING COMPOUND 1KG', 'ROBRC-1KG', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 780);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 780, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2000, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1850, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SAFARE-4L' OR product_name = 'ROS-SAFARI BROWN_4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ROS-SAFARI BROWN_4L', 'ROS-SAFARE-4L', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 750, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA240' OR product_name = 'EAGLE SANDPAPER #240') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #240', 'EA240', v_branch_id, 0, 19.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 200, 19.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 200, 19.5, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA120' OR product_name = 'EAGLE SANDPAPER #120') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #120', 'EA120', v_branch_id, 0, 19.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 300, 19.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 300, 19.5, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT3/4' OR product_name = 'CROCO MASKING TAPE 3/4 18MM (1X64)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 3/4 18MM (1X64)', 'CRO-MT3/4', v_branch_id, 0, 22.6) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 320, 22.6);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 320, 22.6, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GIPREMOVER-BOT' OR product_name = 'GI PAINT REMOVER BOTTLE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GI PAINT REMOVER BOTTLE', 'GIPREMOVER-BOT', v_branch_id, 0, 68) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 68);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 68, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT804' OR product_name = 'NAX PREMILA MT804 ORIENT BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT804 ORIENT BLUE 1L', 'MT804', v_branch_id, 0, 2200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2200, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-4L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 4L', 'DOMBF-4L', v_branch_id, 0, 560) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 20, 560);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 20, 560, 'Migration: ' || 'CSI-03681', '2026-05-11'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-03682', '2026-05-11', 48200, '2026-05-11'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-4L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 4L', 'TOBF-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 20, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 20, 650, 'Migration: ' || 'CSI-03682', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 1850, 'Migration: ' || 'CSI-03682', '2026-05-11'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 20, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 20, 650, 'Migration: ' || 'CSI-03682', '2026-05-11'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004053', '2026-06-02', 22100, '2026-06-02'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-367' OR product_name = 'CANDY TUFF ROS-367 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CANDY TUFF ROS-367 RAIN OR SHINE 4L', 'ROS-367', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 650, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI3634' OR product_name = 'NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L', 'PRI3634', v_branch_id, 0, 500) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 500);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 500, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4406-4L' OR product_name = 'NIPPON EXTREME QDU GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU GREEN 4L', 'NXU4406-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1587-4L' OR product_name = 'NIPPON EXTREME QDU BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLUE 4L', 'NXU1587-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3602-4L' OR product_name = 'METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L', 'MEG3602-4L', v_branch_id, 0, 1000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1000, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1450);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1450, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-2133' OR product_name = 'BULLETIN RED TINTING COLOR PWTCO-2133 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BULLETIN RED TINTING COLOR PWTCO-2133 1/4L PREMIUM WELCOAT', 'PWTCO-2133', v_branch_id, 0, 100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 100);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 100, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 5, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 650, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS- UH SO RED -4L' OR product_name = 'RAIN OR SHINE- UH SO RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE- UH SO RED 4L', 'ROS- UH SO RED -4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 650, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS- HAPPY DAYS-4L' OR product_name = 'RAIN OR SHINE- HAPPY DAYS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE- HAPPY DAYS 4L', 'ROS- HAPPY DAYS-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 3, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 650, 'Migration: ' || 'CSI-004053', '2026-06-02'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004054', '2026-06-02', 31016, '2026-06-02'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SG-4L' OR product_name = 'RAIN OR SHINE STONE GRAY 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE STONE GRAY 4L', 'ROS-SG-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 650, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-6133' OR product_name = 'BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT', 'PWTCO-6133', v_branch_id, 0, 100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 100);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 100, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-BRIDE-4L' OR product_name = 'ROS-BRIDAL GOWN-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ROS-BRIDAL GOWN-4L', 'ROS-BRIDE-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 650, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 600, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-629-4L' OR product_name = 'RAIN OR SHINE ROS-629 TULIPS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE ROS-629 TULIPS 4L', 'ROS-629-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 650);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 650, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1600, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT804' OR product_name = 'NAX PREMILA MT804 ORIENT BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT804 ORIENT BLUE 1L', 'MT804', v_branch_id, 0, 2200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2200, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1850, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2160);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2160, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB-1 1/2' OR product_name = '2B PAINT BRUSH 1 1/2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH 1 1/2', '2B-PB-1 1/2', v_branch_id, 0, 23) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 23);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 23, 'Migration: ' || 'CSI-004054', '2026-06-02'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004055', '2026-06-02', 3366, '2026-06-02'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UNOLT-BOT' OR product_name = 'UNO LACQUER THINNER BOT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('UNO LACQUER THINNER BOT', 'UNOLT-BOT', v_branch_id, 0, 50) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 50);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 50, 'Migration: ' || 'CSI-004055', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGFB-4L' OR product_name = 'POLYGLOSS PU FLAT BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU FLAT BLACK 4L', 'PGFB-4L', v_branch_id, 0, 1950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1950);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1950, 'Migration: ' || 'CSI-004055', '2026-06-02'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#1' OR product_name = 'PAINT BRUSH 2B #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT BRUSH 2B #1', '2B-PB#1', v_branch_id, 0, 18) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 18);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 18, 'Migration: ' || 'CSI-004055', '2026-06-02'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-487', '2026-06-16', 2440, '2026-06-16'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2440);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2440, 'Migration: ' || 'UNREF-487', '2026-06-16'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-489', '2026-06-16', 9760, '2026-06-16'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2440);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2440, 'Migration: ' || 'UNREF-489', '2026-06-16'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-491', '2026-06-17', 2000, '2026-06-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-4L' OR product_name = 'EXTREME QDU MIXING 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 4L', 'EXTREMEMIX-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: ' || 'UNREF-491', '2026-06-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-494', '2026-06-22', 3600, '2026-06-22'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-4L' OR product_name = 'NAX QDU MIX 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 4L', 'NAXQDUMIX-4L', v_branch_id, 0, 3600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 3600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 3600, 'Migration: ' || 'UNREF-494', '2026-06-22'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-496', '2026-06-22', 2000, '2026-06-22'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-4L' OR product_name = 'EXTREME QDU MIXING 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 4L', 'EXTREMEMIX-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: ' || 'UNREF-496', '2026-06-22'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-497', '2026-06-23', 0, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QDEMIX-1L' OR product_name = 'QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L', 'QDEMIX-1L', v_branch_id, 0, 200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 19.75, 200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 19.75, 200, 'Migration: ' || 'UNREF-497', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-498', '2026-06-23', 800, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QDEMIX-4L' OR product_name = 'QDE NP, ALPHA CHROMA, DAVIES, BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('QDE NP, ALPHA CHROMA, DAVIES, BOYSEN 4L', 'QDEMIX-4L', v_branch_id, 0, 800) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 800);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 800, 'Migration: ' || 'UNREF-498', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-499', '2026-06-23', 106445, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 43.625, 2440);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 43.625, 2440, 'Migration: ' || 'UNREF-499', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-500', '2026-06-23', 465, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYLICMIX-1L' OR product_name = 'ACRYLIC NP, TIMEOUT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ACRYLIC NP, TIMEOUT 1L', 'ACRYLICMIX-1L', v_branch_id, 0, 310) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1.5, 310);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.5, 310, 'Migration: ' || 'UNREF-500', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-501', '2026-06-23', 1800, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'LATEXMIX-4L' OR product_name = 'LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 4L', 'LATEXMIX-4L', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 900);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 900, 'Migration: ' || 'UNREF-501', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-502', '2026-06-23', 180, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'LATEXMIX-1L' OR product_name = 'LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 1L', 'LATEXMIX-1L', v_branch_id, 0, 240) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 0.75, 240);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.75, 240, 'Migration: ' || 'UNREF-502', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-503', '2026-06-23', 23625, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-4L' OR product_name = 'NAX QDU MIX 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 4L', 'NAXQDUMIX-4L', v_branch_id, 0, 3600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6.5625, 3600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6.5625, 3600, 'Migration: ' || 'UNREF-503', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-504', '2026-06-23', 32467.5, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 36.075, 900);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 36.075, 900, 'Migration: ' || 'UNREF-504', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-505', '2026-06-23', 9125, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 500) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18.25, 500);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18.25, 500, 'Migration: ' || 'UNREF-505', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'TRANSFER TO MIXING AREA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('TRANSFER TO MIXING AREA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-506', '2026-06-23', 509.375, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4113-4L' OR product_name = 'NIPPON EXTREME QDU RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU RED 4L', 'NXU4113-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 0.3125, 1630);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.3125, 1630, 'Migration: ' || 'UNREF-506', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-507', '2026-06-23', 280, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GLAZERW-1L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL WHITE (R) 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL WHITE (R) 1L', 'GLAZERW-1L', v_branch_id, 0, 280) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 280);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 280, 'Migration: ' || 'UNREF-507', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-509', '2026-06-23', 2000, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-4L' OR product_name = 'EXTREME QDU MIXING 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 4L', 'EXTREMEMIX-4L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: ' || 'UNREF-509', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-512', '2026-06-23', 2800, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AEMIX-4L' OR product_name = 'GLAZER AUTO ENAMEL MIX 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTO ENAMEL MIX 4L', 'AEMIX-4L', v_branch_id, 0, 1400) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1400);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1400, 'Migration: ' || 'UNREF-512', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-514', '2026-06-23', 9760, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2440);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2440, 'Migration: ' || 'UNREF-514', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004078', '2026-06-23', 47250, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 700) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18, 700);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 700, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 600, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI3634' OR product_name = 'NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L', 'PRI3634', v_branch_id, 0, 500) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 500);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 500, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1200' OR product_name = 'EAGLE SANDPAPER #1200') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1200', 'EA1200', v_branch_id, 0, 19.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 19.5);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 19.5, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1500' OR product_name = 'EAGLE SANDPAPER #1500') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1500', 'EA1500', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 28, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA2000' OR product_name = 'EAGLE SANDPAPER #2000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #2000', 'EA2000', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 28);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 28, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 850, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS- HAPPY DAYS-4L' OR product_name = 'RAIN OR SHINE- HAPPY DAYS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE- HAPPY DAYS 4L', 'ROS- HAPPY DAYS-4L', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 850, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-862' OR product_name = 'RAIN OR SHINE IVORY 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE IVORY 4L', 'ROS-862', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 850, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1600, 'Migration: ' || 'CSI-004078', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004079', '2026-06-23', 22260, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT103' OR product_name = 'NAX PREMILA MT103 WHITE LS 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT103 WHITE LS 1L', 'MT103', v_branch_id, 0, 1500) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1500);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1500, 'Migration: ' || 'CSI-004079', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOD145' OR product_name = 'NAX SOD145 SOLVENT NAPTHA/DEGREASER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOD145 SOLVENT NAPTHA/DEGREASER 4L', 'SOD145', v_branch_id, 0, 800) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 800);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 800, 'Migration: ' || 'CSI-004079', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NLT-4L' OR product_name = 'NIPPON LACQUER THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON LACQUER THINNER 4L', 'NLT-4L', v_branch_id, 0, 560) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 560);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 560, 'Migration: ' || 'CSI-004079', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT805' OR product_name = 'NAX PREMILA MT805 CUSTOM BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT805 CUSTOM BLUE 1L', 'MT805', v_branch_id, 0, 2200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2200, 'Migration: ' || 'CSI-004079', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2600) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2600);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2600, 'Migration: ' || 'CSI-004079', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004080', '2026-06-23', 18695, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MSC' OR product_name = 'OLD NEWS') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('OLD NEWS', 'MSC', v_branch_id, 0, 65) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 100, 65);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 65, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-BLUE -OC-4L' OR product_name = 'RAIN OR SHINE-BLUE OCEAN-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-BLUE OCEAN-4L', 'ROS-BLUE -OC-4L', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 850, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-1L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 1L', 'DOMBF-1L', v_branch_id, 0, 195) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 195);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 195, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 2300) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2300);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2300, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3602-4L' OR product_name = 'METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L', 'MEG3602-4L', v_branch_id, 0, 1000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 1000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 1000, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1850, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GAETB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L', 'GAETB-4L', v_branch_id, 0, 855) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 855);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 855, 'Migration: ' || 'CSI-004080', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004084', '2026-06-23', 16200, '2026-06-23'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9700' OR product_name = 'NAX PREMILA NP9700 HS 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9700 HS 2K CLEAR WITH HARDENER 1L', 'NP9700', v_branch_id, 0, 1350) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 1350);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 1350, 'Migration: ' || 'CSI-004084', '2026-06-23'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004090', '2026-07-01', 39600, '2026-07-01'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 680) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18, 680);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 680, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1640);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1640, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4113-4L' OR product_name = 'NIPPON EXTREME QDU RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU RED 4L', 'NXU4113-4L', v_branch_id, 0, 1800) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1800);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1800, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2280) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2280);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2280, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT003' OR product_name = 'NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L', 'MT003', v_branch_id, 0, 2360) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2360);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2360, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDIR-4L' OR product_name = 'PLATONE QDE INTERNATIONAL RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE INTERNATIONAL RED 4L', 'PLQDIR-4L', v_branch_id, 0, 950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 950);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 950, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-701' OR product_name = 'RAIN OR SHINE BAGUIO GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE BAGUIO GREEN 4L', 'ROS-701', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 750, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGFB-4L' OR product_name = 'POLYGLOSS PU FLAT BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU FLAT BLACK 4L', 'PGFB-4L', v_branch_id, 0, 2150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2150, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGW-4L' OR product_name = 'POLYGLOSS PU GLEAMIST WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST WHITE 4L', 'PGGW-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1850, 'Migration: ' || 'CSI-004090', '2026-07-01'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004091', '2026-07-01', 8970, '2026-07-01'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3001-4L' OR product_name = 'METALGUARD EPOXY PRIMER WHITE WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER WHITE WITH HARDENER 4L', 'MEG3001-4L', v_branch_id, 0, 955) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 955);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 955, 'Migration: ' || 'CSI-004091', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-109' OR product_name = 'RAIN OR SHINE TULLE WHITE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE TULLE WHITE', 'ROS-109', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 750, 'Migration: ' || 'CSI-004091', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1100);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1100, 'Migration: ' || 'CSI-004091', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT503' OR product_name = 'NAX PREMILA MT503 THRENE RED G 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT503 THRENE RED G 1L', 'MT503', v_branch_id, 0, 2300) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2300);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2300, 'Migration: ' || 'CSI-004091', '2026-07-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITUH' OR product_name = 'DO IT URETHANE HARDENER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE HARDENER', 'DOITUH', v_branch_id, 0, 250) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 250);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 250, 'Migration: ' || 'CSI-004091', '2026-07-01'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-800', '2026-07-17', 940, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1161' OR product_name = 'NAX NAT-1161 TTC LAVENDER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1161 TTC LAVENDER MICA 1L', 'NAT1161', v_branch_id, 0, 940) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 940);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 940, 'Migration: ' || 'UNREF-800', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-801', '2026-07-17', 13440, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 560) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 560);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 560, 'Migration: ' || 'UNREF-801', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-802', '2026-07-17', 875, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1164' OR product_name = 'NAX NAT-1164 TTC BRIGHT GOLD MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1164 TTC BRIGHT GOLD MICA 1L', 'NAT1164', v_branch_id, 0, 875) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 875);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 875, 'Migration: ' || 'UNREF-802', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-803', '2026-07-17', 1910, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3602-4L' OR product_name = 'METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L', 'MEG3602-4L', v_branch_id, 0, 955) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 955);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 955, 'Migration: ' || 'UNREF-803', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-804', '2026-07-17', 3240, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NLT-4L' OR product_name = 'NIPPON LACQUER THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON LACQUER THINNER 4L', 'NLT-4L', v_branch_id, 0, 540) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 540);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 540, 'Migration: ' || 'UNREF-804', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-805', '2026-07-17', 980, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1159' OR product_name = 'NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L', 'NAT1159', v_branch_id, 0, 980) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 980);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 980, 'Migration: ' || 'UNREF-805', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-806', '2026-07-17', 1980, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-1L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 1L', 'DOMBF-1L', v_branch_id, 0, 165) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 165);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 165, 'Migration: ' || 'UNREF-806', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-807', '2026-07-17', 4080, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-4L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 4L', 'DOMBF-4L', v_branch_id, 0, 680) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 680);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 680, 'Migration: ' || 'UNREF-807', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-808', '2026-07-17', 1180, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT3974' OR product_name = 'NAX NAT-3974 QDU FLAT BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-3974 QDU FLAT BLACK 1L', 'NAT3974', v_branch_id, 0, 590) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 590);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 590, 'Migration: ' || 'UNREF-808', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-809', '2026-07-17', 5400, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI1680' OR product_name = 'NAX PP BUMPER PRIMER GRAY 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PP BUMPER PRIMER GRAY 1L', 'PRI1680', v_branch_id, 0, 450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 450);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 450, 'Migration: ' || 'UNREF-809', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-810', '2026-07-17', 525, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-1L' OR product_name = 'NAX NAT-1OO TTC WHITE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1OO TTC WHITE 1L', 'NAT100-1L', v_branch_id, 0, 525) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 525);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 525, 'Migration: ' || 'UNREF-810', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-811', '2026-07-17', 130, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALCROLTC -THALO BLUE-1L' OR product_name = 'ALPHA CROMA LTC THALO BLUE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CROMA LTC THALO BLUE', 'ALCROLTC -THALO BLUE-1L', v_branch_id, 0, 130) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 130);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 130, 'Migration: ' || 'UNREF-811', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-812', '2026-07-17', 1850, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGMC-4L' OR product_name = 'POLYGLOSS PU METALLIC COARSE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU METALLIC COARSE 4L', 'PGMC-4L', v_branch_id, 0, 1850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1850, 'Migration: ' || 'UNREF-812', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-813', '2026-07-17', 3200, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGO-4L' OR product_name = 'POLYGLOSS PU GLEAMIST ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST ORANGE 4L', 'PGGO-4L', v_branch_id, 0, 3200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 3200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 3200, 'Migration: ' || 'UNREF-813', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-814', '2026-07-17', 3200, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGY-4L' OR product_name = 'POLYGLOSS PU GLEAMIST YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST YELLOW 4L', 'PGGY-4L', v_branch_id, 0, 3200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 3200);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 3200, 'Migration: ' || 'UNREF-814', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-815', '2026-07-17', 1640, '2026-07-17'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1640);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1640, 'Migration: ' || 'UNREF-815', '2026-07-17'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-899', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYLICMIX-1L' OR product_name = 'ACRYLIC NP, TIMEOUT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ACRYLIC NP, TIMEOUT 1L', 'ACRYLICMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 9.5, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9.5, 0, 'Migration: ' || 'UNREF-899', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-900', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QDEMIX-1L' OR product_name = 'QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L', 'QDEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 16.75, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 16.75, 0, 'Migration: ' || 'UNREF-900', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-901', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 29.25, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 29.25, 0, 'Migration: ' || 'UNREF-901', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-902', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 28.5, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 28.5, 0, 'Migration: ' || 'UNREF-902', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-903', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'LATEXMIX-1L' OR product_name = 'LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LATEX NP, ALPHA CHROMA, DAVIES, BOYSEN, WC 1L', 'LATEXMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 0, 'Migration: ' || 'UNREF-903', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-904', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-1L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 1L', 'UTMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 32.5, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 32.5, 0, 'Migration: ' || 'UNREF-904', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'FROM STOCK TO SALES' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('FROM STOCK TO SALES', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'UNREF-905', '2026-07-24', 0, '2026-07-24'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AEMIX-1L' OR product_name = 'GLAZER AUTO ENAMEL MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTO ENAMEL MIX 1L', 'AEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 0);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 0, 'Migration: ' || 'UNREF-905', '2026-07-24'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004115', '2026-08-01', 32785, '2026-08-01'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-1L' OR product_name = 'NAX NAT-1OO TTC WHITE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1OO TTC WHITE 1L', 'NAT100-1L', v_branch_id, 0, 525) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 525);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 525, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GLAZERB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL BLACK 4L', 'GLAZERB-4L', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 850);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 850, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT096' OR product_name = 'NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L', 'MT096', v_branch_id, 0, 6150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 6150);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 6150, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-4L' OR product_name = 'NAX NAT-100 TTC WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-100 TTC WHITE 4L', 'NAT100-4L', v_branch_id, 0, 1905) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1905);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1905, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 2010) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2010);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2010, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2280) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 4, 2280);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 2280, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9200' OR product_name = 'NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L', 'NP9200', v_branch_id, 0, 975) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 975);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 975, 'Migration: ' || 'CSI-004115', '2026-08-01'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CS-004114', '2026-08-01', 13440, '2026-08-01'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 560) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 24, 560);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 24, 560, 'Migration: ' || 'CS-004114', '2026-08-01'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004114', '2026-08-01', 19995, '2026-08-01'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 660) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 18, 660);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 660, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1280) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1280);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1280, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-223' OR product_name = 'RAIN OR SHINE NICOLE PINK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE NICOLE PINK 4L', 'ROS-223', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 750, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1800) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 1800);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1800, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3602-4L' OR product_name = 'METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L', 'MEG3602-4L', v_branch_id, 0, 955) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 955);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 955, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'HDOIT' OR product_name = 'DO IT HARDENER 2K TOP COAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT HARDENER 2K TOP COAT', 'HDOIT', v_branch_id, 0, 250) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 2, 250);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 250, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYPRIMER-4L' OR product_name = 'ALPHA CHROMA ACRYTILE PRIMER WHITE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA ACRYTILE PRIMER WHITE', 'ACRYPRIMER-4L', v_branch_id, 0, 950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 950);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 950, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALPHAC-RS-CAN' OR product_name = 'ALPHA CHROMA OTC RAW SEINA 1CAN') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA OTC RAW SEINA 1CAN', 'ALPHAC-RS-CAN', v_branch_id, 0, 80) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 80);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 80, 'Migration: ' || 'CSI-004114', '2026-08-01'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004118', '2026-08-03', 4710, '2026-08-03'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 660) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 660);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 660, 'Migration: ' || 'CSI-004118', '2026-08-03'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 750, 'Migration: ' || 'CSI-004118', '2026-08-03'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004120', '2026-08-06', 19324, '2026-08-06'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGW-4L' OR product_name = 'POLYGLOSS PU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU WHITE 4L', 'PGW-4L', v_branch_id, 0, 1970) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1970);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1970, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 660) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 660);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 660, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 2010) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2010);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2010, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 1000);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1000, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT701' OR product_name = 'NAX PREMILA MT701 FAST VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT701 FAST VIOLET 1L', 'MT701', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 2100);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2100, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 560) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 560);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 560, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDW-4L' OR product_name = 'PLATONE QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE WHITE 4L', 'PLQDW-4L', v_branch_id, 0, 700) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 700);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 700, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GAETB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L', 'GAETB-4L', v_branch_id, 0, 864) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 864);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 864, 'Migration: ' || 'CSI-004120', '2026-08-06'::timestamp);
+
+  -- Supplier lookup
+  SELECT id INTO v_supplier_id FROM public.suppliers WHERE name = 'APC DISTRIBUTION - VALENCIA' AND branch_id = v_branch_id LIMIT 1;
+  IF v_supplier_id IS NULL THEN
+     INSERT INTO public.suppliers (name, branch_id) VALUES ('APC DISTRIBUTION - VALENCIA', v_branch_id) RETURNING id INTO v_supplier_id;
+  END IF;
+
+  INSERT INTO public.stock_in_logs (branch_id, supplier_id, invoice_number, date_received, total_amount, created_at)
+  VALUES (v_branch_id, v_supplier_id, 'CSI-004125', '2026-08-08', 10230, '2026-08-08'::timestamp) RETURNING id INTO v_stock_in_id;
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-BLUE -OC-4L' OR product_name = 'RAIN OR SHINE-BLUE OCEAN-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-BLUE OCEAN-4L', 'ROS-BLUE -OC-4L', v_branch_id, 0, 750) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 1, 750);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 750, 'Migration: ' || 'CSI-004125', '2026-08-08'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 660) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 6, 660);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6, 660, 'Migration: ' || 'CSI-004125', '2026-08-08'::timestamp);
+
+  -- Item lookup
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI3634' OR product_name = 'NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L', 'PRI3634', v_branch_id, 0, 460) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_in_items (stock_in_id, inventory_id, quantity_received, unit_cost)
+  VALUES (v_stock_in_id, v_item_id, 12, 460);
+  
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 460, 'Migration: ' || 'CSI-004125', '2026-08-08'::timestamp);
+
+  -- START STANDALONE ADJUSTMENTS
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-337', '2026-04-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-338', '2026-04-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-339', '2026-04-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT719-4L' OR product_name = 'NAX NAT-719 TTC COARSE SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-719 TTC COARSE SILVER 4L', 'NAT719-4L', v_branch_id, 0, 2325) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2325, 'Migration: Adj (-) UNREF-360', '2026-04-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT192' OR product_name = 'NAX NAT-192 TTC BRIGHT RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-192 TTC BRIGHT RED 1L', 'NAT192', v_branch_id, 0, 540) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 540, 'Migration: Adj (-) UNREF-361', '2026-04-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT320' OR product_name = 'NAX NAT-320 TTC GOLD YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-320 TTC GOLD YELLOW 1L', 'NAT320', v_branch_id, 0, 425) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 425, 'Migration: Adj (-) UNREF-362', '2026-04-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-363', '2026-04-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 70) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 70, 'Migration: Adj (-) UNREF-364', '2026-04-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-365', '2026-04-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DV400-WHITE-4L' OR product_name = 'DAVIES QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES QDE WHITE 4L', 'DV400-WHITE-4L', v_branch_id, 0, 820) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 820, 'Migration: Adj (-) UNREF-366', '2026-04-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX10100' OR product_name = 'NAX NAT-10100 NH-585 PEARL WHITE MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-10100 NH-585 PEARL WHITE MICA 1L', 'NAX10100', v_branch_id, 0, 675) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 675, 'Migration: Adj (-) UNREF-367', '2026-04-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-368', '2026-04-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-369', '2026-04-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-379', '2026-04-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDB-4L' OR product_name = 'PLATONE QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE BLACK 4L', 'PLQDB-4L', v_branch_id, 0, 661) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 661, 'Migration: Adj (-) UNREF-380', '2026-04-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 1668) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1668, 'Migration: Adj (-) UNREF-381', '2026-04-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1159' OR product_name = 'NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L', 'NAT1159', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 780, 'Migration: Adj (-) UNREF-382', '2026-04-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT320' OR product_name = 'NAX NAT-320 TTC GOLD YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-320 TTC GOLD YELLOW 1L', 'NAT320', v_branch_id, 0, 425) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 425, 'Migration: Adj (-) UNREF-383', '2026-04-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1164' OR product_name = 'NAX NAT-1164 TTC BRIGHT GOLD MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1164 TTC BRIGHT GOLD MICA 1L', 'NAT1164', v_branch_id, 0, 640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 640, 'Migration: Adj (-) UNREF-384', '2026-04-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT990-4L' OR product_name = 'NAX NAT-990 TTC BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-990 TTC BLACK 4L', 'NAT990-4L', v_branch_id, 0, 1518) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1518, 'Migration: Adj (-) UNREF-385', '2026-04-30'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-386', '2026-05-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLY- BT-ALUM-4L' OR product_name = 'POLYGLOSS-BRIGHT ALUMINUM 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS-BRIGHT ALUMINUM 4L', 'POLY- BT-ALUM-4L', v_branch_id, 0, 1950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1950, 'Migration: Adj (-) UNREF-387', '2026-05-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-388', '2026-05-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLYGTHIN-4L' OR product_name = 'POLYGLOSS URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS URETHANE THINNER 4L', 'POLYGTHIN-4L', v_branch_id, 0, 675) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 675, 'Migration: Adj (-) UNREF-389', '2026-05-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-390', '2026-05-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1157' OR product_name = 'NAX NAT-1157 TTC BRIGHT COPPER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1157 TTC BRIGHT COPPER MICA 1L', 'NAT1157', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 780, 'Migration: Adj (-) UNREF-391', '2026-05-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT147' OR product_name = 'NAX NAT-147 TTC THRENE RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-147 TTC THRENE RED 1L', 'NAT147', v_branch_id, 0, 1120) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1120, 'Migration: Adj (-) UNREF-392', '2026-05-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT096' OR product_name = 'NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L', 'MT096', v_branch_id, 0, 6000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 6000, 'Migration: Adj (-) UNREF-393', '2026-05-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-394', '2026-05-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-4L' OR product_name = 'NAX NAT-100 TTC WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-100 TTC WHITE 4L', 'NAT100-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) UNREF-395', '2026-05-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-419', '2026-05-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-420', '2026-05-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT607' OR product_name = 'NAX PREMILA MT607 AUTUMN RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT607 AUTUMN RED 1L', 'MT607', v_branch_id, 0, 2048) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2048, 'Migration: Adj (-) UNREF-421', '2026-05-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-422', '2026-05-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4406-4L' OR product_name = 'NIPPON EXTREME QDU GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU GREEN 4L', 'NXU4406-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-423', '2026-05-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1587-4L' OR product_name = 'NIPPON EXTREME QDU BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLUE 4L', 'NXU1587-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-424', '2026-05-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-425', '2026-05-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-426', '2026-05-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT100-1L' OR product_name = 'NAX PREMILA MT100 WHITE HS 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT100 WHITE HS 1L', 'MT100-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1090, 'Migration: Adj (-) UNREF-427', '2026-05-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT136' OR product_name = 'NAX PREMILA MT136 METALLIC ORANGE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT136 METALLIC ORANGE 1L', 'MT136', v_branch_id, 0, 5050) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 5050, 'Migration: Adj (-) UNREF-428', '2026-05-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-429', '2026-05-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1090, 'Migration: Adj (-) UNREF-430', '2026-05-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAS535' OR product_name = 'NIPPON ACRYLIC GLOSS THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ACRYLIC GLOSS THINNER 4L', 'NAS535', v_branch_id, 0, 450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 450, 'Migration: Adj (-) UNREF-431', '2026-05-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT002-1L' OR product_name = 'NAX PREMILA MT002 CRYSTAL SILVER FINE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT002 CRYSTAL SILVER FINE 1L', 'MT002-1L', v_branch_id, 0, 2150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2150, 'Migration: Adj (-) UNREF-432', '2026-05-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDB-4L' OR product_name = 'PLATONE QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE BLACK 4L', 'PLQDB-4L', v_branch_id, 0, 661) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 661, 'Migration: Adj (-) UNREF-433', '2026-05-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSQDEW-GAL' OR product_name = 'BOYSEN QDE WHITE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN QDE WHITE GAL', 'BSQDEW-GAL', v_branch_id, 0, 834) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 834, 'Migration: Adj (-) UNREF-434', '2026-05-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT719-4L' OR product_name = 'NAX NAT-719 TTC COARSE SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-719 TTC COARSE SILVER 4L', 'NAT719-4L', v_branch_id, 0, 2325) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2325, 'Migration: Adj (-) UNREF-435', '2026-05-19'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT023' OR product_name = 'NAX PREMILA MT023 HIGH SPARKLE FINE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT023 HIGH SPARKLE FINE 1L', 'MT023', v_branch_id, 0, 1994) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1994, 'Migration: Adj (-) UNREF-436', '2026-05-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-437', '2026-05-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-438', '2026-05-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1160, 'Migration: Adj (-) UNREF-439', '2026-05-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT804' OR product_name = 'NAX PREMILA MT804 ORIENT BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT804 ORIENT BLUE 1L', 'MT804', v_branch_id, 0, 1593) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1593, 'Migration: Adj (-) UNREF-440', '2026-05-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1550, 'Migration: Adj (-) UNREF-441', '2026-05-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 1668) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1668, 'Migration: Adj (-) UNREF-442', '2026-05-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-710' OR product_name = 'BOYSEN PERMACOAT GLOSS LATEX B-710 WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN PERMACOAT GLOSS LATEX B-710 WHITE 4L', 'B-710', v_branch_id, 0, 765) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 765, 'Migration: Adj (-) UNREF-443', '2026-05-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-791' OR product_name = 'BOYSEN PERMACOAT FLAT LATEX BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN PERMACOAT FLAT LATEX BLACK 4L', 'B-791', v_branch_id, 0, 615) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 615, 'Migration: Adj (-) UNREF-444', '2026-05-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-445', '2026-05-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4406-4L' OR product_name = 'NIPPON EXTREME QDU GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU GREEN 4L', 'NXU4406-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-446', '2026-05-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-447', '2026-05-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-448', '2026-05-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT149' OR product_name = 'NAX NAT-149 TTC DARK MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-149 TTC DARK MAROON 1L', 'NAT149', v_branch_id, 0, 1110) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1110, 'Migration: Adj (-) UNREF-449', '2026-05-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT715-1L' OR product_name = 'NAX NAT-715 TTC FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-715 TTC FINE SILVER 1L', 'NAT715-1L', v_branch_id, 0, 422) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 422, 'Migration: Adj (-) UNREF-450', '2026-05-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1110-4L' OR product_name = 'NAX NAT-1110 TTC BRIGHT WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1110 TTC BRIGHT WHITE 4L', 'NAT1110-4L', v_branch_id, 0, 2400) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2400, 'Migration: Adj (-) UNREF-451', '2026-05-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-452', '2026-05-29'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT990-4L' OR product_name = 'NAX NAT-990 TTC BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-990 TTC BLACK 4L', 'NAT990-4L', v_branch_id, 0, 1518) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1518, 'Migration: Adj (-) UNREF-453', '2026-06-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 70) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 70, 'Migration: Adj (-) UNREF-454', '2026-06-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-455', '2026-06-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSQDEW-GAL' OR product_name = 'BOYSEN QDE WHITE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN QDE WHITE GAL', 'BSQDEW-GAL', v_branch_id, 0, 834) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 834, 'Migration: Adj (-) UNREF-456', '2026-06-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-480', '2026-06-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-481', '2026-06-09'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-482', '2026-06-10'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT103' OR product_name = 'NAX PREMILA MT103 WHITE LS 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT103 WHITE LS 1L', 'MT103', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1090, 'Migration: Adj (-) UNREF-483', '2026-06-10'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1157' OR product_name = 'NAX NAT-1157 TTC BRIGHT COPPER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1157 TTC BRIGHT COPPER MICA 1L', 'NAT1157', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 780, 'Migration: Adj (-) UNREF-484', '2026-06-11'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-485', '2026-06-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT071' OR product_name = 'NAX PREMILA MT071 MICA BASE 5B BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT071 MICA BASE 5B BLUE 1L', 'MT071', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3000, 'Migration: Adj (-) UNREF-486', '2026-06-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-488', '2026-06-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-490', '2026-06-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-492', '2026-06-17'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1110-4L' OR product_name = 'NAX NAT-1110 TTC BRIGHT WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1110 TTC BRIGHT WHITE 4L', 'NAT1110-4L', v_branch_id, 0, 2400) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2400, 'Migration: Adj (-) UNREF-493', '2026-06-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1550, 'Migration: Adj (-) UNREF-495', '2026-06-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1485, 'Migration: Adj (-) UNREF-508', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT025' OR product_name = 'NAX PREMILA MT025 HIGH SPARKLE SUPER COARSE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT025 HIGH SPARKLE SUPER COARSE 1L', 'MT025', v_branch_id, 0, 1745) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1745, 'Migration: Adj (-) UNREF-510', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GAETB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L', 'GAETB-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-511', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2100, 'Migration: Adj (-) UNREF-513', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 32, 'Migration: Adj (-) UNREF-515', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-100' OR product_name = 'WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L', 'ROS-SR-100', v_branch_id, 0, 672.4) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 672.4, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WQD1150-4L' OR product_name = 'WELCOAT REGULAR QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WELCOAT REGULAR QDE BLACK 4L', 'WQD1150-4L', v_branch_id, 0, 570) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 570, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 70) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 7.25, 70, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'VSEAL' OR product_name = 'VULCASEAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('VULCASEAL', 'VSEAL', v_branch_id, 0, 62) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 62, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UNOLT-BOT' OR product_name = 'UNO LACQUER THINNER BOT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('UNO LACQUER THINNER BOT', 'UNOLT-BOT', v_branch_id, 0, 50) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 12, 50, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UNOPT-BOT' OR product_name = 'UNO PAINT THINNER BOT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('UNO PAINT THINNER BOT', 'UNOPT-BOT', v_branch_id, 0, 52) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 52, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-10-1L' OR product_name = 'TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES', 'AC-10-1L', v_branch_id, 0, 108) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 108, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-4L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 4L', 'TOBF-4L', v_branch_id, 0, 585) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 7, 585, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TLWAX' OR product_name = 'TIMELESS PREMIUM LIQUID WAX 5OML') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMELESS PREMIUM LIQUID WAX 5OML', 'TLWAX', v_branch_id, 0, 50) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 45, 50, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-30-1L' OR product_name = 'THALO GREEN ACRY-COLOR AC-30 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('THALO GREEN ACRY-COLOR AC-30 1L DAVIES', 'AC-30-1L', v_branch_id, 0, 103) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 103, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-20-1L' OR product_name = 'THALO BLUE ACRY-COLOR AC-20 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('THALO BLUE ACRY-COLOR AC-20 1L DAVIES', 'AC-20-1L', v_branch_id, 0, 103) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 103, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA80' OR product_name = 'SAND PAPER #80') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SAND PAPER #80', 'EA80', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 160, 28, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA100' OR product_name = 'SAND PAPER #100') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SAND PAPER #100', 'EA100', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 109, 28, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'RUGBY' OR product_name = 'RUGBY') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RUGBY', 'RUGBY', v_branch_id, 0, 66) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 66, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROBRC-1KG' OR product_name = 'ROBERLO RUBBING COMPOUND 1KG') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ROBERLO RUBBING COMPOUND 1KG', 'ROBRC-1KG', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3.5, 780, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-90-1L' OR product_name = 'RAW SIENNA ACRY-COLOR AC-90 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAW SIENNA ACRY-COLOR AC-90 1L DAVIES', 'AC-90-1L', v_branch_id, 0, 115) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 115, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QSHG710-5L' OR product_name = 'Q-SHIELD EXTRA HG-710 GLOSS WHITE 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('Q-SHIELD EXTRA HG-710 GLOSS WHITE 5L', 'QSHG710-5L', v_branch_id, 0, 851) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 851, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QSHG710-15L' OR product_name = 'Q-SHIELD EXTRA HG-710 GLOSS WHITE 15L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('Q-SHIELD EXTRA HG-710 GLOSS WHITE 15L', 'QSHG710-15L', v_branch_id, 0, 2442) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 2442, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PYLZWH-02' OR product_name = 'PYLOX LAZER WHITE 02') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER WHITE 02', 'PYLZWH-02', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZSKBL-22' OR product_name = 'PYLOX LAZER SKY BLUE 22') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER SKY BLUE 22', 'PLYZSKBL-22', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZSIL-42' OR product_name = 'PYLOX LAZER SILVER 42') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER SILVER 42', 'PLYZSIL-42', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZMTW-03' OR product_name = 'PYLOX LAZER MATT WHITE 03') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER MATT WHITE 03', 'PLYZMTW-03', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZLTGR-33' OR product_name = 'PYLOX LAZER LIGHT GREEN 33') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER LIGHT GREEN 33', 'PLYZLTGR-33', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZGBLK-48' OR product_name = 'PYLOX LAZER GLOSS BLACK 48') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER GLOSS BLACK 48', 'PLYZGBLK-48', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 13, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOUVIO-604' OR product_name = 'PYLOX LAZER FLOURESCENT VIOLET 604') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT VIOLET 604', 'PLYZFLOUVIO-604', v_branch_id, 0, 135) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 135, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOURANGE-601' OR product_name = 'PYLOX LAZER FLOURESCENT ORANGE 601') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT ORANGE 601', 'PLYZFLOURANGE-601', v_branch_id, 0, 135) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 135, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZCLR-01' OR product_name = 'PYLOX LAZER CLEAR 01') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER CLEAR 01', 'PLYZCLR-01', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZCANRED-801' OR product_name = 'PYLOX LAZER CANDYTONE RED 801') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER CANDYTONE RED 801', 'PLYZCANRED-801', v_branch_id, 0, 110) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0, 110, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGTOPC-1L' OR product_name = 'POLYGLOSS TOP COAT W/H') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS TOP COAT W/H', 'PGTOPC-1L', v_branch_id, 0, 470) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 470, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PG888-4L' OR product_name = 'POLYGLOSS PU 888 RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU 888 RED 4L', 'PG888-4L', v_branch_id, 0, 2450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.125, 2450, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDEY-4L' OR product_name = 'PLATONE QDE YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE YELLOW 4L', 'PLQDEY-4L', v_branch_id, 0, 836) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 836, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDRB-4L' OR product_name = 'PLATONE QDE ROYAL BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE ROYAL BLUE 4L', 'PLQDRB-4L', v_branch_id, 0, 698) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 698, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDB-4L' OR product_name = 'PLATONE QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE BLACK 4L', 'PLQDB-4L', v_branch_id, 0, 661) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.4375, 661, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TRAY' OR product_name = 'PAINT ROLLER TRAY') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT ROLLER TRAY', 'TRAY', v_branch_id, 0, 40) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 40, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MSC' OR product_name = 'OLD NEWS') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('OLD NEWS', 'MSC', v_branch_id, 0, 45) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 52.5, 45, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP8100' OR product_name = 'NIPPON ULTRA 8100T FD 2K CLEAR W/HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ULTRA 8100T FD 2K CLEAR W/HARDENER 1L', 'NP8100', v_branch_id, 0, 1200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0, 1200, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NMPREDOX-GAL' OR product_name = 'NIPPON METAL PRIMER RED OXIDE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON METAL PRIMER RED OXIDE GAL', 'NMPREDOX-GAL', v_branch_id, 0, 515) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 515, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NLT-4L' OR product_name = 'NIPPON LACQUER THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON LACQUER THINNER 4L', 'NLT-4L', v_branch_id, 0, 435) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 435, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'HS-1L' OR product_name = 'NIPPON HS FILLER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON HS FILLER 1L', 'HS-1L', v_branch_id, 0, 550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 6, 550, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NFWE-4L' OR product_name = 'NIPPON FLATWALL ENAMEL WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FLATWALL ENAMEL WHITE 4L', 'NFWE-4L', v_branch_id, 0, 615) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 615, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'OTH10AD-1L' OR product_name = 'NIPPON FLATTENING AGENT PASTE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FLATTENING AGENT PASTE 1L', 'OTH10AD-1L', v_branch_id, 0, 620) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 620, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.125, 1550, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'XTRMEQDWARMYLW-4L' OR product_name = 'NIPPON EXTREME QDU WARM YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WARM YELLOW 4L', 'XTRMEQDWARMYLW-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1.40625, 1485, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1224-4L' OR product_name = 'NIPPON EXTREME QDU ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU ORANGE 4L', 'NXU1224-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 1485) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3.28125, 1485, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DCF701-5L' OR product_name = 'NIPPON DOU CLASSIC FLAT WHITE 701 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON DOU CLASSIC FLAT WHITE 701 5L', 'DCF701-5L', v_branch_id, 0, 360) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 360, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAS535' OR product_name = 'NIPPON ACRYLIC GLOSS THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ACRYLIC GLOSS THINNER 4L', 'NAS535', v_branch_id, 0, 450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 450, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOD145' OR product_name = 'NAX SOD145 SOLVENT NAPTHA/DEGREASER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOD145 SOLVENT NAPTHA/DEGREASER 4L', 'SOD145', v_branch_id, 0, 445) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.5, 445, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB745' OR product_name = 'NAX SOB745 BLENDING THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB745 BLENDING THINNER 4L', 'SOB745', v_branch_id, 0, 786) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.4, 786, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9700' OR product_name = 'NAX PREMILA NP9700 HS 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9700 HS 2K CLEAR WITH HARDENER 1L', 'NP9700', v_branch_id, 0, 1030) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 1030, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT903' OR product_name = 'NAX PREMILA MT903 SUN GREEN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT903 SUN GREEN 1L', 'MT903', v_branch_id, 0, 1561) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1561, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT805' OR product_name = 'NAX PREMILA MT805 CUSTOM BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT805 CUSTOM BLUE 1L', 'MT805', v_branch_id, 0, 1593) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1593, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT804' OR product_name = 'NAX PREMILA MT804 ORIENT BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT804 ORIENT BLUE 1L', 'MT804', v_branch_id, 0, 1593) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1593, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT803' OR product_name = 'NAX PREMILA MT803 FRESH BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT803 FRESH BLUE 1L', 'MT803', v_branch_id, 0, 1593) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1593, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT607' OR product_name = 'NAX PREMILA MT607 AUTUMN RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT607 AUTUMN RED 1L', 'MT607', v_branch_id, 0, 2048) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 2048, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT604' OR product_name = 'NAX PREMILA MT604 EXTRA MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT604 EXTRA MAROON 1L', 'MT604', v_branch_id, 0, 2048) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 2048, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT602' OR product_name = 'NAX PREMILA MT602 PEGASUS MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT602 PEGASUS MAROON 1L', 'MT602', v_branch_id, 0, 2302) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 2302, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT507' OR product_name = 'NAX PREMILA MT507 RUBY RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT507 RUBY RED 1L', 'MT507', v_branch_id, 0, 2867) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2867, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT301' OR product_name = 'NAX PREMILA MT301 MAPICO YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT301 MAPICO YELLOW 1L', 'MT301', v_branch_id, 0, 1896) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 1896, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1090, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT100-4L' OR product_name = 'NAX PREMILA MT100 WHITE HS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT100 WHITE HS 4L', 'MT100-4L', v_branch_id, 0, 4160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 4160, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT100-1L' OR product_name = 'NAX PREMILA MT100 WHITE HS 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT100 WHITE HS 1L', 'MT100-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 1090, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT083' OR product_name = 'NAX PREMILA MT083 MICA BASE 4R RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT083 MICA BASE 4R RED 1L', 'MT083', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 3000, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT081' OR product_name = 'NAX PREMILA MT081 MICA BASE 3PK RUTILE RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT081 MICA BASE 3PK RUTILE RED 1L', 'MT081', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0, 3000, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT078' OR product_name = 'NAX PREMILA MT078 MICA BASE 5W BRIGHT WHITE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT078 MICA BASE 5W BRIGHT WHITE 1L', 'MT078', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3000, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT06A' OR product_name = 'NAX PREMILA MT06A NEO MICA BASE 3YG YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT06A NEO MICA BASE 3YG YELLOW 1L', 'MT06A', v_branch_id, 0, 3650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3650, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT068' OR product_name = 'NAX PREMILA MT068 MICA BASE 3U RADIANT RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT068 MICA BASE 3U RADIANT RED 1L', 'MT068', v_branch_id, 0, 6000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 6000, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT067' OR product_name = 'NAX PREMILA MT067 MICA BASE 2K RED BROWN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT067 MICA BASE 2K RED BROWN 1L', 'MT067', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3000, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT061' OR product_name = 'NAX PREMILA MT061 MICA BASE 6W FINE SATIN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT061 MICA BASE 6W FINE SATIN 1L', 'MT061', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3000, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT051' OR product_name = 'NAX PREMILA MT051 MICA BASE 2BZ BRONZE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT051 MICA BASE 2BZ BRONZE 1L', 'MT051', v_branch_id, 0, 3000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3000, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT028' OR product_name = 'NAX PREMILA MT028 HIGH SPARKLE SUPER GLAMOUR 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT028 HIGH SPARKLE SUPER GLAMOUR 1L', 'MT028', v_branch_id, 0, 2150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2150, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT004' OR product_name = 'NAX PREMILA MT004 CRYSTAL SILVER COARSE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT004 CRYSTAL SILVER COARSE 1L', 'MT004', v_branch_id, 0, 2150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2150, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX21' OR product_name = 'NAX NAX21 URETHANE HAEDENER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAX21 URETHANE HAEDENER', 'NAX21', v_branch_id, 0, 190) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 190, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT990-4L' OR product_name = 'NAX NAT-990 TTC BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-990 TTC BLACK 4L', 'NAT990-4L', v_branch_id, 0, 1518) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.875, 1518, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT990-1L' OR product_name = 'NAX NAT-990 TTC BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-990 TTC BLACK 1L', 'NAT990-1L', v_branch_id, 0, 409) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 6, 409, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT745' OR product_name = 'NAX NAT-745 TTC MEDIUM SPARKLE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-745 TTC MEDIUM SPARKLE SILVER 1L', 'NAT745', v_branch_id, 0, 830) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 830, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT740' OR product_name = 'NAX NAT-740 TTC ULTRA FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-740 TTC ULTRA FINE SILVER 1L', 'NAT740', v_branch_id, 0, 470) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 470, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT719-4L' OR product_name = 'NAX NAT-719 TTC COARSE SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-719 TTC COARSE SILVER 4L', 'NAT719-4L', v_branch_id, 0, 2325) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2325, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT715-1L' OR product_name = 'NAX NAT-715 TTC FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-715 TTC FINE SILVER 1L', 'NAT715-1L', v_branch_id, 0, 422) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 422, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT712-1L' OR product_name = 'NAX NAT-712 TTC MEDIUM FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-712 TTC MEDIUM FINE SILVER 1L', 'NAT712-1L', v_branch_id, 0, 581) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 7, 581, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT705-1L' OR product_name = 'NAX NAT705 SUPER FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT705 SUPER FINE SILVER 1L', 'NAT705-1L', v_branch_id, 0, 422) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 422, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT556' OR product_name = 'NAX NAT-556 TTC BLUE NO.8 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-556 TTC BLUE NO.8 1L', 'NAT556', v_branch_id, 0, 620) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 620, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT410' OR product_name = 'NAX NAT-410 TTC CYANINE GREEN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-410 TTC CYANINE GREEN 1L', 'NAT410', v_branch_id, 0, 683) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 683, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT390' OR product_name = 'NAX NAT-390 TTC IRON YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-390 TTC IRON YELLOW 1L', 'NAT390', v_branch_id, 0, 367) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0, 367, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT320' OR product_name = 'NAX NAT-320 TTC GOLD YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-320 TTC GOLD YELLOW 1L', 'NAT320', v_branch_id, 0, 425) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 425, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT305' OR product_name = 'NAX NAT-305 TTC GREEN YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-305 TTC GREEN YELLOW 1L', 'NAT305', v_branch_id, 0, 1380) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1380, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT147' OR product_name = 'NAX NAT-147 TTC THRENE RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-147 TTC THRENE RED 1L', 'NAT147', v_branch_id, 0, 1120) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1120, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1304' OR product_name = 'NAX NAT-1304 TTC CRYSTALLINE ORANGE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1304 TTC CRYSTALLINE ORANGE 1L', 'NAT1304', v_branch_id, 0, 1965) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1965, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1160' OR product_name = 'NAX NAT-1160 TTC RED COPPER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1160 TTC RED COPPER MICA 1L', 'NAT1160', v_branch_id, 0, 694) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 694, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1110-4L' OR product_name = 'NAX NAT-1110 TTC BRIGHT WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1110 TTC BRIGHT WHITE 4L', 'NAT1110-4L', v_branch_id, 0, 2400) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2400, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1107' OR product_name = 'NAX NAT-1107 TTC FINE RED MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1107 TTC FINE RED MICA 1L', 'NAT1107', v_branch_id, 0, 779) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 779, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1106' OR product_name = 'NAX NAT-1106 TTC PEARL BLUE MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1106 TTC PEARL BLUE MICA 1L', 'NAT1106', v_branch_id, 0, 863) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 863, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX1062' OR product_name = 'NAX NAT-1062 QDU 040 SUPER WHITE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1062 QDU 040 SUPER WHITE 1L', 'NAX1062', v_branch_id, 0, 442) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 442, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXE4090' OR product_name = 'NAX EXTREME EPOXY ENAMEL WHITE WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX EXTREME EPOXY ENAMEL WHITE WITH HARDENER 4L', 'NXE4090', v_branch_id, 0, 1320) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.5, 1320, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXE1988' OR product_name = 'NAX EXTREME EPOXY ENAMEL BLACK WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX EXTREME EPOXY ENAMEL BLACK WITH HARDENER 4L', 'NXE1988', v_branch_id, 0, 1050) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1050, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI3634' OR product_name = 'NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX ALPHA HB SPRAY FILLER GRAY WITH HARDENER 1L', 'PRI3634', v_branch_id, 0, 363) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 13.035, 363, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX141' OR product_name = 'NAX 141 NAX MAXIMA URETHANE FD CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 141 NAX MAXIMA URETHANE FD CLEAR WITH HARDENER 1L', 'NAX141', v_branch_id, 0, 344) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 22.75, 344, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX108' OR product_name = 'NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 108 CERAMIC 2K CLEAR WITH HARDENER 1L', 'NAX108', v_branch_id, 0, 460) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 15, 460, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3001-4L' OR product_name = 'METALGUARD EPOXY PRIMER WHITE WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER WHITE WITH HARDENER 4L', 'MEG3001-4L', v_branch_id, 0, 710) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1.82, 710, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3100-1L' OR product_name = 'METALGUARD EPOXY PRIMER RED OXIDE WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER RED OXIDE WITH HARDENER 1L', 'MEG3100-1L', v_branch_id, 0, 193) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3.75, 193, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3602-4L' OR product_name = 'METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER GRAY WITH HARDENER 4L', 'MEG3602-4L', v_branch_id, 0, 685) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 6.25, 685, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3901-4L' OR product_name = 'METALGUARD EPOXY PRIMER BLACK WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER BLACK WITH HARDENER 4L', 'MEG3901-4L', v_branch_id, 0, 710) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4.25, 710, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PUTTYKNI #6' OR product_name = 'JAPAN PUTTY KNIFE #6') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('JAPAN PUTTY KNIFE #6', 'PUTTYKNI #6', v_branch_id, 0, 15) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 15, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-701-4L' OR product_name = 'FLAT WHITE ACRYLIC LATEX B-701 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('FLAT WHITE ACRYLIC LATEX B-701 BOYSEN 4L', 'B-701-4L', v_branch_id, 0, 640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2.75, 640, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-678' OR product_name = 'GOLDEN BUTTER ROS-678 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GOLDEN BUTTER ROS-678 RAIN OR SHINE 4L', 'ROS-678', v_branch_id, 0, 645.3) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 645.3, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1500' OR product_name = 'EAGLE SANDPAPER #1500') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1500', 'EA1500', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 56, 28, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA800' OR product_name = 'EAGLE SANDPAPER #800') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #800', 'EA800', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 171, 18.5, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA600' OR product_name = 'EAGLE SANDPAPER #600') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #600', 'EA600', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 40, 18.5, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA60' OR product_name = 'EAGLE SANDPAPER #60') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #60', 'EA60', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 54, 28, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA400' OR product_name = 'EAGLE SANDPAPER #400') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #400', 'EA400', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 44, 18.5, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA240' OR product_name = 'EAGLE SANDPAPER #240') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #240', 'EA240', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 85, 18.5, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA2000' OR product_name = 'EAGLE SANDPAPER #2000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #2000', 'EA2000', v_branch_id, 0, 28) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 18, 28, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1200' OR product_name = 'EAGLE SANDPAPER #1200') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1200', 'EA1200', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 78, 18.5, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA120' OR product_name = 'EAGLE SANDPAPER #120') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #120', 'EA120', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 75, 18.5, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1000' OR product_name = 'EAGLE SANDPAPER #1000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1000', 'EA1000', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 132, 18.5, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA320' OR product_name = 'EAGLE SAND PAPER #320') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SAND PAPER #320', 'EA320', v_branch_id, 0, 18.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 18.5, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DPB-4' OR product_name = 'DRAGONFLY PAINT BRUSH #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DRAGONFLY PAINT BRUSH #4', 'DPB-4', v_branch_id, 0, 99) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4, 99, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-4L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 4L', 'DOMBF-4L', v_branch_id, 0, 495) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 8.25, 495, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOMBF-1L' OR product_name = 'DOMINO BODY FILTER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DOMINO BODY FILTER WITH HARDENER 1L', 'DOMBF-1L', v_branch_id, 0, 150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 18, 150, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITH-4L' OR product_name = 'DO IT URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE THINNER 4L', 'DOITH-4L', v_branch_id, 0, 590) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.5, 590, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITBLACK-4L' OR product_name = 'DO IT URETHANE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE BLACK 4L', 'DOITBLACK-4L', v_branch_id, 0, 2205) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2205, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITSHLDALL-BOT' OR product_name = 'DO IT SHIELD ALL MULTI-PURPOSE WAX 250ML') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT SHIELD ALL MULTI-PURPOSE WAX 250ML', 'DOITSHLDALL-BOT', v_branch_id, 0, 160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 160, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DV400-WHITE-4L' OR product_name = 'DAVIES QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES QDE WHITE 4L', 'DV400-WHITE-4L', v_branch_id, 0, 820) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4.5, 820, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TC-60-1/4L' OR product_name = 'DAVIES OIL TINTING COLOR TC-60 LAMP BLACK 1/4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES OIL TINTING COLOR TC-60 LAMP BLACK 1/4L', 'TC-60-1/4L', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TCLT-11-1L' OR product_name = 'DAVIES LIQUID-TILE TINTING COLOR VENETIAN RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES LIQUID-TILE TINTING COLOR VENETIAN RED 1L', 'TCLT-11-1L', v_branch_id, 0, 399) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 399, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-80' OR product_name = 'CUMI SUPREME FLOOR SANDING 80') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 80', 'CUMIFS-80', v_branch_id, 0, 42.4) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 9, 42.4, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-60' OR product_name = 'CUMI SUPREME FLOOR SANDING 60') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 60', 'CUMIFS-60', v_branch_id, 0, 44.73) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 14, 44.73, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-36' OR product_name = 'CUMI SUPREME FLOOR SANDING 36') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 36', 'CUMIFS-36', v_branch_id, 0, 55.36) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3.5, 55.36, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CUMIFS-100' OR product_name = 'CUMI SUPREME FLOOR SANDING 100') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CUMI SUPREME FLOOR SANDING 100', 'CUMIFS-100', v_branch_id, 0, 39.03) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 26.5, 39.03, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT3/4' OR product_name = 'CROCO MASKING TAPE 3/4 18MM (1X64)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 3/4 18MM (1X64)', 'CRO-MT3/4', v_branch_id, 0, 23.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 134, 23.59, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1/2' OR product_name = 'CROCO MASKING TAPE 1/2 12MM (1X96)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 1/2 12MM (1X96)', 'CRO-MT1/2', v_branch_id, 0, 15.73) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 40, 15.73, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT2' OR product_name = 'CROCO MASKING TAPE #2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #2', 'CRO-MT2', v_branch_id, 0, 63) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 63, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 32) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 32, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-6133' OR product_name = 'BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BURNT SIENNA TINTING COLOR PWTCO-6133 1/4L PREMIUM WELCOAT', 'PWTCO-6133', v_branch_id, 0, 80.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 80.59, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B1490-1L' OR product_name = 'BOYSEN LTC LAMP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN LTC LAMP BLACK 1L', 'B1490-1L', v_branch_id, 0, 615) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 4, 615, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-182' OR product_name = 'BEIGE SUN ROOF ROS-SR-182 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BEIGE SUN ROOF ROS-SR-182 RAIN OR SHINE 4L', 'ROS-SR-182', v_branch_id, 0, 577) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 577, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1705' OR product_name = 'ACRYTEX PRIMER WHITE B-1705 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ACRYTEX PRIMER WHITE B-1705 BOYSEN 4L', 'B-1705', v_branch_id, 0, 979) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 979, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-#7' OR product_name = '2B PAINT ROLLER #7') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT ROLLER #7', '2B-#7', v_branch_id, 0, 62) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 10, 62, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-#4' OR product_name = '2B PAINT ROLLER #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT ROLLER #4', '2B-#4', v_branch_id, 0, 35) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 24, 35, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#3' OR product_name = '2B PAINT BRUSH #3') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH #3', '2B-PB#3', v_branch_id, 0, 65) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 65, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PRI1680' OR product_name = 'NAX PP BUMPER PRIMER GRAY 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PP BUMPER PRIMER GRAY 1L', 'PRI1680', v_branch_id, 0, 496) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 15.25, 496, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'RSW-4L' OR product_name = 'RAIN OR SHINE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE WHITE 4L', 'RSW-4L', v_branch_id, 0, 735) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 735, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB-1 1/2' OR product_name = '2B PAINT BRUSH 1 1/2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH 1 1/2', '2B-PB-1 1/2', v_branch_id, 0, 25) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 25, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.125, 650, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#1' OR product_name = 'PAINT BRUSH 2B #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT BRUSH 2B #1', '2B-PB#1', v_branch_id, 0, 18) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 11, 18, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PZPG-1L' OR product_name = 'POLYGLOSS-ZINCROMATE PRIMER GREEN-1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS-ZINCROMATE PRIMER GREEN-1L', 'PZPG-1L', v_branch_id, 0, 520) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 520, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALPHAGLOSS-4L' OR product_name = 'ALPHA CHROMA ACRYTILE GLOSS WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA ACRYTILE GLOSS WHITE 4L', 'ALPHAGLOSS-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BBR-MINI' OR product_name = 'DRAGONFLY MINI BABY ROLLER #4 W/H') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DRAGONFLY MINI BABY ROLLER #4 W/H', 'BBR-MINI', v_branch_id, 0, 35) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 35, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DPB-1 1/2' OR product_name = 'DRAGONFLY PAINT BRUSH #1 1/2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DRAGONFLY PAINT BRUSH #1 1/2', 'DPB-1 1/2', v_branch_id, 0, 25) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5, 25, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PTRL-7' OR product_name = 'DRAGONFLY PAINT ROLLER #7 W/H') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DRAGONFLY PAINT ROLLER #7 W/H', 'PTRL-7', v_branch_id, 0, 65) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 65, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-4L' OR product_name = 'NAX NAT-100 TTC WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-100 TTC WHITE 4L', 'NAT100-4L', v_branch_id, 0, 1905) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.84375, 1905, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT3974' OR product_name = 'NAX NAT-3974 QDU FLAT BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-3974 QDU FLAT BLACK 1L', 'NAT3974', v_branch_id, 0, 451) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0, 451, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-SR-100' OR product_name = 'WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WHITE SUN ROOF ROS-SR-100 RAIN OR SHINE 4L', 'ROS-SR-100', v_branch_id, 0, 672) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 672, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDIR-4L' OR product_name = 'PLATONE QDE INTERNATIONAL RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE INTERNATIONAL RED 4L', 'PLQDIR-4L', v_branch_id, 0, 773) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1.75, 773, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-9033' OR product_name = 'PHTHALO GREEN TINTING COLOR PWTCO-9033 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PHTHALO GREEN TINTING COLOR PWTCO-9033 1/4L PREMIUM WELCOAT', 'PWTCO-9033', v_branch_id, 0, 80.59) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 80.59, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB#1' OR product_name = 'PAINT BRUSH 2B #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PAINT BRUSH 2B #1', '2B-PB#1', v_branch_id, 0, 18) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 19, 18, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 7, 1160, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4406-4L' OR product_name = 'NIPPON EXTREME QDU GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU GREEN 4L', 'NXU4406-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NP9200' OR product_name = 'NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NP9200 2K CLEAR WITH HARDENER 1L', 'NP9200', v_branch_id, 0, 871) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 9.75, 871, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT701' OR product_name = 'NAX PREMILA MT701 FAST VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT701 FAST VIOLET 1L', 'MT701', v_branch_id, 0, 1744) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1744, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 1668) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 1668, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT096' OR product_name = 'NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L', 'MT096', v_branch_id, 0, 6000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 6000, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT06H' OR product_name = 'NAX PREMILA MT06H NEO MICA BASE 3AB BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT06H NEO MICA BASE 3AB BLUE 1L', 'MT06H', v_branch_id, 0, 3650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 3650, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT003' OR product_name = 'NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L', 'MT003', v_branch_id, 0, 2150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2150, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NB200-HAR' OR product_name = 'NAX PREMILA 2K NB200 HARDENER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA 2K NB200 HARDENER', 'NB200-HAR', v_branch_id, 0, 1030) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1030, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT736' OR product_name = 'NAX NAT-736 TTC HI-SPARKLE EXTRA COARSE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-736 TTC HI-SPARKLE EXTRA COARSE 1L', 'NAT736', v_branch_id, 0, 685) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 685, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1165' OR product_name = 'NAX NAT-1165 TTC HI-LITE RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1165 TTC HI-LITE RED 1L', 'NAT1165', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 780, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1164' OR product_name = 'NAX NAT-1164 TTC BRIGHT GOLD MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1164 TTC BRIGHT GOLD MICA 1L', 'NAT1164', v_branch_id, 0, 640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 640, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1159' OR product_name = 'NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L', 'NAT1159', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 780, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1157' OR product_name = 'NAX NAT-1157 TTC BRIGHT COPPER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1157 TTC BRIGHT COPPER MICA 1L', 'NAT1157', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 780, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX10100' OR product_name = 'NAX NAT-10100 NH-585 PEARL WHITE MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-10100 NH-585 PEARL WHITE MICA 1L', 'NAX10100', v_branch_id, 0, 675) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4, 675, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PUTTYKNI #4' OR product_name = 'JAPAN PUTTY KNIFE #4') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('JAPAN PUTTY KNIFE #4', 'PUTTYKNI #4', v_branch_id, 0, 12) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 18, 12, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-5033' OR product_name = 'HANSA YELLOW OIL TINITNG COLOR PWTCO-5033 1/4L WELCOAT PREMIUM') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('HANSA YELLOW OIL TINITNG COLOR PWTCO-5033 1/4L WELCOAT PREMIUM', 'PWTCO-5033', v_branch_id, 0, 90.88) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 90.88, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GLAZERB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL BLACK 4L', 'GLAZERB-4L', v_branch_id, 0, 761) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 761, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TC-21-1/4L' OR product_name = 'DAVIES OTC THALO BLUE 1/4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DAVIES OTC THALO BLUE 1/4L', 'TC-21-1/4L', v_branch_id, 0, 95) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 8, 95, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PWTCO-2133' OR product_name = 'BULLETIN RED TINTING COLOR PWTCO-2133 1/4L PREMIUM WELCOAT') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BULLETIN RED TINTING COLOR PWTCO-2133 1/4L PREMIUM WELCOAT', 'PWTCO-2133', v_branch_id, 0, 87.45) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4, 87.45, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSAXGLWHTE-4L' OR product_name = 'BOYSEN ACRYTEX GLOSS WHITE 4L (DOUBLE ENTRY)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX GLOSS WHITE 4L (DOUBLE ENTRY)', 'BSAXGLWHTE-4L', v_branch_id, 0, 1080) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 1080, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1710' OR product_name = 'BOYSEN ACRYTEX GLOSS WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX GLOSS WHITE 4L', 'B-1710', v_branch_id, 0, 1096) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4, 1096, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = '2B-PB-2' OR product_name = '2B PAINT BRUSH #2') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('2B PAINT BRUSH #2', '2B-PB-2', v_branch_id, 0, 31) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 31, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGANTI-C-1L' OR product_name = 'POLYGLOSS ANTI-CORROSSION') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS ANTI-CORROSSION', 'PGANTI-C-1L', v_branch_id, 0, 440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 6.5, 440, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-633' OR product_name = 'RAIN OR SHINE CHOCOLATE BROWN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE CHOCOLATE BROWN 4L', 'ROS-633', v_branch_id, 0, 665) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.25, 665, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROSCB-1L' OR product_name = 'RAIN OR SHINE CHOCOLATE BROWN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE CHOCOLATE BROWN 1L', 'ROSCB-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-701' OR product_name = 'RAIN OR SHINE BAGUIO GREEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE BAGUIO GREEN 4L', 'ROS-701', v_branch_id, 0, 665) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 665, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLYGTHIN-4L' OR product_name = 'POLYGLOSS URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS URETHANE THINNER 4L', 'POLYGTHIN-4L', v_branch_id, 0, 675) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.75, 675, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGTB-4L' OR product_name = 'POLYGLOSS PU PHTHALO BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU PHTHALO BLUE 4L', 'PGTB-4L', v_branch_id, 0, 1883) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.25, 1883, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGMF-4L' OR product_name = 'POLYGLOSS PU MICA RED FINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU MICA RED FINE 4L', 'PGMF-4L', v_branch_id, 0, 2822) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.5, 2822, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGMC-4L' OR product_name = 'POLYGLOSS PU METALLIC COARSE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU METALLIC COARSE 4L', 'PGMC-4L', v_branch_id, 0, 1743) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.0625, 1743, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGJB-4L' OR product_name = 'POLYGLOSS PU JET BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU JET BLACK 4L', 'PGJB-4L', v_branch_id, 0, 1828) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.625, 1828, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGFB-4L' OR product_name = 'POLYGLOSS PU FLAT BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU FLAT BLACK 4L', 'PGFB-4L', v_branch_id, 0, 1930) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.71875, 1930, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDW-4L' OR product_name = 'PLATONE QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE WHITE 4L', 'PLQDW-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 650, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDB-1L' OR product_name = 'PLATONE QDE BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE BLACK 1L', 'PLQDB-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.1875, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SEALERMAX5170-4L' OR product_name = 'NIPPON SEALERMAX 5170 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON SEALERMAX 5170 4L', 'SEALERMAX5170-4L', v_branch_id, 0, 960) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.5, 960, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NPR7' OR product_name = 'NIPPON ROLLER PAINT #7') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ROLLER PAINT #7', 'NPR7', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 570) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 11.0625, 570, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSAXGLWHTE-4L' OR product_name = 'BOYSEN ACRYTEX GLOSS WHITE 4L (DOUBLE ENTRY)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX GLOSS WHITE 4L (DOUBLE ENTRY)', 'BSAXGLWHTE-4L', v_branch_id, 0, 1080) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1080, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1710' OR product_name = 'BOYSEN ACRYTEX GLOSS WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN ACRYTEX GLOSS WHITE 4L', 'B-1710', v_branch_id, 0, 1096) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 1096, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-1L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 1L', 'UTMIX-1L', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.5, 850, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS- HAPPY DAYS-4L' OR product_name = 'RAIN OR SHINE- HAPPY DAYS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE- HAPPY DAYS 4L', 'ROS- HAPPY DAYS-4L', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 650, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'POLY- BT-ALUM-4L' OR product_name = 'POLYGLOSS-BRIGHT ALUMINUM 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS-BRIGHT ALUMINUM 4L', 'POLY- BT-ALUM-4L', v_branch_id, 0, 1950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.125, 1950, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRY- REDUCER-4L' OR product_name = 'ALPHA CHROMA ACRYTILE REDUCER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA ACRYTILE REDUCER', 'ACRY- REDUCER-4L', v_branch_id, 0, 550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 550, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT202-1L' OR product_name = 'NAX PREMILA MT202 TINTING BLACK NP 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT202 TINTING BLACK NP 1L', 'MT202-1L', v_branch_id, 0, 1090) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1090, 'Migration: Adj (-) UNREF-740', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4113-4L' OR product_name = 'NIPPON EXTREME QDU RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU RED 4L', 'NXU4113-4L', v_branch_id, 0, 1630) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1630, 'Migration: Adj (-) UNREF-741', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 1550) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1550, 'Migration: Adj (-) UNREF-742', '2026-06-23'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-743', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-744', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAS535' OR product_name = 'NIPPON ACRYLIC GLOSS THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON ACRYLIC GLOSS THINNER 4L', 'NAS535', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-745', '2026-06-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-746', '2026-06-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-747', '2026-06-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDIR-4L' OR product_name = 'PLATONE QDE INTERNATIONAL RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE INTERNATIONAL RED 4L', 'PLQDIR-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-748', '2026-06-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT503' OR product_name = 'NAX PREMILA MT503 THRENE RED G 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT503 THRENE RED G 1L', 'MT503', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-749', '2026-06-30'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-750', '2026-06-30'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-751', '2026-06-30'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT607' OR product_name = 'NAX PREMILA MT607 AUTUMN RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT607 AUTUMN RED 1L', 'MT607', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-752', '2026-07-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITWHITE-4L' OR product_name = 'DO IT URETHANE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE WHITE 4L', 'DOITWHITE-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2.125, 0, 'Migration: Adj (-) UNREF-753', '2026-07-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MEG3901R-1L' OR product_name = 'METALGUARD EPOXY PRIMER BLACK W/H REPACK') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('METALGUARD EPOXY PRIMER BLACK W/H REPACK', 'MEG3901R-1L', v_branch_id, 0, 200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 200, 'Migration: Adj (+) UNREF-768', '2026-07-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2440) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.7, 2440, 'Migration: Adj (+) UNREF-769', '2026-07-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 900, 'Migration: Adj (+) UNREF-770', '2026-07-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 2000, 'Migration: Adj (+) UNREF-771', '2026-07-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-4L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 4L', 'UTMIX-4L', v_branch_id, 0, 3200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.875, 3200, 'Migration: Adj (+) UNREF-772', '2026-07-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QDEMIX-1L' OR product_name = 'QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L', 'QDEMIX-1L', v_branch_id, 0, 200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 200, 'Migration: Adj (+) UNREF-773', '2026-07-02'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: Adj (+) UNREF-774', '2026-07-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1164' OR product_name = 'NAX NAT-1164 TTC BRIGHT GOLD MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1164 TTC BRIGHT GOLD MICA 1L', 'NAT1164', v_branch_id, 0, 640) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 640, 'Migration: Adj (+) UNREF-775', '2026-07-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 2000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2000, 'Migration: Adj (+) UNREF-776', '2026-07-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT149' OR product_name = 'NAX NAT-149 TTC DARK MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-149 TTC DARK MAROON 1L', 'NAT149', v_branch_id, 0, 1110) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 1110, 'Migration: Adj (-) UNREF-777', '2026-07-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1159' OR product_name = 'NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1159 TTC MEDIUM RUSSET MICA 1L', 'NAT1159', v_branch_id, 0, 780) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 780, 'Migration: Adj (+) UNREF-778', '2026-07-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 900, 'Migration: Adj (+) UNREF-779', '2026-07-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 900) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 900, 'Migration: Adj (+) UNREF-780', '2026-07-07'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'LATEXMIX-15L' OR product_name = 'LATEXNP,ALPHA CROMA,DAVIES,BOYSEN,WC 15L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LATEXNP,ALPHA CROMA,DAVIES,BOYSEN,WC 15L', 'LATEXMIX-15L', v_branch_id, 0, 3200) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 3200, 'Migration: Adj (-) UNREF-781', '2026-07-10'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 40) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 40, 'Migration: Adj (-) UNREF-782', '2026-07-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 2160) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 2160, 'Migration: Adj (-) UNREF-783', '2026-07-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-1L' OR product_name = 'NAX NAT-1OO TTC WHITE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1OO TTC WHITE 1L', 'NAT100-1L', v_branch_id, 0, 525) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 525, 'Migration: Adj (-) UNREF-784', '2026-07-09'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DCSG715-15L' OR product_name = 'NIPPON DOU CLASSIC SG WHITE 715 15L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON DOU CLASSIC SG WHITE 715 15L', 'DCSG715-15L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-785', '2026-07-09'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2.75, 0, 'Migration: Adj (+) UNREF-786', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-20-1L' OR product_name = 'THALO BLUE ACRY-COLOR AC-20 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('THALO BLUE ACRY-COLOR AC-20 1L DAVIES', 'AC-20-1L', v_branch_id, 0, 103) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 103, 'Migration: Adj (-) UNREF-787', '2026-07-09'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALCROLTC -THALO BLUE-1L' OR product_name = 'ALPHA CROMA LTC THALO BLUE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CROMA LTC THALO BLUE', 'ALCROLTC -THALO BLUE-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-788', '2026-07-09'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGMC-4L' OR product_name = 'POLYGLOSS PU METALLIC COARSE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU METALLIC COARSE 4L', 'PGMC-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-789', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGO-4L' OR product_name = 'POLYGLOSS PU GLEAMIST ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST ORANGE 4L', 'PGGO-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-790', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGY-4L' OR product_name = 'POLYGLOSS PU GLEAMIST YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST YELLOW 4L', 'PGGY-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-791', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-792', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NPA1372' OR product_name = 'NIPPELAC ACE LEMON YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPELAC ACE LEMON YELLOW 4L', 'NPA1372', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-793', '2026-07-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1587-4L' OR product_name = 'NIPPON EXTREME QDU BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLUE 4L', 'NXU1587-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-794', '2026-07-14'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU4075-4L' OR product_name = 'NIPPON EXTREME QDU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WHITE 4L', 'NXU4075-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-795', '2026-07-14'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DCSG715-15L' OR product_name = 'NIPPON DOU CLASSIC SG WHITE 715 15L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON DOU CLASSIC SG WHITE 715 15L', 'DCSG715-15L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-796', '2026-07-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALCROLTC -THALO BLUE-1L' OR product_name = 'ALPHA CROMA LTC THALO BLUE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CROMA LTC THALO BLUE', 'ALCROLTC -THALO BLUE-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 0, 'Migration: Adj (-) UNREF-797', '2026-07-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-10-1L' OR product_name = 'TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TOLUIDINE RED ACRY-COLOR AC-10 1L DAVIES', 'AC-10-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-798', '2026-07-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-823' OR product_name = 'VIBRANT RUBY ROS-823 RAIN OR SHINE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('VIBRANT RUBY ROS-823 RAIN OR SHINE 4L', 'ROS-823', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-799', '2026-07-15'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-816', '2026-07-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-817', '2026-07-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT530' OR product_name = 'NAX NAT-530 TTC FINE BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-530 TTC FINE BLUE 1L', 'NAT530', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-818', '2026-07-16'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.25, 0, 'Migration: Adj (-) UNREF-819', '2026-07-17'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITBLACK-4L' OR product_name = 'DO IT URETHANE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE BLACK 4L', 'DOITBLACK-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-820', '2026-07-18'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDEY-4L' OR product_name = 'PLATONE QDE YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE YELLOW 4L', 'PLQDEY-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-821', '2026-07-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITWHITE-4L' OR product_name = 'DO IT URETHANE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE WHITE 4L', 'DOITWHITE-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-822', '2026-07-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QDEMIX-1L' OR product_name = 'QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('QDE MIXING NP, DAVIES, BOYSEN, ALPHA CHROMA, WC 1L', 'QDEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) UNREF-823', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-1L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 1L', 'UTMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2.5, 0, 'Migration: Adj (+) UNREF-824', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 5.825, 0, 'Migration: Adj (+) UNREF-825', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2.375, 0, 'Migration: Adj (+) UNREF-826', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 9, 0, 'Migration: Adj (+) UNREF-827', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-4L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 4L', 'UTMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 0, 'Migration: Adj (+) UNREF-828', '2026-07-22'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'LATEXMIX-15L' OR product_name = 'LATEXNP,ALPHA CROMA,DAVIES,BOYSEN,WC 15L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('LATEXNP,ALPHA CROMA,DAVIES,BOYSEN,WC 15L', 'LATEXMIX-15L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 0, 'Migration: Adj (+) UNREF-829', '2026-07-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT3/4' OR product_name = 'CROCO MASKING TAPE 3/4 18MM (1X64)') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE 3/4 18MM (1X64)', 'CRO-MT3/4', v_branch_id, 0, 35) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 35, 'Migration: Adj (-) UNREF-830', '2026-07-20'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 100) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 100, 'Migration: Adj (-) UNREF-831', '2026-07-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-832', '2026-07-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT136' OR product_name = 'NAX PREMILA MT136 METALLIC ORANGE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT136 METALLIC ORANGE 1L', 'MT136', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-833', '2026-07-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT083' OR product_name = 'NAX PREMILA MT083 MICA BASE 4R RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT083 MICA BASE 4R RED 1L', 'MT083', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-834', '2026-07-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-835', '2026-07-21'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-836', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3.825, 0, 'Migration: Adj (+) UNREF-837', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-1L' OR product_name = 'NAX QDU MIX 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 1L', 'NAXQDUMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) UNREF-838', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-1L' OR product_name = 'EXTREME QDU MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 1L', 'EXTREMEMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2.25, 0, 'Migration: Adj (+) UNREF-839', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGAR-4L' OR product_name = 'POLYGLOSS PU APPLE RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU APPLE RED 4L', 'PGAR-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-840', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALCROLTC -THALO BLUE-1L' OR product_name = 'ALPHA CROMA LTC THALO BLUE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CROMA LTC THALO BLUE', 'ALCROLTC -THALO BLUE-1L', v_branch_id, 0, 150) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 3, 150, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYPRIMER-4L' OR product_name = 'ALPHA CHROMA ACRYTILE PRIMER WHITE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA ACRYTILE PRIMER WHITE', 'ACRYPRIMER-4L', v_branch_id, 0, 950) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 950, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAX301' OR product_name = 'NAX 301 NAX QDU FLAT CLEAR WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX 301 NAX QDU FLAT CLEAR WITH HARDENER 1L', 'NAX301', v_branch_id, 0, 850) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 850, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'FF151' OR product_name = 'NIPPON FF151 FLOP CONTROL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FF151 FLOP CONTROL', 'FF151', v_branch_id, 0, 1000) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 1000, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 650) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 650, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA400' OR product_name = 'EAGLE SANDPAPER #400') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #400', 'EA400', v_branch_id, 0, 28.5) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 100, 28.5, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DOITUH' OR product_name = 'DO IT URETHANE HARDENER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('DO IT URETHANE HARDENER', 'DOITUH', v_branch_id, 0, 230) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 230, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-1L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 1L', 'TOBF-1L', v_branch_id, 0, 175) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 12, 175, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZMTB-47' OR product_name = 'PYLOX MATT BLACK#47') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX MATT BLACK#47', 'PLYZMTB-47', v_branch_id, 0, 90) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 7, 90, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGAR-4L' OR product_name = 'POLYGLOSS PU APPLE RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU APPLE RED 4L', 'PGAR-4L', v_branch_id, 0, 2450) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 2450, 'Migration: Adj (+) CSI-004106', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-4L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 4L', 'UTMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.125, 0, 'Migration: Adj (+) UNREF-851', '2026-07-25'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PG888-4L' OR product_name = 'POLYGLOSS PU 888 RED 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU 888 RED 4L', 'PG888-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1.875, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1587-4L' OR product_name = 'NIPPON EXTREME QDU BLUE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLUE 4L', 'NXU1587-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'B-1750' OR product_name = 'REDUCER ACRYTEX B-1750 BOYSEN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('REDUCER ACRYTEX B-1750 BOYSEN 4L', 'B-1750', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-629-4L' OR product_name = 'RAIN OR SHINE ROS-629 TULIPS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE ROS-629 TULIPS 4L', 'ROS-629-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1.25, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGFB-4L' OR product_name = 'POLYGLOSS PU FLAT BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU FLAT BLACK 4L', 'PGFB-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PYLZANTPR-12' OR product_name = 'PYLOX LAZER ANTI-RUST BROWN PRIMER 12') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER ANTI-RUST BROWN PRIMER 12', 'PYLZANTPR-12', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EPOXYTHNR-4L' OR product_name = 'NIPPON EPOXY THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EPOXY THINNER 4L', 'EPOXYTHNR-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2.075, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT003' OR product_name = 'NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT003 CRYSTAL SILVER MEDIUM 1L', 'MT003', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT3974' OR product_name = 'NAX NAT-3974 QDU FLAT BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-3974 QDU FLAT BLACK 1L', 'NAT3974', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.5, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-629-4L' OR product_name = 'RAIN OR SHINE ROS-629 TULIPS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE ROS-629 TULIPS 4L', 'ROS-629-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-861', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UTMIX-4L' OR product_name = 'URETHANE MIXING POLYGLOSS, DO IT 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('URETHANE MIXING POLYGLOSS, DO IT 4L', 'UTMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.84375, 0, 'Migration: Adj (-) UNREF-862', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGW-4L' OR product_name = 'POLYGLOSS PU GLEAMIST WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST WHITE 4L', 'PGGW-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-863', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGGO-4L' OR product_name = 'POLYGLOSS PU GLEAMIST ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU GLEAMIST ORANGE 4L', 'PGGO-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-864', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGW-4L' OR product_name = 'POLYGLOSS PU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU WHITE 4L', 'PGW-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.84375, 0, 'Migration: Adj (-) UNREF-865', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAXQDUMIX-4L' OR product_name = 'NAX QDU MIX 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX QDU MIX 4L', 'NAXQDUMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-866', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EXTREMEMIX-4L' OR product_name = 'EXTREME QDU MIXING 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EXTREME QDU MIXING 4L', 'EXTREMEMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2.375, 0, 'Migration: Adj (-) UNREF-867', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-868', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-629-4L' OR product_name = 'RAIN OR SHINE ROS-629 TULIPS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE ROS-629 TULIPS 4L', 'ROS-629-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) UNREF-869', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NFI46G-5KG' OR product_name = 'NIPPON FLEXI-SEAL 146 GRAY 5KG') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON FLEXI-SEAL 146 GRAY 5KG', 'NFI46G-5KG', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'UNOLT-4L' OR product_name = 'UNO LACQUER THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('UNO LACQUER THINNER 4L', 'UNOLT-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.875, 0, 'Migration: Adj (-) UNREF-871', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROBPNTSTRNR' OR product_name = 'ROBFILTER PAINT STRAINER 125M') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ROBFILTER PAINT STRAINER 125M', 'ROBPNTSTRNR', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 5, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AEMIX-4L' OR product_name = 'GLAZER AUTO ENAMEL MIX 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTO ENAMEL MIX 4L', 'AEMIX-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.75, 0, 'Migration: Adj (-) UNREF-873', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'BSQDEW-GAL' OR product_name = 'BOYSEN QDE WHITE GAL') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('BOYSEN QDE WHITE GAL', 'BSQDEW-GAL', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.625, 0, 'Migration: Adj (-) UNREF-874', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT134' OR product_name = 'NAX PREMILA MT134 METALLIC GOLD 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT134 METALLIC GOLD 1L', 'MT134', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT081' OR product_name = 'NAX PREMILA MT081 MICA BASE 3PK RUTILE RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT081 MICA BASE 3PK RUTILE RED 1L', 'MT081', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-876', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT075' OR product_name = 'NAX PREMILA MT075 MICA BASE 3Y FINE GOLD 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT075 MICA BASE 3Y FINE GOLD 1L', 'MT075', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-877', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT068' OR product_name = 'NAX PREMILA MT068 MICA BASE 3U RADIANT RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT068 MICA BASE 3U RADIANT RED 1L', 'MT068', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-878', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-109' OR product_name = 'RAIN OR SHINE TULLE WHITE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE TULLE WHITE', 'ROS-109', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NPA1372' OR product_name = 'NIPPELAC ACE LEMON YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPELAC ACE LEMON YELLOW 4L', 'NPA1372', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NPA1983' OR product_name = 'NIPPELAC ACE JET BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPELAC ACE JET BLACK 4L', 'NPA1983', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 6.75, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT904' OR product_name = 'NAX PREMILA MT904 SHADOWN GREEN 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT904 SHADOWN GREEN 1L', 'MT904', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT704' OR product_name = 'NAX PREMILA MT704 FINE VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT704 FINE VIOLET 1L', 'MT704', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT604' OR product_name = 'NAX PREMILA MT604 EXTRA MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT604 EXTRA MAROON 1L', 'MT604', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT602' OR product_name = 'NAX PREMILA MT602 PEGASUS MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT602 PEGASUS MAROON 1L', 'MT602', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 2, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT501' OR product_name = 'NAX PREMILA MT501 STRONG RED 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT501 STRONG RED 1L', 'MT501', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYLICMIX-1L' OR product_name = 'ACRYLIC NP, TIMEOUT 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ACRYLIC NP, TIMEOUT 1L', 'ACRYLICMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0, 0, 'Migration: Adj (-) UNREF-887', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PREMILAMIX-1L' OR product_name = 'PREMILA MIXING 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PREMILA MIXING 1L', 'PREMILAMIX-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 29.25, 0, 'Migration: Adj (+) UNREF-888', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDB-4L' OR product_name = 'PLATONE QDE BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE BLACK 4L', 'PLQDB-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.25, 0, 'Migration: Adj (-) UNREF-889', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PUT3050-4KG' OR product_name = 'NIPPON PAINT FILLERMAX BODY FILLER WITH HARDENER 4KG') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON PAINT FILLERMAX BODY FILLER WITH HARDENER 4KG', 'PUT3050-4KG', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NMPREDOX-LTR' OR product_name = 'NIPPON METAL PRIMER RED OXIDE LITER') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON METAL PRIMER RED OXIDE LITER', 'NMPREDOX-LTR', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1338-4L' OR product_name = 'NIPPON EXTREME QDU YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU YELLOW 4L', 'NXU1338-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3.9375, 0, 'Migration: Adj (-) UNREF-892', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1224-4L' OR product_name = 'NIPPON EXTREME QDU ORANGE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU ORANGE 4L', 'NXU1224-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-893', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXUMAGENTA-4L' OR product_name = 'NIPPON EXTREME MAGENTA 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME MAGENTA 4L', 'NXUMAGENTA-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DCSG715-5L' OR product_name = 'NIPPON DOU CLASSIC SG 715 WHITE 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON DOU CLASSIC SG 715 WHITE 5L', 'DCSG715-5L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT3974' OR product_name = 'NAX NAT-3974 QDU FLAT BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-3974 QDU FLAT BLACK 1L', 'NAT3974', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 0.5, 0, 'Migration: Adj (+) UNREF-896', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1164' OR product_name = 'NAX NAT-1164 TTC BRIGHT GOLD MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1164 TTC BRIGHT GOLD MICA 1L', 'NAT1164', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1.625, 0, 'Migration: Adj (-) UNREF-897', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1161' OR product_name = 'NAX NAT-1161 TTC LAVENDER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1161 TTC LAVENDER MICA 1L', 'NAT1161', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.75, 0, 'Migration: Adj (-) UNREF-898', '2026-07-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'TOBF-1L' OR product_name = 'TIMEOUT BODY FILLER WITH HARDENER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('TIMEOUT BODY FILLER WITH HARDENER 1L', 'TOBF-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 10, 0, 'Migration: Adj (-) INV_06/24/2026', '2026-06-24'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1500' OR product_name = 'EAGLE SANDPAPER #1500') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1500', 'EA1500', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA120' OR product_name = 'EAGLE SANDPAPER #120') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #120', 'EA120', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 4, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1200' OR product_name = 'EAGLE SANDPAPER #1200') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1200', 'EA1200', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 3, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA400' OR product_name = 'EAGLE SANDPAPER #400') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #400', 'EA400', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA600' OR product_name = 'EAGLE SANDPAPER #600') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #600', 'EA600', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 2, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA800' OR product_name = 'EAGLE SANDPAPER #800') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #800', 'EA800', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 16, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA80' OR product_name = 'SAND PAPER #80') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('SAND PAPER #80', 'EA80', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA1000' OR product_name = 'EAGLE SANDPAPER #1000') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #1000', 'EA1000', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'EA240' OR product_name = 'EAGLE SANDPAPER #240') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('EAGLE SANDPAPER #240', 'EA240', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'IN', 1, 0, 'Migration: Adj (+) INV_07/27/2026', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'QSHG710-5L' OR product_name = 'Q-SHIELD EXTRA HG-710 GLOSS WHITE 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('Q-SHIELD EXTRA HG-710 GLOSS WHITE 5L', 'QSHG710-5L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-932', '2026-07-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-933', '2026-07-27'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXE1988' OR product_name = 'NAX EXTREME EPOXY ENAMEL BLACK WITH HARDENER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX EXTREME EPOXY ENAMEL BLACK WITH HARDENER 4L', 'NXE1988', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-934', '2026-07-28'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ACRYPRIMER-4L' OR product_name = 'ALPHA CHROMA ACRYTILE PRIMER WHITE') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA ACRYTILE PRIMER WHITE', 'ACRYPRIMER-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-935', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ALPHAC-RS-CAN' OR product_name = 'ALPHA CHROMA OTC RAW SEINA 1CAN') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('ALPHA CHROMA OTC RAW SEINA 1CAN', 'ALPHAC-RS-CAN', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-936', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT096' OR product_name = 'NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT096 MICA BASE 3M CRYSTAL SILVER 1L', 'MT096', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-937', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'XTRMEQDWARMYLW-4L' OR product_name = 'NIPPON EXTREME QDU WARM YELLOW 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU WARM YELLOW 4L', 'XTRMEQDWARMYLW-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-938', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDCB-4L' OR product_name = 'PLATONE QDE CHOCOLATE BROWN 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE CHOCOLATE BROWN 4L', 'PLQDCB-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-939', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU1965-4L' OR product_name = 'NIPPON EXTREME QDU BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU BLACK 4L', 'NXU1965-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-940', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-4L' OR product_name = 'NAX NAT-100 TTC WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-100 TTC WHITE 4L', 'NAT100-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-941', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXU7391-4L' OR product_name = 'NIPPON EXTREME QDU SILVER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME QDU SILVER 4L', 'NXU7391-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-942', '2026-07-31'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-943', '2026-08-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-944', '2026-08-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.5, 0, 'Migration: Adj (-) UNREF-945', '2026-08-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-946', '2026-08-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'WCPOD' OR product_name = 'WASTE COTTON POD') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('WASTE COTTON POD', 'WCPOD', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-947', '2026-08-01'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'AC-40-1L' OR product_name = 'HANSA YELLOW ACRY-COLOR AC-40 1L DAVIES') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('HANSA YELLOW ACRY-COLOR AC-40 1L DAVIES', 'AC-40-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-948', '2026-08-03'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'ROS-TEMP-4L' OR product_name = 'RAIN OR SHINE-TEMPTATION 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('RAIN OR SHINE-TEMPTATION 4L', 'ROS-TEMP-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-949', '2026-08-03'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT602' OR product_name = 'NAX PREMILA MT602 PEGASUS MAROON 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT602 PEGASUS MAROON 1L', 'MT602', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-950', '2026-08-03'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXUMAGENTA-4L' OR product_name = 'NIPPON EXTREME MAGENTA 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME MAGENTA 4L', 'NXUMAGENTA-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-951', '2026-08-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT023' OR product_name = 'NAX PREMILA MT023 HIGH SPARKLE FINE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT023 HIGH SPARKLE FINE 1L', 'MT023', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-965', '2026-08-04'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-966', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NXUCINQVIO-4L' OR product_name = 'NIPPON EXTREME CINQUASA VIOLET 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON EXTREME CINQUASA VIOLET 4L', 'NXUCINQVIO-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-967', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PGW-4L' OR product_name = 'POLYGLOSS PU WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('POLYGLOSS PU WHITE 4L', 'PGW-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-968', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-969', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT701' OR product_name = 'NAX PREMILA MT701 FAST VIOLET 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT701 FAST VIOLET 1L', 'MT701', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-970', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-971', '2026-08-05'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLQDW-4L' OR product_name = 'PLATONE QDE WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PLATONE QDE WHITE 4L', 'PLQDW-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-972', '2026-08-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'GAETB-4L' OR product_name = 'GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('GLAZER AUTOMOTIVE ENAMEL THALO BLUE-4L', 'GAETB-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-973', '2026-08-06'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT100-4L' OR product_name = 'NAX PREMILA MT100 WHITE HS 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT100 WHITE HS 4L', 'MT100-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-974', '2026-08-07'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT100-1L' OR product_name = 'NAX PREMILA MT100 WHITE HS 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT100 WHITE HS 1L', 'MT100-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-975', '2026-08-07'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT321' OR product_name = 'NAX NAT-321 TTC HOSTAPERM YELLOW 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-321 TTC HOSTAPERM YELLOW 1L', 'NAT321', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-976', '2026-08-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT990-4L' OR product_name = 'NAX NAT-990 TTC BLACK 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-990 TTC BLACK 4L', 'NAT990-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-977', '2026-08-08'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-978', '2026-08-11'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'SOB757' OR product_name = 'NAX SOB757 HIGH GRADE URETHANE THINNER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX SOB757 HIGH GRADE URETHANE THINNER 4L', 'SOB757', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 0.25, 0, 'Migration: Adj (-) UNREF-979', '2026-08-11'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PNB100' OR product_name = 'NAX PREMILA NB100 B/C BINDER 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA NB100 B/C BINDER 4L', 'PNB100', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-980', '2026-08-11'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT715-1L' OR product_name = 'NAX NAT-715 TTC FINE SILVER 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-715 TTC FINE SILVER 1L', 'NAT715-1L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-981', '2026-08-12'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT100-4L' OR product_name = 'NAX NAT-100 TTC WHITE 4L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-100 TTC WHITE 4L', 'NAT100-4L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-982', '2026-08-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'NAT1158' OR product_name = 'NAX NAT-1158 TTC SUPER FINE COPPER MICA 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX NAT-1158 TTC SUPER FINE COPPER MICA 1L', 'NAT1158', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-983', '2026-08-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'DCSG715-5L' OR product_name = 'NIPPON DOU CLASSIC SG 715 WHITE 5L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NIPPON DOU CLASSIC SG 715 WHITE 5L', 'DCSG715-5L', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-984', '2026-08-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'PLYZFLOURANGE-601' OR product_name = 'PYLOX LAZER FLOURESCENT ORANGE 601') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('PYLOX LAZER FLOURESCENT ORANGE 601', 'PLYZFLOURANGE-601', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-985', '2026-08-13'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT203' OR product_name = 'NAX PREMILA MT203 DEEP BLACK 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT203 DEEP BLACK 1L', 'MT203', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-986', '2026-08-14'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'MT804' OR product_name = 'NAX PREMILA MT804 ORIENT BLUE 1L') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('NAX PREMILA MT804 ORIENT BLUE 1L', 'MT804', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-987', '2026-08-14'::timestamp);
+
+  -- Item lookup for Adj
+  SELECT id INTO v_item_id FROM public.inventory WHERE (sku = 'CRO-MT1' OR product_name = 'CROCO MASKING TAPE #1') AND branch_id = v_branch_id LIMIT 1;
+  IF v_item_id IS NULL THEN
+    INSERT INTO public.inventory (product_name, sku, branch_id, quantity, cost) VALUES ('CROCO MASKING TAPE #1', 'CRO-MT1', v_branch_id, 0, 0) RETURNING id INTO v_item_id;
+  END IF;
+
+  INSERT INTO public.stock_transactions (inventory_id, branch_id, type, quantity, unit_price, reason, created_at)
+  VALUES (v_item_id, v_branch_id, 'OUT', 1, 0, 'Migration: Adj (-) UNREF-988', '2026-08-14'::timestamp);
+  END;
+END $$;
