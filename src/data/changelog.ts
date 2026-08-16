@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786894932893",
+    version: "v1.8.16",
+    date: "2026-08-16",
+    type: "feature",
+    title: "Valencia Coloursmile Now Live",
+    description: "The Valencia Coloursmile branch migration is complete, delivering richer colour options and improved stability for a smoother, more enjoyable experience."
+  },
+
+  {
     id: "update-1786603500285",
     version: "v1.8.13",
     date: "2026-08-13",
