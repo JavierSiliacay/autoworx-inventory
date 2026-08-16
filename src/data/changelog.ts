@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786897089107",
+    version: "v1.8.16",
+    date: "2026-08-16",
+    type: "fix",
+    title: "Corrected billing statement for Valencia Coloursmile",
+    description: "Billing statements for Valencia Coloursmile no longer include an incorrect middle initial, ensuring accurate customer invoices."
+  },
+
+  {
     id: "update-1786896717204",
     version: "v1.8.16",
     date: "2026-08-16",
