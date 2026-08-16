@@ -108,7 +108,7 @@ export default function BillingStatementsPage() {
       if (branchData?.name?.toUpperCase().includes('ISUZU')) {
         preparedBy = 'RHONABYL MAGALLANES';
       } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION') || branchData?.name?.toUpperCase().includes('VALENCIA')) {
-        preparedBy = 'CARLA B. VARIACION';
+        preparedBy = 'CARLA VARIACION';
       }
 
       // 4. Insert Header
