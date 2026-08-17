@@ -200,14 +200,19 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
            <div className="flex justify-between w-full items-end pb-2">
               {/* Prepared By Block */}
               <div className="flex flex-col items-center">
-                <img 
-                    src="/carla_signature.png" 
-                    alt="Signature" 
-                    className="h-[5rem] w-auto object-contain translate-y-[25px] translate-x-[29px] relative z-20 pointer-events-none drop-shadow-sm" 
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                />
+                {!po.branch?.name?.toUpperCase().includes('VALENCIA') && (
+                  <img 
+                      src="/carla_signature.png" 
+                      alt="Signature" 
+                      className="h-[5rem] w-auto object-contain translate-y-[25px] translate-x-[29px] relative z-20 pointer-events-none drop-shadow-sm" 
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                )}
+                {po.branch?.name?.toUpperCase().includes('VALENCIA') && (
+                  <div className="h-[5rem] translate-y-[25px] relative z-20"></div>
+                )}
                 <p className="font-bold text-[12px] uppercase tracking-wider relative z-10 mt-[-2px]">
-                  PREPARED BY: CARLA VARIACION
+                  PREPARED BY: {po.branch?.name?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' : 'CARLA VARIACION'}
                 </p>
               </div>
 
