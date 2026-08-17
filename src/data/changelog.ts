@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786928707303",
+    version: "v1.8.17",
+    date: "2026-08-17",
+    type: "feature",
+    title: "Custom print headers for Valencia Coloursmile",
+    description: "Staff can now add custom headers to printed reports for the Valencia Coloursmile branch, giving documents a more professional and tailored look."
+  },
+
+  {
     id: "update-1786897089107",
     version: "v1.8.16",
     date: "2026-08-16",
