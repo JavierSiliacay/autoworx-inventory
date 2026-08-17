@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1786929294603",
+    version: "v1.8.17",
+    date: "2026-08-17",
+    type: "fix",
+    title: "Corrected Prepared By for Valencia Coloursmile",
+    description: "The 'prepared by' field for Valencia Coloursmile now correctly shows REZEL BAHIAN, ensuring accurate attribution on reports."
+  },
+
+  {
     id: "update-1786928707303",
     version: "v1.8.17",
     date: "2026-08-17",
