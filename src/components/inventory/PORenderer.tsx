@@ -97,8 +97,20 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
         <div className="flex-1 flex flex-col min-h-0">
           {/* LOGO & ADDRESS (Tight Header Block) */}
           <div className="text-center mb-4 shrink-0 -mt-2">
-            <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
-            <p className="text-[14px] -mt-10 font-medium">Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City</p>
+            {po.branch?.name?.toUpperCase().includes('VALENCIA') ? (
+              <div className="flex items-center justify-center gap-2">
+                <img src="/coloursmile_logo.png" alt="Valencia Coloursmile Paint Trading" className="h-28 object-contain mb-0" />
+                <div className="text-center mt-4">
+                  <h2 className="text-[26px] text-black font-extrabold tracking-wide mb-1 whitespace-nowrap" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>VALENCIA COLOURSMILE PAINT TRADING</h2>
+                  <p className="text-[16px] text-black font-medium" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>Alkuino Bldg, Sayre Highway, Poblacion, Valencia City</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
+                <p className="text-[14px] -mt-10 font-medium">Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City</p>
+              </>
+            )}
           </div>
 
           {/* TITLE */}
