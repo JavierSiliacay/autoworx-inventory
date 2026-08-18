@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787035750425",
+    version: "v1.8.18",
+    date: "2026-08-18",
+    type: "improvement",
+    title: "Smoother cash sales without receipts",
+    description: "Staff can now complete cash transactions even when no receipt is printed, and reports automatically hide sensitive details for better privacy and ease of use."
+  },
+
+  {
     id: "update-1787031939631",
     version: "v1.8.18",
     date: "2026-08-18",
