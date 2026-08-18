@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787018656402",
+    version: "v1.8.18",
+    date: "2026-08-18",
+    type: "feature",
+    title: "New Billed Status & Miscellaneous Inventory Category",
+    description: "Staff can now mark items as 'Billed' to track invoicing progress and use a new Miscellaneous category for easier inventory organization."
+  },
+
+  {
     id: "update-1786929294603",
     version: "v1.8.17",
     date: "2026-08-17",
