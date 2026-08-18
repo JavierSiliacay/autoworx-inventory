@@ -280,6 +280,7 @@ export default function StockInPage() {
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="px-4 py-3 w-8" />
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Received By</th>
@@ -335,7 +336,16 @@ export default function StockInPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-slate-900 font-mono">{log.invoice_number || "—"}</p>
+                        {log.invoice_number?.startsWith('[ADJ+]') ? (
+                          <span className="inline-flex px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Adj (+)</span>
+                        ) : log.invoice_number?.startsWith('[ADJ-]') ? (
+                          <span className="inline-flex px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Adj (-)</span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Stock-In</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-slate-900 font-mono">{log.invoice_number?.replace(/^\[ADJ[+-]\]-/, '') || "—"}</p>
                         {log.po && <p className="text-[10px] text-slate-400 mt-0.5">REF: {log.po.po_number}</p>}
                       </td>
                       <td className="px-6 py-4">
@@ -616,11 +626,20 @@ export default function StockInPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 ml-7">
+                        {log.invoice_number?.startsWith('[ADJ+]') ? (
+                          <span className="inline-flex px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (+)</span>
+                        ) : log.invoice_number?.startsWith('[ADJ-]') ? (
+                          <span className="inline-flex px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (-)</span>
+                        ) : (
+                          <span className="inline-flex px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[9px] font-bold uppercase tracking-wider">Stock-In</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${isExpanded ? "bg-green-100 text-green-600" : "text-slate-300"}`}>
                           {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         </div>
-                        <p className="text-sm font-semibold text-slate-900 font-mono truncate">{log.invoice_number || "No Invoice"}</p>
+                        <p className="text-sm font-semibold text-slate-900 font-mono truncate">{log.invoice_number?.replace(/^\[ADJ[+-]\]-/, '') || "No Invoice"}</p>
                       </div>
                       <p className="text-xs text-slate-500 ml-7">{log.supplier?.name}</p>
                     </div>

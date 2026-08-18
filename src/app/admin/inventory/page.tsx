@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History, PackageMinus
+  Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History, PackageMinus, Printer
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -105,6 +105,11 @@ export default function AdminInventoryPage() {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Print settings state
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printCategories, setPrintCategories] = useState<string[]>(CATEGORIES);
+  const [printStockFilter, setPrintStockFilter] = useState("all");
 
   async function fetchPriceHistory(id: string) {
     setHistoryLoading(true);
@@ -285,13 +290,22 @@ export default function AdminInventoryPage() {
           <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">Master Inventory</h1>
           <p className="text-sm text-slate-500 mt-0.5">Live stock levels across the distribution network.</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="inline-flex items-center justify-center gap-2 bg-[#16a34a] hover:bg-[#15803d] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-sm shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsPrintModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-sm shrink-0"
+          >
+            <Printer className="w-4 h-4" />
+            Print Sheet
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="inline-flex items-center justify-center gap-2 bg-[#16a34a] hover:bg-[#15803d] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Add Product
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -824,6 +838,100 @@ export default function AdminInventoryPage() {
                 className="flex-[2] inline-flex items-center justify-center gap-2 py-2.5 bg-[#16a34a] hover:bg-[#15803d] text-white text-sm font-semibold rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-sm">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
                 {currentProduct.id ? "Save Changes" : "Add Product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Modal */}
+      {isPrintModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-bold text-slate-800">Print Physical Inventory Sheet</h2>
+              <button onClick={() => setIsPrintModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Category Filter */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-bold text-slate-700">Categories to Print</label>
+                  <button 
+                    onClick={() => setPrintCategories(printCategories.length === CATEGORIES.length ? [] : [...CATEGORIES])}
+                    className="text-xs text-blue-600 font-semibold hover:underline"
+                  >
+                    {printCategories.length === CATEGORIES.length ? "Deselect All" : "Select All"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORIES.map(cat => (
+                    <label key={cat} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                        checked={printCategories.includes(cat)}
+                        onChange={(e) => {
+                          if (e.target.checked) setPrintCategories([...printCategories, cat]);
+                          else setPrintCategories(printCategories.filter(c => c !== cat));
+                        }}
+                      />
+                      <span className="text-sm text-slate-700 font-medium">{cat}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Stock Filter */}
+              <div>
+                <label className="text-sm font-bold text-slate-700 block mb-3">Stock Level Filter</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                    <input type="radio" name="stockFilter" value="all" checked={printStockFilter === "all"} onChange={() => setPrintStockFilter("all")} className="text-blue-600 focus:ring-blue-600" />
+                    <div>
+                      <span className="block text-sm font-bold text-slate-800">All Items</span>
+                      <span className="block text-xs text-slate-500">Print the entire list regardless of stock</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                    <input type="radio" name="stockFilter" value="in_stock" checked={printStockFilter === "in_stock"} onChange={() => setPrintStockFilter("in_stock")} className="text-green-600 focus:ring-green-600" />
+                    <div>
+                      <span className="block text-sm font-bold text-slate-800 text-green-700">Only In-Stock</span>
+                      <span className="block text-xs text-slate-500">System Qty &gt; 0</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                    <input type="radio" name="stockFilter" value="out_of_stock" checked={printStockFilter === "out_of_stock"} onChange={() => setPrintStockFilter("out_of_stock")} className="text-red-600 focus:ring-red-600" />
+                    <div>
+                      <span className="block text-sm font-bold text-slate-800 text-red-700">Only Out of Stock / Negative</span>
+                      <span className="block text-xs text-slate-500">System Qty &le; 0 (Needs manual verification)</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button
+                onClick={() => setIsPrintModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={printCategories.length === 0}
+                onClick={() => {
+                  const url = `/print/inventory?branch=${filterBranch || 'all'}&categories=${printCategories.join(',')}&stock=${printStockFilter}`;
+                  window.open(url, '_blank');
+                  setIsPrintModalOpen(false);
+                }}
+                className="inline-flex items-center gap-2 bg-[#16a34a] hover:bg-[#15803d] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Generate Sheet
               </button>
             </div>
           </div>

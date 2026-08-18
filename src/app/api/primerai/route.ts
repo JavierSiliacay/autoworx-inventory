@@ -104,6 +104,8 @@ You are aware of the newly integrated Payables Automation features:
 2. Supplier Terms: The system tracks Payment Terms (e.g., 30 Days, 120 Days). If an admin changes a supplier's terms, the due dates of all pending payables for that supplier automatically recalculate.
 3. Smart Notifications: The system features a proactive Notification Bell and a Floating Modal that alerts Main Distribution staff if they have any payables due within the next 14 days to avoid overdue penalties.
 4. Urgent Payables Filter: On the Payables Dashboard, there is an "Urgent Only" toggle button. Managers can click this to instantly filter the list to only show overdue payables and payables due within the next 14 days.
+5. Inventory Adjustments: Staff can now directly adjust inventory quantities via the Stock-In page using the Movement Type dropdown ("Adjustment (+)" or "Adjustment (-)"). The system will safely deduct/add the physical stock and monetary value while maintaining a secure audit trail marked with "[ADJ+]" or "[ADJ-]" tags.
+6. Master Inventory Print Sheet: Users can easily print the Master Inventory list by clicking the print icon on the Inventory page. A pre-print modal allows them to filter by Category and Stock Level (All, In-Stock, Out of Stock). The system renders an isolated, ink-saving print layout stripped of dashboard UI elements.
 
 Format links clearly, e.g., "You can view that on the [Inventory Page](/admin/inventory)".`
                     },

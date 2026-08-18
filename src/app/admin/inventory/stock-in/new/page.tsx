@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Plus, Trash2, Save, ArrowLeft, Loader2, Search,
-  Building2, Package, Calendar, Camera, FileText, UserCheck, CheckCircle2
+  Building2, Package, Calendar, Camera, FileText, UserCheck, CheckCircle2, Info, AlertTriangle
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -77,6 +77,7 @@ export default function NewStockInPage() {
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [dateReceived, setDateReceived] = useState(new Date().toISOString().split("T")[0]);
+  const [movementType, setMovementType] = useState<"Stock In" | "Adjustment (+)" | "Adjustment (-)">("Stock In");
   const [items, setItems] = useState<StockInItem[]>([]);
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -163,8 +164,14 @@ export default function NewStockInPage() {
     e.preventDefault();
     setHasSubmitted(true);
     
-    if (!supplierId || !invoiceNumber || items.length === 0) { 
-      alert("Supplier, Invoice No, and at least one item are required."); 
+    const isAdjustment = movementType.includes("Adjustment");
+    
+    if (!isAdjustment && (!supplierId || !invoiceNumber)) { 
+      alert("Supplier and Invoice No are required for Stock In."); 
+      return; 
+    }
+    if (items.length === 0) {
+      alert("At least one item is required."); 
       return; 
     }
 
@@ -202,28 +209,37 @@ export default function NewStockInPage() {
       const userRole = (session?.user as any)?.role || "staff";
       const formattedRole = userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
+      let finalInvoiceNumber = invoiceNumber;
+      if (isAdjustment && !finalInvoiceNumber) {
+        finalInvoiceNumber = `[ADJ${movementType.includes('+') ? '+' : '-'}]-${Date.now()}`;
+      }
+
       const logPayload = {
         reference_po_id: selectedPO || null,
         branch_id: selectedBranchId,
-        supplier_id: supplierId,
-        invoice_number: invoiceNumber,
+        supplier_id: isAdjustment && !supplierId ? null : supplierId,
+        invoice_number: finalInvoiceNumber,
         date_received: dateReceived,
         received_by: `${session?.user?.name || session?.user?.email || "System"} (${formattedRole})`,
         receipt_image_url: imageUrl,
-        total_amount: total
+        total_amount: total * (movementType === "Adjustment (-)" ? -1 : 1)
       };
 
       const itemsPayload = items.map(item => {
         const template = inventory.find(inv => inv.product_name === item.product_name);
+        const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+        const qty = item.quantity_received * multiplier;
+        const itemTotal = item.total_amount !== undefined ? (item.total_amount * multiplier) : (item.quantity_received * item.unit_cost * multiplier);
+
         return {
           inventory_id: item.inventory_id || null,
           product_name: item.product_name,
           category: template?.category || "Paint",
           unit: template?.unit || "Gallon",
           price: template?.price || (item.unit_cost * 1.3),
-          quantity_received: item.quantity_received,
+          quantity_received: qty,
           unit_cost: item.unit_cost,
-          total_amount: item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost)
+          total_amount: itemTotal
         };
       });
 
@@ -257,14 +273,36 @@ export default function NewStockInPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">Record Stock-In</h1>
-          <p className="text-sm text-slate-500">Verify and log incoming inventory.</p>
+          <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">
+            {movementType === "Stock In" ? "Record Stock-In" : "Inventory Adjustment"}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {movementType === "Stock In" ? "Verify and log incoming inventory." : "Correct physical inventory discrepancies."}
+          </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Details Card */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Movement Type */}
+          <div className="sm:col-span-2">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Movement Type</label>
+            <div className="relative">
+              <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <select value={movementType} onChange={e => {
+                setMovementType(e.target.value as any);
+                if (e.target.value.includes("Adjustment")) {
+                  setSelectedPO("");
+                }
+              }}
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors">
+                <option value="Stock In">Stock In (Purchase/Delivery)</option>
+                <option value="Adjustment (+)">Adjustment (+) - Add Missing Stock</option>
+                <option value="Adjustment (-)">Adjustment (-) - Remove Missing/Damaged Stock</option>
+              </select>
+            </div>
+          </div>
           {/* Reference PO */}
           <div className="sm:col-span-2">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Reference Purchase Order</label>
@@ -282,9 +320,9 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Supplier</label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <select disabled={!!selectedPO} value={supplierId} onChange={e => setSupplierId(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
-                <option value="">Select supplier...</option>
+              <select disabled={!!selectedPO || movementType.includes("Adjustment")} value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO || movementType.includes("Adjustment") ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId && !movementType.includes("Adjustment") ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
+                <option value="">{movementType.includes("Adjustment") ? "Not Required for Adjustments" : "Select supplier..."}</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -294,9 +332,9 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Invoice / Receipt No.</label>
             <div className="relative">
               <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input type="text" placeholder="e.g. INV-9812" value={invoiceNumber}
+              <input type="text" placeholder={movementType.includes("Adjustment") ? "Auto-generated if left blank" : "e.g. INV-9812"} value={invoiceNumber}
                 onChange={e => setInvoiceNumber(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber && !movementType.includes("Adjustment") ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
             </div>
           </div>
           {/* Date */}
@@ -309,6 +347,29 @@ export default function NewStockInPage() {
             </div>
           </div>
         </div>
+        {movementType === "Adjustment (+)" && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+              <Info className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-blue-900">You selected Adjustment (+)</h4>
+              <p className="text-xs text-blue-700 mt-0.5">This action will <strong>increase</strong> the inventory quantity. If you meant to decrease or remove stock, please change the Movement Type to <strong>Adjustment (-)</strong> at the top.</p>
+            </div>
+          </div>
+        )}
+        
+        {movementType === "Adjustment (-)" && (
+          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg shrink-0">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-900">You selected Adjustment (-)</h4>
+              <p className="text-xs text-amber-700 mt-0.5">Simply enter a positive number in the Qty column below, and the system will automatically <strong>decrease</strong> the stock by that amount.</p>
+            </div>
+          </div>
+        )}
 
         {/* Line Items Card */}
         <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col">
@@ -449,7 +510,23 @@ export default function NewStockInPage() {
                     {items.map((item, idx) => {
                       return (
                       <tr id={`desktop-row-${item.inventory_id}`} key={idx} className="transition-colors">
-                        <td className="px-5 py-3 text-sm font-medium text-slate-800">{item.product_name}</td>
+                        <td className="px-5 py-3">
+                          <div className="text-sm font-medium text-slate-800">{item.product_name}</div>
+                          {movementType.includes("Adjustment") && (() => {
+                            const template = inventory.find(i => i.product_name === item.product_name);
+                            const currentStock = template?.quantity || 0;
+                            const currentCost = template?.cost || 0;
+                            const currentValue = currentStock * currentCost;
+                            const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+                            const newStock = currentStock + (item.quantity_received * multiplier);
+                            const newValue = newStock * currentCost;
+                            return (
+                              <div className="text-[10px] text-slate-500 mt-1">
+                                Stock: {currentStock} <span className="text-slate-300 mx-1">➔</span> <span className={`font-bold ${newStock < 0 ? 'text-red-500' : 'text-blue-600'}`}>{newStock}</span> | Value: ₱{currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-slate-300 mx-1">➔</span> <span className="font-mono font-medium">₱{newValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="1" value={item.quantity_received} min={1}
                             onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
@@ -496,7 +573,23 @@ export default function NewStockInPage() {
                   return (
                   <div id={`mobile-row-${item.inventory_id}`} key={idx} className="p-4 space-y-3 transition-colors">
                     <div className="flex justify-between items-start">
-                      <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
+                        {movementType.includes("Adjustment") && (() => {
+                          const template = inventory.find(i => i.product_name === item.product_name);
+                          const currentStock = template?.quantity || 0;
+                          const currentCost = template?.cost || 0;
+                          const currentValue = currentStock * currentCost;
+                          const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+                          const newStock = currentStock + (item.quantity_received * multiplier);
+                          const newValue = newStock * currentCost;
+                          return (
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              Stock: {currentStock} ➔ <span className={`font-bold ${newStock < 0 ? 'text-red-500' : 'text-blue-600'}`}>{newStock}</span> | ₱{newValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          );
+                        })()}
+                      </div>
                       {!selectedPO && (
                         <button type="button" onClick={() => {
                           if (window.confirm("Are you sure you want to remove this item?")) {
