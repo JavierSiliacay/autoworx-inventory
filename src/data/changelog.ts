@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787042122700",
+    version: "v1.8.18",
+    date: "2026-08-18",
+    type: "feature",
+    title: "Primer AI now supports Bisaya language",
+    description: "Users can interact with Primer AI in their native Bisaya language, making the experience more intuitive and accessible."
+  },
+
+  {
     id: "update-1787041491262",
     version: "v1.8.18",
     date: "2026-08-18",
