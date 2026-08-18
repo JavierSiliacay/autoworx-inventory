@@ -269,7 +269,8 @@ export default function AdminSalesPage() {
       let query = supabase
         .from('sales')
         .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
 
       if (filterBranch) {
         if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
@@ -1247,15 +1248,15 @@ export default function AdminSalesPage() {
                 <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
                   <div className="max-h-[300px] overflow-y-auto">
                     <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse table-fixed">
                       <thead className="sticky top-0 z-10 bg-slate-100">
                         <tr>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32">Color Code (Optional)</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[120px]">Unit Price</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[150px] text-right">Subtotal</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Color Code</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28">Unit Price</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
                           <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
                         </tr>
                       </thead>
@@ -1279,8 +1280,8 @@ export default function AdminSalesPage() {
                             <td className="px-2 py-2">
                               <input
                                 type="number"
-                                min="1" step="1"
-                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
+                                min="0.01" step="any"
+                                className="w-full px-1 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
                                 value={item.quantity === undefined ? "" : item.quantity}
                                 onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                               />

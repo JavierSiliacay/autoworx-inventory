@@ -61,16 +61,16 @@ export default function BillingStatementsPage() {
   async function fetchCustomersWithBalance() {
     try {
       let query = supabase.from('accounts_receivable')
-        .select('customer_name')
-        .gt('remaining_balance', 0)
-        .neq('payment_status', 'Billed'); // Exclude billed invoices
+        .select('customer_name, remaining_balance, payment_status')
+        .limit(10000);
       if (selectedBranchId !== "all") {
         query = query.eq('branch_id', selectedBranchId);
       }
       const { data, error } = await query;
       if (error) throw error;
       if (data) {
-        const unique = Array.from(new Set(data.map(d => (d.customer_name || 'UNKNOWN').trim().toUpperCase())));
+        const eligible = data.filter(d => Number(d.remaining_balance) > 0 && d.payment_status !== 'Billed');
+        const unique = Array.from(new Set(eligible.map(d => (d.customer_name || 'UNKNOWN').trim().toUpperCase())));
         setAvailableCustomers(unique.sort());
       }
     } catch (err) {
@@ -86,15 +86,17 @@ export default function BillingStatementsPage() {
       // 1. Fetch ARs for this customer
       let arQuery = supabase.from('accounts_receivable')
         .select('*')
-        .gt('remaining_balance', 0)
-        .neq('payment_status', 'Billed') // Exclude billed invoices
-        .ilike('customer_name', selectedCustomerForCreate);
+        .ilike('customer_name', selectedCustomerForCreate)
+        .limit(10000);
       
       if (selectedBranchId !== "all") {
         arQuery = arQuery.eq('branch_id', selectedBranchId);
       }
-      const { data: ars, error: arError } = await arQuery;
+      const { data: arsRaw, error: arError } = await arQuery;
       if (arError) throw arError;
+      
+      const ars = (arsRaw || []).filter(r => Number(r.remaining_balance) > 0 && r.payment_status !== 'Billed');
+      
       if (!ars || ars.length === 0) {
         alert("No outstanding invoices found for this customer.");
         setIsCreating(false);
