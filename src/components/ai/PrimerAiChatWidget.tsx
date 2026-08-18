@@ -12,11 +12,11 @@ type Message = {
   content: string;
 };
 
-const SUGGESTIONS = ["Where is the inventory dashboard?", "Take me to the sales page.", "Where do I manage staff?"];
+const SUGGESTIONS = ["Where is the inventory dashboard?", "Asa ang sales invoice?", "Unsaon pag print sa inventory list?"];
 const WELCOME_MSG: Message = {
   id: "welcome",
   role: "assistant",
-  content: "Hello! I am Primer AI. I can help you understand the Autoworx Inventory System. How can I assist you today?",
+  content: "Hello! Ako si Primer AI. Pwede tika matabangan unsaon pag gamit sa Autoworx Inventory System. Unsa may matabang nako nimo karon? Pwede rajud ka magbisaya, makasabot raman japun ko.",
 };
 
 export default function PrimerAiChatWidget() {
