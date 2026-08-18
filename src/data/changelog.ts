@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787041491262",
+    version: "v1.8.18",
+    date: "2026-08-18",
+    type: "feature",
+    title: "Print Inventory Sheets & Adjust Stock Easily",
+    description: "Staff can now print a master inventory sheet directly from the system and make stock adjustments on the spot, eliminating extra steps and simplifying inventory management."
+  },
+
+  {
     id: "update-1787035750425",
     version: "v1.8.18",
     date: "2026-08-18",
