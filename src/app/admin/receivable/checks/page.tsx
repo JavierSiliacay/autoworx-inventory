@@ -215,7 +215,7 @@ export default function CheckLogsPage() {
                   </td>
                   <td className="px-10 py-6">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-[#1e40af] uppercase tracking-widest mb-0.5">INV: {check.invoice_no}</span>
+                      <span className="text-[10px] font-black text-[#1e40af] uppercase tracking-widest mb-0.5">INV: {check.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : check.invoice_no}</span>
                       <span className="text-xs font-bold text-slate-700">{check.customer_name}</span>
                     </div>
                   </td>
@@ -283,7 +283,7 @@ export default function CheckLogsPage() {
                 <option value="" disabled>Select Customer / Invoice</option>
                 {arRecords.map(ar => (
                   <option key={ar.id} value={ar.id}>
-                    {ar.customer_name} - {ar.invoice_no} (Balance: ₱{formatNum(ar.remaining_balance)})
+                    {ar.customer_name} - {ar.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : ar.invoice_no} (Balance: ₱{formatNum(ar.remaining_balance)})
                   </option>
                 ))}
               </select>

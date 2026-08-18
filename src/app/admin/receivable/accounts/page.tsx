@@ -174,7 +174,7 @@ export default function AccountReceivablesPage() {
                 >
                   <td className="px-10 py-6">
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-[#1e40af] uppercase tracking-widest">{record.invoice_no || 'NO INV'}</span>
+                      <span className="text-xs font-black text-[#1e40af] uppercase tracking-widest">{record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (record.invoice_no || 'NO INV')}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{formatDate(record.date)}</span>
                     </div>
                   </td>

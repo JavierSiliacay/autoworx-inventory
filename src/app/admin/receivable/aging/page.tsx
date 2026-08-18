@@ -311,7 +311,7 @@ export default function AgingReportPage() {
                     {isEditing ? (
                       <input className="px-2 py-1 text-xs font-bold border border-blue-200 rounded-lg w-24 bg-white text-[#1e40af] focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20" value={editValues.invoice_no || ''} onChange={e => setEditValues({...editValues, invoice_no: e.target.value})} />
                     ) : (
-                      <span className="font-bold text-[#1e40af] text-xs uppercase tracking-widest">{record.invoice_no}</span>
+                      <span className="font-bold text-[#1e40af] text-xs uppercase tracking-widest">{record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : record.invoice_no}</span>
                     )}
                   </td>
                   <td className="px-6 py-5 text-sm">

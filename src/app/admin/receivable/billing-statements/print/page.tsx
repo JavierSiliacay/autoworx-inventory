@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Printer, X, Loader2 } from "lucide-react";
-
+  
 interface CustomerData {
   name: string;
   address: string;
@@ -206,7 +206,7 @@ export default function BillingStatementPrintPage() {
                           {new Date(item.date).toLocaleDateString('en-GB')}
                         </td>
                         <td className="border-r-[1.5px] border-black text-center font-bold text-blue-700">
-                          {item.invoice_no}
+                          {item.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : item.invoice_no}
                         </td>
                         <td className="text-center font-black pr-4">
                           ₱{Number(item.remaining_balance).toLocaleString(undefined, {minimumFractionDigits:2})}

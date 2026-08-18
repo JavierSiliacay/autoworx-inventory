@@ -257,7 +257,7 @@ export default function SavedBillingStatementPrintPage() {
                               {new Date(item.date_purchased).toLocaleDateString('en-GB')}
                             </td>
                             <td className="border-r-[1.5px] border-black text-center text-blue-600 font-bold uppercase">
-                              {item.invoice_no}
+                              {item.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : item.invoice_no}
                             </td>
                             <td className="border-r-[1.5px] border-black text-center font-bold uppercase">
                               {data.po_number || ''}

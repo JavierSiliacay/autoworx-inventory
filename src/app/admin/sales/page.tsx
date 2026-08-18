@@ -448,6 +448,7 @@ export default function AdminSalesPage() {
       }
 
       // 2. Insert into Sales
+      const finalInvoiceNo = currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? `MIG-NO-REC-${Date.now()}` : currentSale.invoice_no;
       const salesBatch = validItems.map(item => {
         const invItem = inventory.find(i => i.id === item.item_id);
         const sellingPrice = Number(item.unit_price || 0);
@@ -457,7 +458,7 @@ export default function AdminSalesPage() {
 
         return {
           date: currentSale.date,
-          invoice_no: currentSale.invoice_no,
+          invoice_no: finalInvoiceNo,
           customer_name: currentSale.customer_name,
           payment_type: currentSale.payment_type,
           branch_id: currentSale.branch_id || invItem?.branch_id,
@@ -481,7 +482,7 @@ export default function AdminSalesPage() {
       // 3. Create Accounts Receivable record if it's a debt (one for the whole invoice)
       if (currentSale.payment_type !== 'Cancelled' && (currentSale.payment_type === "Charge" || currentSale.payment_type === "Delivery") && salesData && salesData.length > 0) {
         await supabase.from('accounts_receivable').insert([{
-          invoice_no: currentSale.invoice_no,
+          invoice_no: finalInvoiceNo,
           customer_name: currentSale.customer_name,
           total_amount_due: grandTotal,
           remaining_balance: grandTotal,
@@ -921,7 +922,7 @@ export default function AdminSalesPage() {
                     )}
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className={`text-sm font-bold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>{invoice.invoice_no}</span>
+                        <span className={`text-sm font-bold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>{invoice.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : invoice.invoice_no}</span>
                         <span className={`text-[10px] font-medium ${invoice.payment_type === 'Cancelled' ? 'text-red-400' : 'text-slate-400'}`}>
                           {new Date(invoice.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -1191,7 +1192,7 @@ export default function AdminSalesPage() {
                     <SearchableSelect
                       options={customers.map(c => ({ value: c.name, label: c.name }))}
                       value={currentSale.customer_name}
-                      onChange={(val) => setCurrentSale({...currentSale, customer_name: val})}
+                      onChange={(val) => setCurrentSale({...currentSale, customer_name: val, invoice_no: val === 'CASH SALES - NO RECEIPT' ? 'CASH SALES - NO RECEIPT' : (currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? '' : currentSale.invoice_no)})}
                       placeholder="Select a customer..."
                       className="pl-8"
                     />
