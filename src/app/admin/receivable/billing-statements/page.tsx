@@ -60,7 +60,10 @@ export default function BillingStatementsPage() {
 
   async function fetchCustomersWithBalance() {
     try {
-      let query = supabase.from('accounts_receivable').select('customer_name').gt('remaining_balance', 0);
+      let query = supabase.from('accounts_receivable')
+        .select('customer_name')
+        .gt('remaining_balance', 0)
+        .neq('payment_status', 'Billed'); // Exclude billed invoices
       if (selectedBranchId !== "all") {
         query = query.eq('branch_id', selectedBranchId);
       }
@@ -84,6 +87,7 @@ export default function BillingStatementsPage() {
       let arQuery = supabase.from('accounts_receivable')
         .select('*')
         .gt('remaining_balance', 0)
+        .neq('payment_status', 'Billed') // Exclude billed invoices
         .ilike('customer_name', selectedCustomerForCreate);
       
       if (selectedBranchId !== "all") {

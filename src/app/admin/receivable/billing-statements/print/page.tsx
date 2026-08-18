@@ -33,6 +33,7 @@ export default function BillingStatementPrintPage() {
         .from('accounts_receivable')
         .select('*')
         .gt('remaining_balance', 0)
+        .neq('payment_status', 'Billed')
         .order('date', { ascending: true });
 
       if (customerFilter) {

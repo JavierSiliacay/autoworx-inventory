@@ -196,7 +196,11 @@ export default function AccountReceivablesPage() {
                     <span className={`text-sm font-black ${record.remaining_balance <= 0 ? 'text-slate-400' : 'text-red-600'}`}>₱{formatNum(record.remaining_balance)}</span>
                   </td>
                   <td className="px-10 py-6 text-center">
-                    {record.remaining_balance <= 0 ? (
+                    {record.payment_status?.toLowerCase() === 'billed' ? (
+                      <span className="px-3 py-1 bg-blue-50 text-blue-600 font-black text-[9px] uppercase tracking-widest rounded-xl ring-1 ring-blue-100">
+                        BILLED
+                      </span>
+                    ) : record.remaining_balance <= 0 ? (
                       <span className="px-3 py-1 bg-green-50 text-green-600 font-black text-[9px] uppercase tracking-widest rounded-xl ring-1 ring-green-100">
                         CLEARED
                       </span>

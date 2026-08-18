@@ -26,7 +26,7 @@ interface InventoryItem {
   updated_at: string;
 }
 
-const CATEGORIES = ["Urethane", "Clearcoat", "Primer", "Paint"];
+const CATEGORIES = ["Urethane", "Clearcoat", "Primer", "Paint", "Miscellaneous"];
 const PREDEFINED_UNITS = ["Gallon", "Liter", "Can", "Piece", "Kilogram", "Meter"];
 
 const categoryBadge: Record<string, string> = {
@@ -34,6 +34,7 @@ const categoryBadge: Record<string, string> = {
   Clearcoat: "bg-indigo-50 text-indigo-600",
   Primer:    "bg-purple-50 text-purple-600",
   Paint:     "bg-slate-100 text-slate-600",
+  Miscellaneous: "bg-amber-50 text-amber-600",
 };
 
 const unitAbbr: Record<string, string> = {

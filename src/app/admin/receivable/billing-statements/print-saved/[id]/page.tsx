@@ -38,8 +38,45 @@ export default function SavedBillingStatementPrintPage() {
 
       if (itemError) throw itemError;
 
+      const arIds = (itemData || []).map((item: any) => item.ar_id).filter(Boolean);
+      let activeArsMap: Record<string, any> = {};
+      
+      if (arIds.length > 0) {
+        const { data: arData, error: arError } = await supabase
+          .from('accounts_receivable')
+          .select('*')
+          .in('id', arIds);
+          
+        if (!arError && arData) {
+           arData.forEach((ar: any) => activeArsMap[ar.id] = ar);
+        }
+      }
+
+      // Now filter and merge:
+      const mergedItems = (itemData || [])
+        .map((item: any) => {
+          const liveAr = activeArsMap[item.ar_id];
+          if (!liveAr) return item; // fallback if deleted
+          
+          return {
+             ...item,
+             amount_due: liveAr.remaining_balance,
+             invoice_no: liveAr.invoice_no,
+             date_purchased: liveAr.date,
+             _live_status: liveAr.payment_status
+          }
+        })
+        .filter((item: any) => {
+          // Only show if the status is Unpaid (or not Billed/Cleared)
+          if (item._live_status && item._live_status === 'Billed') return false;
+          if (item._live_status && item._live_status === 'Cleared') return false;
+          // Also remove if remaining balance is <= 0
+          if (Number(item.amount_due) <= 0) return false;
+          return true;
+        });
+
       setData(billData);
-      setItems(itemData || []);
+      setItems(mergedItems);
 
     } catch (e) {
       console.error(e);

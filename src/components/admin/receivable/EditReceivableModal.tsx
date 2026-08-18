@@ -16,6 +16,7 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
   const [invoiceNo, setInvoiceNo] = useState("");
   const [totalAmountDue, setTotalAmountDue] = useState("");
   const [amountCollected, setAmountCollected] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("Unpaid");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
         formattedCol += '.' + partsCol[1];
       }
       setAmountCollected(formattedCol);
+      setPaymentStatus(record.payment_status || "Unpaid");
     }
   }, [isOpen, record]);
 
@@ -68,6 +70,13 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
 
       if (rpcError) throw rpcError;
       
+      const { error: statusError } = await supabase
+        .from('accounts_receivable')
+        .update({ payment_status: paymentStatus })
+        .eq('id', record.id);
+      
+      if (statusError) throw statusError;
+
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -151,6 +160,18 @@ export default function EditReceivableModal({ isOpen, onClose, record, onSuccess
             <p className="text-[9px] font-bold text-emerald-500 mt-2 uppercase tracking-widest">
               Changes will be recorded as a manual adjustment in the audit trail.
             </p>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Status</label>
+            <select
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl outline-none text-sm font-medium text-slate-800 transition-all"
+              value={paymentStatus}
+              onChange={(e) => setPaymentStatus(e.target.value)}
+            >
+              <option value="Unpaid">Unpaid</option>
+              <option value="Billed">Billed</option>
+              <option value="Cleared">Cleared</option>
+            </select>
           </div>
         </div>
 
