@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787031939631",
+    version: "v1.8.18",
+    date: "2026-08-18",
+    type: "fix",
+    title: "Smoothier Data Handling and UI Fixes",
+    description: "We've resolved data migration issues, improved how accounts receivable data is fetched, and fixed several bugs in the ledger interface to make the system more reliable and easier to use."
+  },
+
+  {
     id: "update-1787018656402",
     version: "v1.8.18",
     date: "2026-08-18",
