@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787106085966",
+    version: "v1.8.19",
+    date: "2026-08-19",
+    type: "feature",
+    title: "Smart Payables for Bulk Stock Updates",
+    description: "Easily handle payables when adding multiple stock items at once and update categories in one step, making inventory management faster and less error‑prone."
+  },
+
+  {
     id: "update-1787042122700",
     version: "v1.8.18",
     date: "2026-08-18",
