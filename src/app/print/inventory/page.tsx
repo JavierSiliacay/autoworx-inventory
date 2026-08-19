@@ -14,7 +14,7 @@ interface InventoryItem {
   quantity: number;
 }
 
-const CATEGORIES = ["Urethane", "Clearcoat", "Primer", "Paint", "Miscellaneous"];
+const CATEGORIES = ["Thinner", "Clearcoat", "Primer", "Paint", "Miscellaneous"];
 
 const unitAbbr: Record<string, string> = {
   Gallon: "gal", Liter: "L", Can: "can",

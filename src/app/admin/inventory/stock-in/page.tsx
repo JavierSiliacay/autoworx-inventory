@@ -16,6 +16,7 @@ interface StockInItem {
   inventory_id: string;
   quantity_received: number;
   unit_cost: number;
+  movement_type?: string;
   inventory: {
     product_name: string;
     sku: string | null;
@@ -33,6 +34,7 @@ interface StockInLog {
   supplier: { name: string } | null;
   branch: { name: string } | null;
   po: { po_number: string } | null;
+  items?: { movement_type: string }[];
 }
 
 // Branches that have been fully migrated and should show data
@@ -134,7 +136,7 @@ export default function StockInPage() {
       // Always run the query — isolation is enforced by branch_id filter
       let query = supabase
         .from("stock_in_logs")
-        .select("*, supplier:suppliers(name), branch:branches(name), po:purchase_orders(po_number)")
+        .select("*, supplier:suppliers(name), branch:branches(name), po:purchase_orders(po_number), items:stock_in_items(movement_type)")
         .order("created_at", { ascending: false });
       if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
       const { data, error } = await query;
@@ -336,13 +338,18 @@ export default function StockInPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {log.invoice_number?.startsWith('[ADJ+]') ? (
-                          <span className="inline-flex px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Adj (+)</span>
-                        ) : log.invoice_number?.startsWith('[ADJ-]') ? (
-                          <span className="inline-flex px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Adj (-)</span>
-                        ) : (
-                          <span className="inline-flex px-2 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md text-[10px] font-bold uppercase tracking-wider">Stock-In</span>
-                        )}
+                        <div className="flex flex-col -space-y-[1px]">
+                          {Array.from(new Set(log.items?.map((i: any) => i.movement_type || "Stock In"))).sort().map((type: any, idx, arr) => (
+                             <span key={idx} className={`inline-flex items-center justify-center px-2 py-1 text-[9px] font-bold uppercase tracking-wider border relative ${
+                               type.includes("Adjustment (+)") ? "bg-blue-50 text-blue-700 border-blue-200" :
+                               type.includes("Adjustment (-)") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                               "bg-green-50 text-green-700 border-green-200"
+                             } ${idx === 0 && arr.length > 1 ? "rounded-t-md" : ""} ${idx === arr.length - 1 && arr.length > 1 ? "rounded-b-md" : ""} ${arr.length === 1 ? "rounded-md" : ""}`}
+                             style={{ zIndex: arr.length - idx }}>
+                               {type.includes("Adjustment (+)") ? "Adj (+)" : type.includes("Adjustment (-)") ? "Adj (-)" : "Stock-In"}
+                             </span>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm font-semibold text-slate-900 font-mono">{log.invoice_number?.replace(/^\[ADJ[+-]\]-/, '') || "—"}</p>
@@ -464,6 +471,7 @@ export default function StockInPage() {
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px]">#</th>
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px]">Item / Description</th>
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px]">SKU / Code</th>
+                                      <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px]">Type</th>
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px] text-right">Qty</th>
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px] text-right">Unit Cost</th>
                                       <th className="px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-[9px] text-right">Total</th>
@@ -492,6 +500,15 @@ export default function StockInPage() {
                                               <span className="text-slate-300">—</span>
                                             )}
                                           </td>
+                                          <td className="px-4 py-2.5">
+                                            {item.movement_type === "Adjustment (+)" ? (
+                                              <span className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (+)</span>
+                                            ) : item.movement_type === "Adjustment (-)" ? (
+                                              <span className="inline-flex px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (-)</span>
+                                            ) : (
+                                              <span className="inline-flex px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[9px] font-bold uppercase tracking-wider">Stock-In</span>
+                                            )}
+                                          </td>
                                           <td className="px-4 py-2.5 text-right font-semibold text-slate-700">
                                             {item.quantity_received.toLocaleString()}
                                           </td>
@@ -508,7 +525,7 @@ export default function StockInPage() {
                                   {/* Footer Total */}
                                   <tfoot>
                                     <tr className="border-t-2 border-slate-200 bg-slate-50">
-                                      <td colSpan={5} className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                      <td colSpan={6} className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                         Invoice Total
                                       </td>
                                       <td className="px-4 py-3 text-right text-sm font-bold text-green-700">
@@ -684,9 +701,18 @@ export default function StockInPage() {
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-semibold text-slate-800 leading-snug truncate">{item.inventory?.product_name || "—"}</p>
-                                  {item.inventory?.sku && (
-                                    <p className="text-[9px] font-mono text-slate-400 mt-0.5">#{item.inventory.sku}</p>
-                                  )}
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    {item.movement_type === "Adjustment (+)" ? (
+                                      <span className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[8px] font-bold uppercase tracking-wider">Adj (+)</span>
+                                    ) : item.movement_type === "Adjustment (-)" ? (
+                                      <span className="inline-flex px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[8px] font-bold uppercase tracking-wider">Adj (-)</span>
+                                    ) : (
+                                      <span className="inline-flex px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[8px] font-bold uppercase tracking-wider">Stock-In</span>
+                                    )}
+                                    {item.inventory?.sku && (
+                                      <p className="text-[9px] font-mono text-slate-400">#{item.inventory.sku}</p>
+                                    )}
+                                  </div>
                                 </div>
                                 <p className="text-xs font-bold text-slate-900 shrink-0">{fmt(lineTotal)}</p>
                               </div>

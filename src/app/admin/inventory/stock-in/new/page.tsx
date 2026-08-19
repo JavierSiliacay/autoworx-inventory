@@ -13,7 +13,7 @@ import { useNetwork } from "@/context/NetworkContext";
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; quantity?: number; }
 interface POHeader { id: string; po_number: string; supplier_id: string; items: any[]; }
-interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; total_amount?: number; }
+interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; total_amount?: number; movement_type?: "Stock In" | "Adjustment (+)" | "Adjustment (-)"; }
 
 const HighlightMatch = ({ text, query }: { text: string; query: string }) => {
   if (!query) return <>{text}</>;
@@ -77,7 +77,6 @@ export default function NewStockInPage() {
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [dateReceived, setDateReceived] = useState(new Date().toISOString().split("T")[0]);
-  const [movementType, setMovementType] = useState<"Stock In" | "Adjustment (+)" | "Adjustment (-)">("Stock In");
   const [items, setItems] = useState<StockInItem[]>([]);
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -132,7 +131,7 @@ export default function NewStockInPage() {
     
     if (!confirm(`Are you sure you want to add ${product.product_name}?`)) return;
 
-    setItems(prev => [...prev, { inventory_id: product.id, product_name: product.product_name, quantity_received: 1, unit_cost: product.cost || 0 }]);
+    setItems(prev => [...prev, { inventory_id: product.id, product_name: product.product_name, quantity_received: 1, unit_cost: product.cost || 0, movement_type: "Stock In" }]);
     setItemSearch("");
     
     setTimeout(() => {
@@ -158,15 +157,18 @@ export default function NewStockInPage() {
     if (file) { setReceiptImage(file); setPreviewUrl(URL.createObjectURL(file)); }
   };
 
-  const total = items.reduce((s, i) => s + (i.total_amount !== undefined ? Number(i.total_amount) : i.quantity_received * i.unit_cost), 0);
+  const total = items.reduce((s, i) => {
+    const m = i.movement_type === "Adjustment (-)" ? -1 : 1;
+    return s + (i.total_amount !== undefined ? Number(i.total_amount) * m : i.quantity_received * i.unit_cost * m);
+  }, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasSubmitted(true);
     
-    const isAdjustment = movementType.includes("Adjustment");
+    const isAdjustmentOnly = items.length > 0 && items.every(i => i.movement_type && i.movement_type.includes("Adjustment"));
     
-    if (!isAdjustment && (!supplierId || !invoiceNumber)) { 
+    if (!isAdjustmentOnly && (!supplierId || !invoiceNumber)) { 
       alert("Supplier and Invoice No are required for Stock In."); 
       return; 
     }
@@ -210,24 +212,24 @@ export default function NewStockInPage() {
       const formattedRole = userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
       let finalInvoiceNumber = invoiceNumber;
-      if (isAdjustment && !finalInvoiceNumber) {
-        finalInvoiceNumber = `[ADJ${movementType.includes('+') ? '+' : '-'}]-${Date.now()}`;
+      if (isAdjustmentOnly && !finalInvoiceNumber) {
+        finalInvoiceNumber = `[ADJ]-${Date.now()}`;
       }
 
       const logPayload = {
         reference_po_id: selectedPO || null,
         branch_id: selectedBranchId,
-        supplier_id: isAdjustment && !supplierId ? null : supplierId,
+        supplier_id: isAdjustmentOnly && !supplierId ? null : supplierId,
         invoice_number: finalInvoiceNumber,
         date_received: dateReceived,
         received_by: `${session?.user?.name || session?.user?.email || "System"} (${formattedRole})`,
         receipt_image_url: imageUrl,
-        total_amount: total * (movementType === "Adjustment (-)" ? -1 : 1)
+        total_amount: total
       };
 
       const itemsPayload = items.map(item => {
         const template = inventory.find(inv => inv.product_name === item.product_name);
-        const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+        const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
         const qty = item.quantity_received * multiplier;
         const itemTotal = item.total_amount !== undefined ? (item.total_amount * multiplier) : (item.quantity_received * item.unit_cost * multiplier);
 
@@ -239,7 +241,8 @@ export default function NewStockInPage() {
           price: template?.price || (item.unit_cost * 1.3),
           quantity_received: qty,
           unit_cost: item.unit_cost,
-          total_amount: itemTotal
+          total_amount: itemTotal,
+          movement_type: item.movement_type || "Stock In"
         };
       });
 
@@ -274,10 +277,10 @@ export default function NewStockInPage() {
         </button>
         <div>
           <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">
-            {movementType === "Stock In" ? "Record Stock-In" : "Inventory Adjustment"}
+            Record Stock-In / Adjustment
           </h1>
           <p className="text-sm text-slate-500">
-            {movementType === "Stock In" ? "Verify and log incoming inventory." : "Correct physical inventory discrepancies."}
+            Verify and log incoming inventory or correct discrepancies.
           </p>
         </div>
       </div>
@@ -285,24 +288,6 @@ export default function NewStockInPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Details Card */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Movement Type */}
-          <div className="sm:col-span-2">
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Movement Type</label>
-            <div className="relative">
-              <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <select value={movementType} onChange={e => {
-                setMovementType(e.target.value as any);
-                if (e.target.value.includes("Adjustment")) {
-                  setSelectedPO("");
-                }
-              }}
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] transition-colors">
-                <option value="Stock In">Stock In (Purchase/Delivery)</option>
-                <option value="Adjustment (+)">Adjustment (+) - Add Missing Stock</option>
-                <option value="Adjustment (-)">Adjustment (-) - Remove Missing/Damaged Stock</option>
-              </select>
-            </div>
-          </div>
           {/* Reference PO */}
           <div className="sm:col-span-2">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Reference Purchase Order</label>
@@ -320,9 +305,9 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Supplier</label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <select disabled={!!selectedPO || movementType.includes("Adjustment")} value={supplierId} onChange={e => setSupplierId(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO || movementType.includes("Adjustment") ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId && !movementType.includes("Adjustment") ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
-                <option value="">{movementType.includes("Adjustment") ? "Not Required for Adjustments" : "Select supplier..."}</option>
+              <select disabled={!!selectedPO} value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId && !items.every(i => i.movement_type?.includes("Adjustment")) ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
+                <option value="">{items.length > 0 && items.every(i => i.movement_type?.includes("Adjustment")) ? "Not Required for Adjustments" : "Select supplier..."}</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -332,9 +317,9 @@ export default function NewStockInPage() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Invoice / Receipt No.</label>
             <div className="relative">
               <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input type="text" placeholder={movementType.includes("Adjustment") ? "Auto-generated if left blank" : "e.g. INV-9812"} value={invoiceNumber}
+              <input type="text" placeholder={items.length > 0 && items.every(i => i.movement_type?.includes("Adjustment")) ? "Auto-generated if left blank" : "e.g. INV-9812"} value={invoiceNumber}
                 onChange={e => setInvoiceNumber(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber && !movementType.includes("Adjustment") ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber && !items.every(i => i.movement_type?.includes("Adjustment")) ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
             </div>
           </div>
           {/* Date */}
@@ -347,29 +332,6 @@ export default function NewStockInPage() {
             </div>
           </div>
         </div>
-        {movementType === "Adjustment (+)" && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg shrink-0">
-              <Info className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-blue-900">You selected Adjustment (+)</h4>
-              <p className="text-xs text-blue-700 mt-0.5">This action will <strong>increase</strong> the inventory quantity. If you meant to decrease or remove stock, please change the Movement Type to <strong>Adjustment (-)</strong> at the top.</p>
-            </div>
-          </div>
-        )}
-        
-        {movementType === "Adjustment (-)" && (
-          <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg shrink-0">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-amber-900">You selected Adjustment (-)</h4>
-              <p className="text-xs text-amber-700 mt-0.5">Simply enter a positive number in the Qty column below, and the system will automatically <strong>decrease</strong> the stock by that amount.</p>
-            </div>
-          </div>
-        )}
 
         {/* Line Items Card */}
         <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden flex flex-col">
@@ -500,6 +462,7 @@ export default function NewStockInPage() {
                   <thead>
                     <tr className="border-b border-slate-100">
                       <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Movement Type</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Qty Received</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Unit Cost</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Total</th>
@@ -512,12 +475,12 @@ export default function NewStockInPage() {
                       <tr id={`desktop-row-${item.inventory_id}`} key={idx} className="transition-colors">
                         <td className="px-5 py-3">
                           <div className="text-sm font-medium text-slate-800">{item.product_name}</div>
-                          {movementType.includes("Adjustment") && (() => {
+                          {item.movement_type?.includes("Adjustment") && (() => {
                             const template = inventory.find(i => i.product_name === item.product_name);
                             const currentStock = template?.quantity || 0;
                             const currentCost = template?.cost || 0;
                             const currentValue = currentStock * currentCost;
-                            const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+                            const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
                             const newStock = currentStock + (item.quantity_received * multiplier);
                             const newValue = newStock * currentCost;
                             return (
@@ -526,6 +489,13 @@ export default function NewStockInPage() {
                               </div>
                             );
                           })()}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <select value={item.movement_type || "Stock In"} onChange={e => updateItem(idx, "movement_type", e.target.value)} className="w-28 text-xs font-medium px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#16a34a]">
+                            <option value="Stock In">Stock In</option>
+                            <option value="Adjustment (+)">Adj (+)</option>
+                            <option value="Adjustment (-)">Adj (-)</option>
+                          </select>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <input type="number" step="1" value={item.quantity_received} min={1}
@@ -575,12 +545,12 @@ export default function NewStockInPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
-                        {movementType.includes("Adjustment") && (() => {
+                        {item.movement_type?.includes("Adjustment") && (() => {
                           const template = inventory.find(i => i.product_name === item.product_name);
                           const currentStock = template?.quantity || 0;
                           const currentCost = template?.cost || 0;
                           const currentValue = currentStock * currentCost;
-                          const multiplier = movementType === "Adjustment (-)" ? -1 : 1;
+                          const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
                           const newStock = currentStock + (item.quantity_received * multiplier);
                           const newValue = newStock * currentCost;
                           return (
@@ -599,7 +569,15 @@ export default function NewStockInPage() {
                           className="p-1 text-slate-300 hover:text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                       )}
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div>
+                        <p className="text-[10px] text-slate-400 mb-1">Type</p>
+                        <select value={item.movement_type || "Stock In"} onChange={e => updateItem(idx, "movement_type", e.target.value)} className="w-full text-xs px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#16a34a]">
+                          <option value="Stock In">Stock In</option>
+                          <option value="Adjustment (+)">Adj (+)</option>
+                          <option value="Adjustment (-)">Adj (-)</option>
+                        </select>
+                      </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
                         <input type="number" step="1" min="1" value={item.quantity_received}

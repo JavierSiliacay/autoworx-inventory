@@ -22,6 +22,7 @@ DECLARE
   v_branch_id uuid;
   v_supplier_name text;
   v_supplier_due_days int;
+  v_payable_amount decimal := 0;
 BEGIN
   v_branch_id := (p_log_payload->>'branch_id')::uuid;
 
@@ -60,14 +61,20 @@ BEGIN
 
     -- Insert stock_in_item
     INSERT INTO public.stock_in_items (
-      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost
+      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost, movement_type
     ) VALUES (
       p_log_id,
       v_inventory_id,
       (v_new_item->>'quantity_received')::decimal,
       (v_new_item->>'unit_cost')::decimal,
-      COALESCE((v_new_item->>'total_amount')::decimal, (v_new_item->>'quantity_received')::decimal * (v_new_item->>'unit_cost')::decimal)
+      COALESCE((v_new_item->>'total_amount')::decimal, (v_new_item->>'quantity_received')::decimal * (v_new_item->>'unit_cost')::decimal),
+      COALESCE(v_new_item->>'movement_type', 'Stock In')
     );
+
+    -- Calculate payable amount (only Stock In items)
+    IF COALESCE(v_new_item->>'movement_type', 'Stock In') = 'Stock In' THEN
+      v_payable_amount := v_payable_amount + COALESCE((v_new_item->>'total_amount')::decimal, (v_new_item->>'quantity_received')::decimal * (v_new_item->>'unit_cost')::decimal);
+    END IF;
 
     -- Update inventory quantities and latest cost
     UPDATE public.inventory
@@ -96,14 +103,27 @@ BEGIN
 
   -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE'
   IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' THEN
-    UPDATE public.supplier_payables
-    SET 
-      supplier_name = v_supplier_name,
-      reference_no = p_log_payload->>'invoice_number',
-      amount_due = (p_log_payload->>'total_amount')::decimal,
-      balance = (p_log_payload->>'total_amount')::decimal - paid_amount,
-      due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
-    WHERE reference_no = p_log_payload->>'old_invoice_number';
+    IF v_payable_amount > 0 THEN
+      UPDATE public.supplier_payables
+      SET 
+        supplier_name = v_supplier_name,
+        reference_no = p_log_payload->>'invoice_number',
+        amount_due = v_payable_amount,
+        balance = v_payable_amount - paid_amount,
+        due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
+      WHERE reference_no = p_log_payload->>'old_invoice_number';
+    ELSE
+      -- If the edit removed all Stock In items, we should theoretically delete or zero out the payable.
+      -- But usually we just update it to 0.
+      UPDATE public.supplier_payables
+      SET 
+        supplier_name = v_supplier_name,
+        reference_no = p_log_payload->>'invoice_number',
+        amount_due = 0,
+        balance = 0 - paid_amount,
+        due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
+      WHERE reference_no = p_log_payload->>'old_invoice_number';
+    END IF;
   END IF;
 
 END;

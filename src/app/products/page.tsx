@@ -140,7 +140,7 @@ function ProductsContent() {
             Product <span className="text-[#1e40af]">Catalog</span>
           </h1>
           <p className="text-base md:text-lg text-[#475569] max-w-2xl leading-relaxed mx-auto md:mx-0">
-            Professional-grade automotive coatings for top body shops. Browse our curated selection of high-performance urethanes and structural primers.
+            Professional-grade automotive coatings for top body shops. Browse our curated selection of high-performance thinners and structural primers.
           </p>
         </header>
 
@@ -160,7 +160,7 @@ function ProductsContent() {
                 />
               </div>
               <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
-                {["All High-End", "Technical Paint", "Urethanes", "Clearcoats", "Primers"].map((cat) => (
+                {["All High-End", "Technical Paint", "Thinners", "Clearcoats", "Primers"].map((cat) => (
                   <button 
                     key={cat} 
                     onClick={() => {
@@ -188,7 +188,7 @@ function ProductsContent() {
             <div className="hidden lg:block bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-100">
               <h3 className="font-manrope font-bold text-xs tracking-widest uppercase text-slate-400 mb-6">Market Sectors</h3>
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-                {["All High-End", "Technical Paint", "Urethanes", "Clearcoats", "Primers"].map((cat) => (
+                {["All High-End", "Technical Paint", "Thinners", "Clearcoats", "Primers"].map((cat) => (
                   <label key={cat} className="flex items-center gap-3 cursor-pointer group">
                     <input 
                       type="checkbox" 

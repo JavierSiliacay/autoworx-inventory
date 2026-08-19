@@ -59,9 +59,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         supplier_id: logData.supplier_id || "",
         branch_id: logData.branch_id || "",
         items: logData.items ? logData.items.map((item: any) => {
-          const qty = Number(item.quantity_received) || 0;
+          const qty = Math.abs(Number(item.quantity_received) || 0);
           const cost = Number(item.unit_cost) || 0;
-          const totalAmt = item.total_amount !== undefined ? Number(item.total_amount) : (qty * cost);
+          const totalAmt = item.total_amount !== undefined ? Math.abs(Number(item.total_amount)) : (qty * cost);
           return {
             id: item.id,
             inventory_id: item.inventory_id,
@@ -69,7 +69,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
             quantity_received: qty,
             unit_cost: cost,
             total_amount: totalAmt,
-            old_quantity: qty
+            old_quantity: qty,
+            movement_type: item.movement_type || "Stock In",
+            old_movement_type: item.movement_type || "Stock In"
           };
         }) : []
       });
@@ -106,9 +108,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         supplier_id: logData.supplier_id || "",
         branch_id: logData.branch_id || "",
         items: logData.items ? logData.items.map((item: any) => {
-          const qty = Number(item.quantity_received) || 0;
+          const qty = Math.abs(Number(item.quantity_received) || 0);
           const cost = Number(item.unit_cost) || 0;
-          const totalAmt = item.total_amount !== undefined ? Number(item.total_amount) : (qty * cost);
+          const totalAmt = item.total_amount !== undefined ? Math.abs(Number(item.total_amount)) : (qty * cost);
           return {
             id: item.id,
             inventory_id: item.inventory_id,
@@ -116,7 +118,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
             quantity_received: qty,
             unit_cost: cost,
             total_amount: totalAmt,
-            old_quantity: qty
+            old_quantity: qty,
+            movement_type: item.movement_type || "Stock In",
+            old_movement_type: item.movement_type || "Stock In"
           };
         }) : []
       });
@@ -138,7 +142,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
           quantity_received: 1, 
           unit_cost: product.cost || 0,
           total_amount: product.cost || 0,
-          old_quantity: 0 
+          old_quantity: 0,
+          movement_type: "Stock In",
+          old_movement_type: null
         }
       ]
     });
@@ -208,19 +214,23 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
       const oldItemsPayload = (logData.items || []).map((item: any) => ({
         inventory_id: item.inventory_id,
-        quantity_received: item.quantity_received
+        quantity_received: item.quantity_received,
+        movement_type: item.movement_type || "Stock In"
       }));
 
       const newItemsPayload = validItems.map(item => {
-        const qty = Number(item.quantity_received) || 1;
-        const itemTotal = item.total_amount !== undefined && item.total_amount !== ""
+        const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
+        const qty = (Number(item.quantity_received) || 1) * multiplier;
+        const baseItemTotal = item.total_amount !== undefined && item.total_amount !== ""
           ? Number(item.total_amount)
-          : (qty * Number(item.unit_cost || 0));
+          : (Number(item.quantity_received) || 1) * Number(item.unit_cost || 0);
+        const itemTotal = baseItemTotal * multiplier;
         return {
           inventory_id: item.inventory_id,
           quantity_received: qty,
           unit_cost: Number(item.unit_cost || 0),
-          total_amount: itemTotal
+          total_amount: itemTotal,
+          movement_type: item.movement_type || "Stock In"
         };
       });
 
@@ -438,6 +448,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="px-4 py-3 font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Item Name</th>
+                    <th className="px-4 py-3 font-semibold text-slate-400 uppercase tracking-wider text-[10px] w-32">Movement Type</th>
                     <th className="px-4 py-3 font-semibold text-slate-400 uppercase tracking-wider text-[10px] w-32">Qty Received</th>
                     <th className="px-4 py-3 font-semibold text-slate-400 uppercase tracking-wider text-[10px] w-40">Unit Cost (₱)</th>
                     <th className="px-4 py-3 font-semibold text-slate-400 uppercase tracking-wider text-[10px] w-40 text-right">Total (₱)</th>
@@ -453,6 +464,17 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                           <Package className="w-4 h-4 text-slate-300" />
                           <span className="font-semibold text-slate-700">{item.product_name}</span>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <select 
+                          value={item.movement_type || "Stock In"} 
+                          onChange={(e) => handleRowChange(index, 'movement_type', e.target.value)}
+                          className="w-full text-[11px] font-medium px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                        >
+                          <option value="Stock In">Stock In</option>
+                          <option value="Adjustment (+)">Adj (+)</option>
+                          <option value="Adjustment (-)">Adj (-)</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         <input

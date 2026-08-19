@@ -19,6 +19,7 @@ DECLARE
   v_po_id uuid;
   v_supplier_name text;
   v_supplier_due_days int;
+  v_payable_amount decimal := 0;
 BEGIN
   -- 1. Parse PO ID if it exists (and is not empty string)
   IF (log_payload->>'reference_po_id') IS NOT NULL AND (log_payload->>'reference_po_id') != '' THEN
@@ -73,16 +74,21 @@ BEGIN
       ) RETURNING id INTO v_inventory_id;
     END IF;
 
-    -- Insert stock_in_items
     INSERT INTO public.stock_in_items (
-      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost
+      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost, movement_type
     ) VALUES (
       v_log_id,
       v_inventory_id,
       (v_item->>'quantity_received')::decimal,
       (v_item->>'unit_cost')::decimal,
-      COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * (v_item->>'unit_cost')::decimal)
+      COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * (v_item->>'unit_cost')::decimal),
+      COALESCE(v_item->>'movement_type', 'Stock In')
     );
+
+    -- Calculate payable amount (only Stock In items)
+    IF COALESCE(v_item->>'movement_type', 'Stock In') = 'Stock In' THEN
+      v_payable_amount := v_payable_amount + COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * (v_item->>'unit_cost')::decimal);
+    END IF;
 
     -- Update inventory quantities and latest cost
     UPDATE public.inventory
@@ -101,7 +107,7 @@ BEGIN
       'IN',
       (v_item->>'quantity_received')::decimal,
       COALESCE((v_item->>'total_amount')::decimal / NULLIF((v_item->>'quantity_received')::decimal, 0), (v_item->>'unit_cost')::decimal),
-      'Stock In: ' || (log_payload->>'invoice_number')
+      COALESCE(v_item->>'movement_type', 'Stock In') || ': ' || COALESCE(log_payload->>'invoice_number', 'N/A')
     );
   END LOOP;
 
@@ -119,7 +125,7 @@ BEGIN
   WHERE id = (log_payload->>'supplier_id')::uuid;
 
   -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE'
-  IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' THEN
+  IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' AND v_payable_amount > 0 THEN
     INSERT INTO public.supplier_payables (
       supplier_name,
       reference_no,
@@ -135,9 +141,9 @@ BEGIN
       v_supplier_name,
       log_payload->>'invoice_number',
       (log_payload->>'branch_id')::uuid,
-      (log_payload->>'total_amount')::decimal,
+      v_payable_amount,
       0,
-      (log_payload->>'total_amount')::decimal,
+      v_payable_amount,
       ((log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval),
       'Pending',
       'Auto-generated from Stock-In',
