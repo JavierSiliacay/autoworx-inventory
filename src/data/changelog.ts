@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787116500175",
+    version: "v1.8.19",
+    date: "2026-08-19",
+    type: "improvement",
+    title: "Faster Sales Search and Reporting",
+    description: "Staff can now search sales records more quickly, navigate pages smoothly, and see accurate attribution on printed reports."
+  },
+
+  {
     id: "update-1787106085966",
     version: "v1.8.19",
     date: "2026-08-19",
