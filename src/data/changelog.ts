@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787120832214",
+    version: "v1.8.19",
+    date: "2026-08-19",
+    type: "feature",
+    title: "Enhanced Developer Settings & Broadcast Tools",
+    description: "The Developer Settings interface has been refreshed for easier navigation, and broadcast features have been upgraded to let staff share updates more efficiently."
+  },
+
+  {
     id: "update-1787116500175",
     version: "v1.8.19",
     date: "2026-08-19",
