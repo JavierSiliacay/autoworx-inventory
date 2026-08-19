@@ -31,7 +31,7 @@ export default function BillingStatementPrintPage() {
       // 1. Fetch ARs
       let arQuery = supabase
         .from('accounts_receivable')
-        .select('*')
+        .select('*, branch:branches(name)')
         .gt('remaining_balance', 0)
         .neq('payment_status', 'Billed')
         .order('date', { ascending: true });
@@ -240,17 +240,33 @@ export default function BillingStatementPrintPage() {
             <div className="mt-auto pt-4 flex flex-col items-start px-2 shrink-0 z-10 page-break-inside-avoid">
                <div className="flex justify-between w-full items-end pb-2">
                   {/* Prepared By Block */}
-                  <div className="flex flex-col items-center">
-                    <img 
-                      src="/carla_signature.png" 
-                      alt="Signature" 
-                      className="h-16 object-contain -mb-6"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                    <div className="w-56 border-b-[1.5px] border-black"></div>
-                    <span className="text-[12px] font-bold mt-1 uppercase">CARLA B. VARIACION</span>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase">Prepared by</span>
-                  </div>
+                  {(() => {
+                    const branchName = items[0]?.branch?.name?.toUpperCase() || "";
+                    let preparedBy = "CARLA B. VARIACION";
+                    let showSignature = true;
+
+                    if (branchName.includes('ISUZU') || branchName.includes('AGORA')) {
+                      preparedBy = "RHONABYL MAGALLANES";
+                      showSignature = false;
+                    } else if (branchName.includes('VALENCIA')) {
+                      preparedBy = "REZEL BAHIAN";
+                      showSignature = false;
+                    }
+
+                    return (
+                      <div className="flex flex-col items-center">
+                        <img 
+                          src="/carla_signature.png" 
+                          alt="Signature" 
+                          className={`h-16 object-contain -mb-6 ${!showSignature ? 'invisible' : ''}`}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                        <div className="w-56 border-b-[1.5px] border-black"></div>
+                        <span className="text-[12px] font-bold mt-1 uppercase">{preparedBy}</span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase">Prepared by</span>
+                      </div>
+                    );
+                  })()}
 
 
                   {/* Noted By Block */}

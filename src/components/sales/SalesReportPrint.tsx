@@ -22,6 +22,7 @@ interface SalesReportPrintProps {
   transmittalChecks?: { name: string; ref: string; amount: string; bank: string }[];
   transmittalNotes?: string[];
   isPreview?: boolean;
+  branchName?: string;
 }
 
 export default function SalesReportPrint({ 
@@ -33,7 +34,8 @@ export default function SalesReportPrint({
   paymentTypeFilter = 'All',
   transmittalChecks = [], 
   transmittalNotes = [],
-  isPreview = false
+  isPreview = false,
+  branchName
 }: SalesReportPrintProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -80,13 +82,15 @@ export default function SalesReportPrint({
     ? `ANNUAL SALES REPORT - FOR YEAR ${year}${filterLabel}`
     : `DAILY SALES REPORT - ${new Date(printDate).toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' })}${filterLabel}`;
 
-  const cashSales = filteredSales.reduce((acc, sale) => (sale.payment_type === 'Cash' || sale.payment_type === 'GCash' || sale.payment_type === 'Bank Transfer') ? acc + sale.total_amount : acc, 0);
+  const cashSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cash' ? acc + sale.total_amount : acc, 0);
+  const digitalSales = filteredSales.reduce((acc, sale) => (sale.payment_type === 'GCash' || sale.payment_type === 'Bank Transfer') ? acc + sale.total_amount : acc, 0);
   const chargeSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Charge' ? acc + sale.total_amount : acc, 0);
   const deliverySales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Delivery' ? acc + sale.total_amount : acc, 0);
   const cancelledSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cancelled' ? acc + sale.total_amount : acc, 0);
-  const totalSales = cashSales + chargeSales + deliverySales;
+  const totalSales = cashSales + digitalSales + chargeSales + deliverySales;
 
-  const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
+  const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash');
+  const digitalSalesArr = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
   const chargeSalesArr = filteredSales.filter(s => s.payment_type === 'Charge');
   const deliverySalesArr = filteredSales.filter(s => s.payment_type === 'Delivery');
   const cancelledSalesArr = filteredSales.filter(s => s.payment_type === 'Cancelled');
@@ -98,9 +102,14 @@ export default function SalesReportPrint({
     let logicalRows = 0;
     logicalRows += 5; // Base layout components (Header margins + title spaces)
     
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
       logicalRows += 3; // Cash Sales Table Base
       logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
+    }
+
+    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
+      logicalRows += 3; // Digital Sales Table Base
+      logicalRows += Math.max(1, digitalSalesArr.length); // Digital rows
     }
     
     if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') {
@@ -156,7 +165,7 @@ export default function SalesReportPrint({
             <p className="text-sm text-gray-600 font-medium">Generated on: {mounted ? generateTimestamp : ''}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">Autoworx Inventory System</p>
+            <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">{branchName || 'Autoworx Inventory System'}</p>
           </div>
         </div>
 
@@ -223,7 +232,7 @@ export default function SalesReportPrint({
             </tr>
           </thead>
           <tbody>
-            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash') && (
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
               <>
                 <tr>
                   <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
@@ -238,7 +247,28 @@ export default function SalesReportPrint({
                 ))}
                 {cashSalesArr.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash/GCash/Bank Transfer Sales</td>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
+                  </tr>
+                )}
+              </>
+            )}
+
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
+              <>
+                <tr>
+                  <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">GCASH/BANK TRANSFER SALES RECEIPT:</td>
+                </tr>
+                {digitalSalesArr.map((sale, i) => (
+                  <tr key={`digital-${i}`} className="border-b border-black">
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN {sale.payment_type.toUpperCase()}</td>
+                  </tr>
+                ))}
+                {digitalSalesArr.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No GCash/Bank Transfer Sales</td>
                   </tr>
                 )}
               </>
@@ -308,11 +338,20 @@ export default function SalesReportPrint({
             )}
           </tbody>
           <tbody>
-            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
               <tr>
                 <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
                 <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
                   ₱ {cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="border border-black bg-white px-2 py-1"></td>
+              </tr>
+            )}
+            {(paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
+              <tr>
+                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL GCASH/BANK TRANSFER SALES:</td>
+                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                  ₱ {digitalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td className="border border-black bg-white px-2 py-1"></td>
               </tr>
@@ -395,13 +434,19 @@ export default function SalesReportPrint({
         <div className="mt-2 flex flex-col items-start px-2 shrink-0 z-10 page-break-inside-avoid pb-2 pt-4">
            {/* Center compose image natively intersecting the typography */}
            <div className="flex flex-col items-center">
-             <img 
-                src="/carla_signature.png" 
-                alt="Signature" 
-                className="h-[5rem] w-auto object-contain translate-y-[20px] translate-x-[28px] relative z-20 pointer-events-none drop-shadow-sm" 
-             />
-             <p className="font-bold text-[12px] uppercase tracking-wider relative z-10 mt-[-2px]">
-               PREPARED BY: CARLA VARIACION
+             {(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA'))) && (
+               <img 
+                  src="/carla_signature.png" 
+                  alt="Signature" 
+                  className="h-[5rem] w-auto object-contain translate-y-[20px] translate-x-[28px] relative z-20 pointer-events-none drop-shadow-sm" 
+               />
+             )}
+             <p className={`font-bold text-[12px] uppercase tracking-wider relative z-10 ${(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA'))) ? 'mt-[-2px]' : 'mt-[3rem]'}`}>
+               PREPARED BY: {
+                 (branchName?.toUpperCase().includes('ISUZU') || branchName?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
+                 : branchName?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' 
+                 : 'CARLA VARIACION'
+               }
              </p>
            </div>
         </div>

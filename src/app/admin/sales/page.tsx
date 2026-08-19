@@ -80,8 +80,14 @@ export default function AdminSalesPage() {
 
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [totalInvoices, setTotalInvoices] = useState(0);
+  const [printSales, setPrintSales] = useState<any[]>([]);
+  const [isFetchingPrint, setIsFetchingPrint] = useState(false);
+
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [filterMonth, setFilterMonth] = useState("all");
+  const [filterPayment, setFilterPayment] = useState("all");
   const [showSetupAlert, setShowSetupAlert] = useState(false);
   const [selectedSaleIds, setSelectedSaleIds] = useState<string[]>([]);
   
@@ -96,8 +102,15 @@ export default function AdminSalesPage() {
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterMonth, filterBranch]);
+  }, [debouncedSearchTerm, filterMonth, filterBranch, filterPayment]);
 
   // Print Report States
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -208,7 +221,6 @@ export default function AdminSalesPage() {
   useEffect(() => {
     setMounted(true);
     if (session) {
-      fetchSales();
       fetchInventory();
       fetchBranches();
       fetchCustomers();
@@ -224,7 +236,13 @@ export default function AdminSalesPage() {
         supabase.removeChannel(channel);
       };
     }
-  }, [session, selectedBranchId, filterMonth]);
+  }, [session, selectedBranchId]);
+
+  useEffect(() => {
+    if (session) {
+      fetchSales();
+    }
+  }, [session, selectedBranchId, filterMonth, debouncedSearchTerm, filterPayment, currentPage]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
@@ -266,43 +284,75 @@ export default function AdminSalesPage() {
   async function fetchSales() {
     try {
       setLoading(true);
-      let query = supabase
-        .from('sales')
-        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
-        .order('created_at', { ascending: false })
-        .limit(10000);
 
-      if (filterBranch) {
-        if (isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
-          setSales([]);
-          setLoading(false);
-          return;
-        }
-        query = query.eq('branch_id', filterBranch);
-      } else if (isStaff && userBranchIds.length > 0) {
-        query = query.in('branch_id', userBranchIds);
-      }
+      let p_start_date = null;
+      let p_end_date = null;
 
       if (filterMonth !== 'all') {
         if (filterMonth.length === 7) {
           const [year, month] = filterMonth.split('-');
+          p_start_date = `${filterMonth}-01`;
           const lastDay = new Date(Number(year), Number(month), 0).getDate();
-          query = query.gte('date', `${filterMonth}-01`).lte('date', `${filterMonth}-${lastDay}`);
+          p_end_date = `${filterMonth}-${lastDay}`;
         } else if (filterMonth.length === 10) {
-          query = query.eq('date', filterMonth);
+          p_start_date = filterMonth;
+          p_end_date = filterMonth;
         }
       }
 
-      const { data, error } = await query;
-      if (error) {
-        if (error.message.includes('relation "public.sales" does not exist') || error.code === '42P01') {
+      const branchToSearch = filterBranch || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null);
+
+      if (filterBranch && isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+         setSales([]);
+         setTotalInvoices(0);
+         setLoading(false);
+         return;
+      }
+
+      // STEP 1: Use RPC to bypass the 1000 row limit and search everything directly on the server
+      const { data: lightData, error: idError } = await supabase.rpc('search_sales_invoices', {
+        search_term: debouncedSearchTerm,
+        p_branch_id: branchToSearch,
+        p_start_date: p_start_date,
+        p_end_date: p_end_date,
+        p_payment_type: filterPayment === 'all' ? null : filterPayment
+      });
+      
+      if (idError) {
+        if (idError.message.includes('function search_sales_invoices') || idError.message.includes('does not exist')) {
+          alert("Database update required for search. Please run SEARCH_SALES_RPC.sql in your Supabase SQL Editor.");
+          setLoading(false);
+          return;
+        }
+        if (idError.message.includes('relation "public.sales" does not exist') || idError.code === '42P01') {
           setShowSetupAlert(true);
           return;
         }
-        throw error;
+        throw idError;
       }
-      
-      // Fetch Staff Map to convert emails to names
+
+      const uniqueInvoices = (lightData || []).map((row: any) => row.invoice_no);
+      setTotalInvoices(uniqueInvoices.length);
+
+      // STEP 2: Paginate the invoice list
+      const paginatedInvoiceNos = uniqueInvoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      if (paginatedInvoiceNos.length === 0) {
+         setSales([]);
+         setLoading(false);
+         return;
+      }
+
+      // STEP 3: Fetch full details for the paginated invoices
+      const { data: fullData, error: fullError } = await supabase
+        .from('sales')
+        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
+        .in('invoice_no', paginatedInvoiceNos)
+        .order('created_at', { ascending: false });
+
+      if (fullError) throw fullError;
+
+      // Fetch Staff Map
       let staffMap: Record<string, string> = {};
       try {
         const { data: staffData } = await supabase.from("users").select("email, name, role");
@@ -316,17 +366,103 @@ export default function AdminSalesPage() {
         }
       } catch (e) { console.warn("Staff map fetch error"); }
 
-      const results = (data || []).map((s: any) => ({
+      const results = (fullData || []).map((s: any) => ({
         ...s,
         inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
         branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
         performed_by_name: s.performed_by ? (staffMap[s.performed_by.toLowerCase()] || s.performed_by.split('@')[0]) : "Unknown"
       }));
+      
       setSales(results);
     } catch (err) {
       console.error("Fetch Sales Error:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchPrintData() {
+    try {
+      setIsFetchingPrint(true);
+      let query = supabase
+        .from('sales')
+        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
+        .order('created_at', { ascending: false })
+        .limit(10000); // safety limit
+
+      if (filterBranch) {
+        query = query.eq('branch_id', filterBranch);
+      } else if (isStaff && userBranchIds.length > 0) {
+        query = query.in('branch_id', userBranchIds);
+      }
+
+      if (printType === 'monthly') {
+        const lastDay = new Date(printYear, printMonth, 0).getDate();
+        query = query.gte('date', `${printYear}-${String(printMonth).padStart(2, '0')}-01`)
+                     .lte('date', `${printYear}-${String(printMonth).padStart(2, '0')}-${lastDay}`);
+      } else if (printType === 'daily') {
+        query = query.eq('date', printDate);
+      } else if (printType === 'yearly') {
+        query = query.gte('date', `${printYear}-01-01`).lte('date', `${printYear}-12-31`);
+      }
+
+      if (printPaymentType !== 'All') {
+        query = query.eq('payment_type', printPaymentType);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      let staffMap: Record<string, string> = {};
+      try {
+        const { data: staffData } = await supabase.from("users").select("email, name, role");
+        if (staffData) {
+          staffData.forEach(u => { 
+             if (u.email) {
+                const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
+                staffMap[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
+             }
+          });
+        }
+      } catch (e) { console.warn("Staff map fetch error"); }
+
+      const groups: Record<string, any> = {};
+      (data || []).forEach((s: any) => {
+        const sale = {
+          ...s,
+          inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
+          branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
+          performed_by_name: s.performed_by ? (staffMap[s.performed_by.toLowerCase()] || s.performed_by.split('@')[0]) : "Unknown"
+        };
+        const key = sale.invoice_no;
+        if (!groups[key]) {
+          groups[key] = {
+            invoice_no: sale.invoice_no,
+            customer_name: sale.customer_name,
+            date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
+            payment_type: sale.payment_type,
+            branch_name: sale.branches?.name,
+            performed_by: sale.performed_by_name || 'Unknown Staff',
+            total_amount: 0,
+            items: []
+          };
+        }
+        groups[key].total_amount += sale.total_amount;
+        groups[key].items.push(sale);
+      });
+
+      const finalPrintSales = Object.values(groups).sort((a: any, b: any) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      setPrintSales(finalPrintSales);
+      setIsPrintModalOpen(false);
+      setIsPreviewOpen(true);
+    } catch (err) {
+      console.error("Fetch Print Data Error:", err);
+      alert("Failed to fetch print data.");
+    } finally {
+      setIsFetchingPrint(false);
     }
   }
 
@@ -665,17 +801,10 @@ export default function AdminSalesPage() {
       setLoading(false);
     }
   };
-  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-  const filteredSales = (sales || []).filter(s => {
-    if (searchTokens.length === 0) return true;
-    const searchableText = `${s.invoice_no} ${s.customer_name} ${s.inventory?.product_name} ${s.color_code || ''}`.toLowerCase();
-    return searchTokens.every(token => searchableText.includes(token));
-  });
-
   const groupedSales = React.useMemo(() => {
     const groups: Record<string, any> = {};
     
-    filteredSales.forEach(sale => {
+    (sales || []).forEach(sale => {
       const key = sale.invoice_no;
       if (!groups[key]) {
         groups[key] = {
@@ -696,7 +825,7 @@ export default function AdminSalesPage() {
     return Object.values(groups).sort((a: any, b: any) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [filteredSales]);
+  }, [sales]);
 
   const toggleSelectAll = () => {
     if (selectedSaleIds.length === groupedSales.length) {
@@ -712,8 +841,8 @@ export default function AdminSalesPage() {
     );
   };
 
-  const totalPages = Math.ceil(groupedSales.length / itemsPerPage);
-  const paginatedSales = groupedSales.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalInvoices / itemsPerPage));
+  const paginatedSales = groupedSales;
 
   if (showSetupAlert) {
     return (
@@ -760,6 +889,22 @@ export default function AdminSalesPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:block">Payment Type</label>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+            >
+              <option value="all" className="font-bold text-blue-600">All Payments</option>
+              <option value="Cash">Cash</option>
+              <option value="GCash">GCash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Charge">Charge</option>
+              <option value="Delivery">Delivery</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:block">Period</label>
             <select 
@@ -1510,14 +1655,12 @@ export default function AdminSalesPage() {
                 </div>
               )}
               <button
-                onClick={() => {
-                  setIsPrintModalOpen(false);
-                  setIsPreviewOpen(true);
-                }}
-                className="w-full bg-[#1a1b20] text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2"
+                onClick={fetchPrintData}
+                disabled={isFetchingPrint}
+                className="w-full bg-[#1a1b20] text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Printer className="w-4 h-4" />
-                Generate Print View
+                {isFetchingPrint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                {isFetchingPrint ? "Generating..." : "Generate Print View"}
               </button>
             </div>
           </div>
@@ -1567,7 +1710,7 @@ export default function AdminSalesPage() {
             <div className="relative transform origin-top hover:scale-[1.01] transition-transform duration-500">
               <div className="absolute -inset-4 bg-indigo-600/5 blur-2xl rounded-full opacity-50" />
               <SalesReportPrint 
-                sales={groupedSales as any} 
+                sales={printSales as any} 
                 month={printMonth} 
                 year={printYear} 
                 reportType={printType} 
@@ -1576,6 +1719,7 @@ export default function AdminSalesPage() {
                 transmittalChecks={transmittalChecks} 
                 transmittalNotes={transmittalNotes} 
                 isPreview={true}
+                branchName={branches.find(b => b.id === filterBranch)?.name || ''}
               />
             </div>
           </div>
@@ -1584,7 +1728,7 @@ export default function AdminSalesPage() {
     )}
 
     <SalesReportPrint 
-      sales={groupedSales as any} 
+      sales={printSales as any} 
       month={printMonth} 
       year={printYear} 
       reportType={printType} 
@@ -1593,6 +1737,7 @@ export default function AdminSalesPage() {
       transmittalChecks={transmittalChecks} 
       transmittalNotes={transmittalNotes} 
       isPreview={false}
+      branchName={branches.find(b => b.id === filterBranch)?.name || ''}
     />
     <EditSaleModal
       isOpen={isEditModalOpen}
