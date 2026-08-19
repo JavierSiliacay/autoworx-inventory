@@ -11,6 +11,7 @@ export default function DeveloperSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [announcementTitle, setAnnouncementTitle] = useState("System Maintenance");
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -25,32 +26,50 @@ export default function DeveloperSettingsPage() {
     }
   }, [session, status, router]);
 
+  const confirmForceRefresh = () => setShowConfirmModal(true);
+
+  const broadcastEvent = async (event: string, payload: any) => {
+    return new Promise((resolve, reject) => {
+      // Find the existing channel that ForceRefreshListener is using
+      const activeChannel = supabase.getChannels().find(c => c.topic === 'realtime:system_updates');
+      
+      if (activeChannel && activeChannel.state === 'joined') {
+        activeChannel.send({
+          type: "broadcast",
+          event: event,
+          payload: payload
+        }).then(() => resolve(true)).catch(reject);
+      } else {
+        // Fallback if not joined
+        const channel = supabase.channel("system_updates");
+        channel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.send({
+              type: "broadcast",
+              event: event,
+              payload: payload
+            });
+            supabase.removeChannel(channel);
+            resolve(true);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            reject(new Error(status));
+          }
+        });
+      }
+    });
+  };
+
   const handleForceRefresh = async () => {
-    if (!confirm("Are you sure you want to force refresh all active staff clients? They will experience a brief page reload.")) return;
-    
+    setShowConfirmModal(false);
     setLoading(true);
     try {
-      const channel = supabase.channel("system_updates");
-      
-      // We must wait for the channel to subscribe before sending a broadcast
-      channel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.send({
-            type: "broadcast",
-            event: "force_reload",
-            payload: { timestamp: new Date().toISOString() }
-          });
-          
-          setSuccess(true);
-          setTimeout(() => setSuccess(false), 3000);
-          supabase.removeChannel(channel);
-          setLoading(false);
-        }
-      });
-      
+      await broadcastEvent("force_reload", { timestamp: new Date().toISOString() });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (e) {
       console.error(e);
       alert("Failed to broadcast force refresh.");
+    } finally {
       setLoading(false);
     }
   };
@@ -62,31 +81,18 @@ export default function DeveloperSettingsPage() {
     
     setAnnouncementLoading(true);
     try {
-      const channel = supabase.channel("system_updates");
-      
-      channel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.send({
-            type: "broadcast",
-            event: "announcement",
-            payload: { 
-              title: announcementTitle,
-              message: announcementMessage,
-              timestamp: new Date().toISOString() 
-            }
-          });
-          
-          setAnnouncementSuccess(true);
-          setAnnouncementMessage(""); // clear message after sending
-          setTimeout(() => setAnnouncementSuccess(false), 3000);
-          supabase.removeChannel(channel);
-          setAnnouncementLoading(false);
-        }
+      await broadcastEvent("announcement", { 
+        title: announcementTitle,
+        message: announcementMessage,
+        timestamp: new Date().toISOString() 
       });
-      
+      setAnnouncementSuccess(true);
+      setAnnouncementMessage(""); // clear message after sending
+      setTimeout(() => setAnnouncementSuccess(false), 3000);
     } catch (e) {
       console.error(e);
       alert("Failed to broadcast announcement.");
+    } finally {
       setAnnouncementLoading(false);
     }
   };
@@ -98,7 +104,7 @@ export default function DeveloperSettingsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3 text-purple-600">
+        <div className="flex items-center gap-3 text-[#16a34a]">
           <Code2 className="w-8 h-8" />
           <h1 className="text-2xl font-black tracking-tight text-slate-800">Developer Settings</h1>
         </div>
@@ -110,7 +116,7 @@ export default function DeveloperSettingsPage() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+            <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
               <RefreshCw className="w-6 h-6" />
             </div>
             <div>
@@ -121,12 +127,12 @@ export default function DeveloperSettingsPage() {
             </div>
           </div>
           <button
-            onClick={handleForceRefresh}
+            onClick={confirmForceRefresh}
             disabled={loading || success}
             className={`shrink-0 px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
               success 
                 ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                : "bg-[#16a34a] text-white hover:bg-emerald-700 disabled:opacity-50"
             }`}
           >
             {loading ? (
@@ -150,7 +156,7 @@ export default function DeveloperSettingsPage() {
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-start gap-4">
-          <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+          <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
             <Megaphone className="w-6 h-6" />
           </div>
           <div>
@@ -169,7 +175,7 @@ export default function DeveloperSettingsPage() {
               value={announcementTitle}
               onChange={(e) => setAnnouncementTitle(e.target.value)}
               required
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 transition-colors"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a] transition-colors"
             />
           </div>
           <div>
@@ -179,7 +185,7 @@ export default function DeveloperSettingsPage() {
               onChange={(e) => setAnnouncementMessage(e.target.value)}
               required
               placeholder="e.g. Please save your work, the system will restart in 5 minutes for a new update..."
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 transition-colors min-h-[120px] resize-y"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a] transition-colors min-h-[120px] resize-y"
             />
           </div>
           
@@ -190,7 +196,7 @@ export default function DeveloperSettingsPage() {
               className={`px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${
                 announcementSuccess 
                   ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                  : "bg-[#16a34a] text-white hover:bg-emerald-700 disabled:opacity-50"
               }`}
             >
               {announcementLoading ? (
@@ -205,6 +211,36 @@ export default function DeveloperSettingsPage() {
           </div>
         </form>
       </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-[#16a34a] mb-2">
+                <RefreshCw className="w-6 h-6" />
+                <h2 className="text-xl font-bold">Force Global Refresh?</h2>
+              </div>
+              <p className="text-slate-500 mt-2 text-sm leading-relaxed">
+                This will instantly prompt all currently active staff clients to refresh their system. Any unsaved data in forms may be lost if a staff member is actively working. Are you sure you want to proceed?
+              </p>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                className="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleForceRefresh}
+                className="px-5 py-2.5 rounded-xl font-bold text-sm bg-[#16a34a] hover:bg-green-700 text-white transition-colors shadow-sm"
+              >
+                Yes, Force Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
