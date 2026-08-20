@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787209677041",
+    version: "v1.8.20",
+    date: "2026-08-20",
+    type: "feature",
+    title: "Faster, smoother experience across the app",
+    description: "We’ve upgraded the underlying data handling and refreshed the interface, making the app quicker to load and more responsive to your actions."
+  },
+
+  {
     id: "update-1787204571076",
     version: "v1.8.20",
     date: "2026-08-20",
