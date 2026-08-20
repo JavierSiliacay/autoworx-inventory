@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787204571076",
+    version: "v1.8.20",
+    date: "2026-08-20",
+    type: "feature",
+    title: "Live Data Updates Across All Tables",
+    description: "Now, any changes made to major data tables appear instantly for everyone, keeping your view up‑to‑date without needing to refresh."
+  },
+
+  {
     id: "update-1787120832214",
     version: "v1.8.19",
     date: "2026-08-19",
