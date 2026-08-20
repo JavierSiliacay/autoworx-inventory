@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787215449815",
+    version: "v1.8.20",
+    date: "2026-08-20",
+    type: "feature",
+    title: "Improved Sales Agent Sync & New Tracking Dashboard",
+    description: "Sales agents experience smoother, more reliable data sync, and a new dashboard provides an at‑a‑glance view of agent performance."
+  },
+
+  {
     id: "update-1787209677041",
     version: "v1.8.20",
     date: "2026-08-20",
