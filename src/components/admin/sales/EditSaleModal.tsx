@@ -12,11 +12,12 @@ interface EditSaleModalProps {
   invoiceData: any; // The grouped sale
   inventory: any[];
   customers: { id: string; name: string }[];
+  salesAgents?: { id: string; name: string }[];
   onSuccess: () => void;
   session: any;
 }
 
-export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory, customers, onSuccess, session }: EditSaleModalProps) {
+export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory, customers, salesAgents = [], onSuccess, session }: EditSaleModalProps) {
   const [loading, setLoading] = useState(false);
   const [removedItems, setRemovedItems] = useState<any[]>([]);
   const [currentSale, setCurrentSale] = useState({
@@ -24,6 +25,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     invoice_no: "",
     old_invoice_no: "",
     customer_name: "",
+    sales_agent: "",
     payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
     branch_id: "",
     items: [] as any[],
@@ -37,6 +39,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         invoice_no: invoiceData.invoice_no,
         old_invoice_no: invoiceData.invoice_no,
         customer_name: invoiceData.customer_name || "",
+        sales_agent: invoiceData.sales_agent || "",
         payment_type: invoiceData.payment_type || "Cash",
         old_payment_type: invoiceData.payment_type || "Cash",
         branch_id: invoiceData.items[0]?.branch_id || "",
@@ -123,6 +126,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         invoice_no: invoiceData.invoice_no,
         old_invoice_no: invoiceData.invoice_no,
         customer_name: invoiceData.customer_name || "",
+        sales_agent: invoiceData.sales_agent || "",
         payment_type: invoiceData.payment_type || "Cash",
         old_payment_type: invoiceData.payment_type || "Cash",
         branch_id: invoiceData.items[0]?.branch_id || "",
@@ -189,6 +193,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         old_payment_type: currentSale.old_payment_type,
         invoice_no: currentSale.invoice_no,
         customer_name: currentSale.customer_name,
+        sales_agent: currentSale.sales_agent || null,
         payment_type: currentSale.payment_type,
         date: currentSale.date,
         branch_id: currentSale.branch_id,
@@ -305,6 +310,23 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                 />
               </div>
             </div>
+
+            {salesAgents && salesAgents.length > 0 && (
+              <div className="space-y-2">
+                <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
+                  Sales Agent (Quota Tracking)
+                </label>
+                <div className="relative">
+                  <SearchableSelect
+                    options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
+                    value={currentSale.sales_agent || ""}
+                    onChange={(val) => setCurrentSale({...currentSale, sales_agent: val})}
+                    placeholder="Select sales agent..."
+                    className="border-[#f59e0b]/30 focus:border-[#f59e0b] focus:ring-[#f59e0b]/20"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Type</label>

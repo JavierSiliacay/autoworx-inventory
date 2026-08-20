@@ -27,6 +27,7 @@ interface SaleEntry {
   performed_by: string;
   created_at: string;
   color_code?: string | null;
+  sales_agent?: string | null;
   inventory?: {
     product_name: string;
     sku: string;
@@ -63,11 +64,13 @@ export default function AdminSalesPage() {
   const [selectedSaleToEdit, setSelectedSaleToEdit] = useState<any>(null);
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
   const [customers, setCustomers] = useState<{ id: string, name: string }[]>([]);
+  const [salesAgents, setSalesAgents] = useState<{ id: string, name: string }[]>([]);
   
   const [currentSale, setCurrentSale] = useState({
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
     customer_name: "",
+    sales_agent: "",
     payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
     branch_id: "",
     items: Array(10).fill(null).map(() => ({
@@ -313,6 +316,7 @@ export default function AdminSalesPage() {
       fetchInventory();
       fetchBranches();
       fetchCustomers();
+      fetchSalesAgents();
 
       const channel = supabase
         .channel('sales-inventory-live')
@@ -439,6 +443,7 @@ export default function AdminSalesPage() {
           groups[key] = {
             invoice_no: sale.invoice_no,
             customer_name: sale.customer_name,
+            sales_agent: sale.sales_agent,
             date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
             payment_type: sale.payment_type,
             branch_name: sale.branches?.name,
@@ -605,6 +610,7 @@ export default function AdminSalesPage() {
           invoice_no: finalInvoiceNo,
           customer_name: currentSale.customer_name,
           payment_type: currentSale.payment_type,
+          sales_agent: currentSale.sales_agent || null,
           branch_id: currentSale.branch_id || invItem?.branch_id,
           item_id: item.item_id,
           quantity: sellingQty,
@@ -675,6 +681,7 @@ export default function AdminSalesPage() {
         date: new Date().toISOString().split('T')[0],
         invoice_no: "",
         customer_name: "",
+        sales_agent: "",
         payment_type: "Cash",
         branch_id: "",
         items: Array(10).fill(null).map(() => ({
@@ -809,6 +816,25 @@ export default function AdminSalesPage() {
       setLoading(false);
     }
   };
+  const agentPerformance = React.useMemo(() => {
+    if (!sales) return [];
+    const perf: Record<string, { total_amount: number, invoice_count: Set<string> }> = {};
+    (sales || []).forEach(sale => {
+      if (sale.sales_agent) {
+        if (!perf[sale.sales_agent]) {
+          perf[sale.sales_agent] = { total_amount: 0, invoice_count: new Set() };
+        }
+        perf[sale.sales_agent].total_amount += sale.total_amount;
+        perf[sale.sales_agent].invoice_count.add(sale.invoice_no);
+      }
+    });
+    return Object.entries(perf).map(([name, data]) => ({
+      name,
+      total_amount: data.total_amount,
+      invoice_count: data.invoice_count.size
+    })).sort((a, b) => b.total_amount - a.total_amount);
+  }, [sales]);
+
   const groupedSales = React.useMemo(() => {
     const groups: Record<string, any> = {};
     
@@ -996,6 +1022,42 @@ export default function AdminSalesPage() {
           </button>
         </div>
       </div>
+
+        {/* Sales Agent Performance Dashboard (Main Distribution Only) */}
+        {branches.find(b => b.id === (filterBranch || selectedBranchId || currentSale.branch_id))?.name?.toLowerCase().includes('main') && agentPerformance.length > 0 && (
+          <div className="bg-gradient-to-br from-[#f59e0b]/10 via-[#f59e0b]/5 to-transparent border border-[#f59e0b]/20 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/20 flex items-center justify-center text-[#d97706]">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-manrope font-extrabold text-[#d97706]">Sales Agent Performance</h3>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Main Distribution Quota Monitor</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {agentPerformance.map((agent, idx) => (
+                <div key={idx} className="bg-white/60 backdrop-blur-md border border-[#f59e0b]/20 rounded-xl p-4 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="w-4 h-4 text-[#f59e0b] group-hover:scale-110 transition-transform" />
+                    <span className="font-bold text-slate-700 truncate">{agent.name}</span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sales</div>
+                      <div className="text-lg font-black text-[#d97706]">₱{agent.total_amount.toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Invoices</div>
+                      <div className="text-sm font-bold text-slate-600">{agent.invoice_count}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Bulk Actions Bar */}
       {mounted && role === 'developer' && selectedSaleIds.length > 0 && (
@@ -1359,6 +1421,25 @@ export default function AdminSalesPage() {
                     />
                   </div>
                 </div>
+
+                {/* Sales Agent Selection (Main Distribution Only) */}
+                {branches.find(b => b.id === (currentSale.branch_id || filterBranch || selectedBranchId))?.name?.toLowerCase().includes('main') && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
+                      <TrendingUp className="w-3 h-3" />
+                      Sales Agent (Quota Tracking)
+                    </label>
+                    <div className="relative">
+                      <SearchableSelect
+                        options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
+                        value={currentSale.sales_agent || ""}
+                        onChange={(val) => setCurrentSale({...currentSale, sales_agent: val})}
+                        placeholder="Select sales agent..."
+                        className="border-[#f59e0b]/30 focus:border-[#f59e0b] focus:ring-[#f59e0b]/20"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Type */}
                 <div className="space-y-2">
@@ -1762,6 +1843,7 @@ export default function AdminSalesPage() {
       invoiceData={selectedSaleToEdit}
       inventory={inventory}
       customers={customers}
+      salesAgents={salesAgents}
       onSuccess={() => {
         queryClient.invalidateQueries({ queryKey: ['sales'] });
         fetchInventory();
