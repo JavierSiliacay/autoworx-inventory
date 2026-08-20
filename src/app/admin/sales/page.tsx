@@ -360,6 +360,15 @@ export default function AdminSalesPage() {
     setCustomers(data || []);
   }
 
+  async function fetchSalesAgents() {
+    let query = supabase.from('sales_agents').select('id, name').order('name');
+    if (filterBranch) {
+      query = query.eq('branch_id', filterBranch);
+    }
+    const { data } = await query;
+    setSalesAgents(data || []);
+  }
+
   async function fetchInventory() {
     let query = supabase.from('inventory').select('id, product_name, sku, quantity, unit, price, cost, branch_id, branches(name)').order('product_name');
     if (filterBranch) {
