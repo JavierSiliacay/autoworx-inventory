@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787216079478",
+    version: "v1.8.20",
+    date: "2026-08-20",
+    type: "feature",
+    title: "AI Sales Assistant Boost",
+    description: "Our AI now includes enhanced sales agent capabilities, helping staff generate more effective sales conversations and responses."
+  },
+
+  {
     id: "update-1787215449815",
     version: "v1.8.20",
     date: "2026-08-20",
