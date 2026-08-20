@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PackageMinus, Search, Loader2, Building2, Package, ArrowRight, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
@@ -24,8 +25,8 @@ interface StockOutTransaction {
 
 export default function StockOutPage() {
   const { selectedBranchId } = useNetwork();
-  const [transactions, setTransactions] = useState<StockOutTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,11 +36,40 @@ export default function StockOutPage() {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const PAGE_SIZE = 15;
 
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['stock-out', selectedBranchId],
+    queryFn: async () => {
+      let query = supabase
+        .from("stock_transactions")
+        .select("id, created_at, quantity, reason, inventory_id, inventory(id, product_name), branches(name)")
+        .eq("type", "OUT")
+        .order("created_at", { ascending: false });
+
+      if (selectedBranchId !== "all") {
+        query = query.eq("branch_id", selectedBranchId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data as unknown as StockOutTransaction[]) || [];
+    }
+  });
+
   useEffect(() => { 
-    fetchTransactions(); 
     fetchInventory();
     fetchBranches();
-  }, [selectedBranchId]);
+    
+    const channel = supabase
+      .channel('stock-out-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_transactions', filter: "type=eq.OUT" }, () => {
+        queryClient.invalidateQueries({ queryKey: ['stock-out'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBranchId, queryClient]);
 
   async function fetchBranches() {
     const { data } = await supabase.from("branches").select("id, name");
@@ -65,30 +95,7 @@ export default function StockOutPage() {
     }
   }
 
-  async function fetchTransactions() {
-    try {
-      setLoading(true);
 
-      let query = supabase
-        .from("stock_transactions")
-        .select("id, created_at, quantity, reason, inventory_id, inventory(id, product_name), branches(name)")
-        .eq("type", "OUT")
-        .order("created_at", { ascending: false });
-
-      if (selectedBranchId !== "all") {
-        query = query.eq("branch_id", selectedBranchId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      setTransactions(data as unknown as StockOutTransaction[]);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const handleDelete = async (txn: StockOutTransaction) => {
     if (!confirm("Are you sure you want to delete this stock out transaction? The deducted quantity will be returned to the inventory.")) return;
@@ -128,7 +135,7 @@ export default function StockOutPage() {
       if (txnErr) throw txnErr;
 
       setSelectedTransaction(null);
-      fetchTransactions();
+      queryClient.invalidateQueries({ queryKey: ['stock-out'] });
       fetchInventory();
     } catch (e: any) {
       console.error(e);
@@ -199,7 +206,7 @@ export default function StockOutPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {loading ? (
+              {(loading || isLoading) ? (
                 <tr>
                   <td colSpan={5} className="py-12">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
@@ -302,7 +309,7 @@ export default function StockOutPage() {
         inventory={inventory}
         branches={branches}
         onSuccess={() => {
-          fetchTransactions();
+          queryClient.invalidateQueries({ queryKey: ['stock-out'] });
           fetchInventory();
         }}
       />
@@ -326,7 +333,7 @@ export default function StockOutPage() {
         inventory={inventory}
         branches={branches}
         onSuccess={() => {
-          fetchTransactions();
+          queryClient.invalidateQueries({ queryKey: ['stock-out'] });
           fetchInventory();
           setSelectedTransaction(null);
         }}

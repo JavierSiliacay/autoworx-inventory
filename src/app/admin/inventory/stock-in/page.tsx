@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Truck, Search, Plus, Camera, Loader2, Building2, Trash2,
   ChevronDown, ChevronUp, Package, Hash, DollarSign, ReceiptText, X, Edit2
@@ -43,13 +44,11 @@ const MIGRATED_BRANCH_NAMES = ['main distribution'];
 export default function StockInPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
-  const [logs, setLogs] = useState<StockInLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoverImageId, setHoverImageId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [currentBranchName, setCurrentBranchName] = useState<string>("");
-  const [isMigrated, setIsMigrated] = useState<boolean>(true);
+  const [loading, setLoading] = useState(false);
 
   // Expandable row state
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -69,9 +68,57 @@ export default function StockInPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => { 
-    fetchLogs(); 
     fetchCatalog();
   }, [selectedBranchId]);
+
+  const { data: { logs, currentBranchName, isMigrated } = { logs: [], currentBranchName: "", isMigrated: true }, isLoading } = useQuery({
+    queryKey: ['stock-in-logs', selectedBranchId],
+    queryFn: async () => {
+      let bName = "";
+      let migrated = true;
+
+      if (selectedBranchId !== "all") {
+        const { data: branchData } = await supabase
+          .from("branches")
+          .select("name")
+          .eq("id", selectedBranchId)
+          .single();
+        bName = branchData?.name || "";
+      }
+
+      let query = supabase
+        .from("stock_in_logs")
+        .select("*, supplier:suppliers(name), branch:branches(name), po:purchase_orders(po_number), items:stock_in_items(movement_type)")
+        .order("created_at", { ascending: false });
+      if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const results = data || [];
+
+      if (results.length === 0 && selectedBranchId !== "all") {
+        const knownMigrated = MIGRATED_BRANCH_NAMES.some(n => bName.toLowerCase().includes(n));
+        migrated = knownMigrated;
+      }
+
+      return { logs: results as StockInLog[], currentBranchName: bName, isMigrated: migrated };
+    },
+    enabled: !!session
+  });
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('stock-in-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_in_logs' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, queryClient]);
 
   async function fetchCatalog() {
     try {
@@ -103,60 +150,12 @@ export default function StockInPage() {
       
       if (expandedId === log.id) setExpandedId(null);
       alert("Stock-in deleted and inventory reversed successfully.");
-      fetchLogs();
+      queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
     } catch (e: any) {
       console.error(e);
       alert("Error deleting record: " + e.message);
     } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchLogs() {
-    try {
-      setLoading(true);
-
-      // Resolve branch name for contextual empty state UI only — does NOT gate the query
-      if (selectedBranchId !== "all") {
-        const { data: branchData } = await supabase
-          .from("branches")
-          .select("name")
-          .eq("id", selectedBranchId)
-          .single();
-        const bName = branchData?.name || "";
-        setCurrentBranchName(bName);
-        // A branch is "migrated" if data has been imported for it
-        // We determine this AFTER the query based on whether records exist
-        setIsMigrated(true); // assume true until proven otherwise by empty results
-      } else {
-        setCurrentBranchName("");
-        setIsMigrated(true);
-      }
-
-      // Always run the query — isolation is enforced by branch_id filter
-      let query = supabase
-        .from("stock_in_logs")
-        .select("*, supplier:suppliers(name), branch:branches(name), po:purchase_orders(po_number), items:stock_in_items(movement_type)")
-        .order("created_at", { ascending: false });
-      if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const results = data || [];
-      setLogs(results);
-
-      // After query: if no records and this isn't the migrated branch name, mark as pending
-      if (results.length === 0 && selectedBranchId !== "all") {
-        const { data: branchData } = await supabase
-          .from("branches").select("name").eq("id", selectedBranchId).single();
-        const bName = (branchData?.name || "").toLowerCase();
-        const knownMigrated = MIGRATED_BRANCH_NAMES.some(n => bName.includes(n));
-        setIsMigrated(knownMigrated);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   }
 
@@ -257,11 +256,11 @@ export default function StockInPage() {
 
       {/* Table Card */}
       <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden relative">
-        {loading && (
+        {(loading || isLoading) ? (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center">
             <Loader2 className="w-6 h-6 text-[#16a34a] animate-spin" />
           </div>
-        )}
+        ) : null}
 
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -823,7 +822,7 @@ export default function StockInPage() {
         inventory={globalInventory}
         suppliers={globalSuppliers}
         onSuccess={() => {
-          fetchLogs();
+          queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
         }}
         session={session}
       />

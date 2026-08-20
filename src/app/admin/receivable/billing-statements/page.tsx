@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Printer, Search, FileText, Plus, Trash2, Edit2, X, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -10,9 +11,8 @@ import Link from "next/link";
 export default function BillingStatementsPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statements, setStatements] = useState<any[]>([]);
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -29,14 +29,14 @@ export default function BillingStatementsPage() {
 
   useEffect(() => {
     if (session) {
-      fetchStatements();
+      queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
       fetchCustomersWithBalance();
     }
   }, [session, selectedBranchId]);
 
-  async function fetchStatements() {
-    try {
-      setLoading(true);
+  const { data: statements = [], isLoading: loading } = useQuery({
+    queryKey: ['billing-statements', selectedBranchId],
+    queryFn: async () => {
       let query = supabase
         .from('billing_statements')
         .select('*')
@@ -47,16 +47,25 @@ export default function BillingStatementsPage() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setStatements(data || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load statements");
-    } finally {
-      setLoading(false);
-    }
-  }
+      return data || [];
+    },
+    enabled: !!session
+  });
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('billing-statements-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'billing_statements' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, queryClient]);
 
   async function fetchCustomersWithBalance() {
     try {
@@ -147,7 +156,7 @@ export default function BillingStatementsPage() {
       alert("Billing statement created!");
       setIsCreateModalOpen(false);
       setSelectedCustomerForCreate("");
-      fetchStatements();
+      queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
     } catch (err) {
       console.error(err);
       alert("Failed to create statement");
@@ -162,7 +171,7 @@ export default function BillingStatementsPage() {
       const { error } = await supabase.from('billing_statements').delete().eq('id', id);
       if (error) throw error;
       alert("Deleted successfully");
-      fetchStatements();
+      queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
     } catch (err) {
       console.error(err);
       alert("Failed to delete");
@@ -188,7 +197,7 @@ export default function BillingStatementsPage() {
       if (error) throw error;
       alert("Statement updated!");
       setIsEditModalOpen(false);
-      fetchStatements();
+      queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
     } catch (err) {
       console.error(err);
       alert("Failed to update statement");

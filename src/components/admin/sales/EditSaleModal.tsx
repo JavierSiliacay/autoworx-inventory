@@ -394,7 +394,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                           <input
                             type="number"
                             min="0.01" step="any"
-                            className="w-full px-1 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
+                            className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
                             value={item.quantity === undefined ? "" : item.quantity}
                             onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                           />
@@ -406,7 +406,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                           <FormattedNumberInput
                             autoSize
                             prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
-                            className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
+                            className="pl-8 pr-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-right focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
                             value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
                             onChange={(val) => handleRowChange(idx, 'subtotal', val)}
                           />

@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Search, Edit, Trash2, AlertTriangle, Loader2, X, Package, History, PackageMinus, Printer
 } from "lucide-react";
@@ -85,8 +86,7 @@ export default function AdminInventoryPage() {
 
   const [filter, setFilter] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showOnlyLowStock, setShowOnlyLowStock] = useState(false);
 
   const role = (session?.user as any)?.role || "staff";
@@ -139,17 +139,40 @@ export default function AdminInventoryPage() {
   };
 
   // ─── Data Fetching ─────────────────────────────────────────────────────────
+  const { data: items = [], isLoading: loading } = useQuery({
+    queryKey: ['inventory', filterBranch],
+    queryFn: async () => {
+      const userBranchIds = (session?.user as any)?.branch_ids || [];
+      let query = supabase.from("inventory").select("*, branches(name)");
+      if (role === "staff") {
+        if (userBranchIds.length > 0) query = query.in("branch_id", userBranchIds);
+        else return [];
+      }
+      if (filterBranch) {
+        if (role === "staff" && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          return [];
+        }
+        query = query.eq("branch_id", filterBranch);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data.map((i: any) => ({ ...i, branch_name: i.branches?.name || "Unknown" })) as InventoryItem[];
+    },
+    enabled: !!session
+  });
+
   useEffect(() => {
-    if (session) { fetchInventory(); fetchBranches(); fetchStaff(); }
+    if (session) { fetchBranches(); fetchStaff(); }
   }, [session, selectedBranchId]);
 
   useEffect(() => {
+    if (!session) return;
     const ch = supabase
       .channel("inventory-room")
-      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => fetchInventory())
+      .on("postgres_changes", { event: "*", schema: "public", table: "inventory" }, () => queryClient.invalidateQueries({ queryKey: ['inventory'] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [session, selectedBranchId]);
+  }, [session, queryClient]);
 
   async function fetchStaff() {
     const { data } = await supabase.from("users").select("email, name, role");
@@ -170,29 +193,7 @@ export default function AdminInventoryPage() {
     setBranches(data || []);
   }
 
-  async function fetchInventory() {
-    try {
-      setLoading(true);
-      const userBranchIds = (session?.user as any)?.branch_ids || [];
-      let query = supabase.from("inventory").select("*, branches(name)");
-      if (role === "staff") {
-        if (userBranchIds.length > 0) query = query.in("branch_id", userBranchIds);
-        else { setItems([]); return; }
-      }
-      if (filterBranch) {
-        if (role === "staff" && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
-          setItems([]);
-          return;
-        }
-        query = query.eq("branch_id", filterBranch);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      setItems(data.map(i => ({ ...i, branch_name: i.branches?.name || "Unknown" })) as InventoryItem[]);
-    } finally {
-      setLoading(false);
-    }
-  }
+
 
   // ─── CRUD ──────────────────────────────────────────────────────────────────
   const openModal = (product: Partial<InventoryItem> | null = null) => {
@@ -241,7 +242,7 @@ export default function AdminInventoryPage() {
           reason: `Initial inventory: ${payload.product_name}`,
         }]);
       }
-      await fetchInventory();
+      await queryClient.invalidateQueries({ queryKey: ['inventory'] });
       closeModal();
     } catch (e) {
       alert("Error saving: " + (e as any).message);
@@ -253,7 +254,7 @@ export default function AdminInventoryPage() {
   async function deleteProduct(id: string) {
     if (!confirm("Delete this inventory record?")) return;
     const { error } = await supabase.from("inventory").delete().eq("id", id);
-    if (!error) setItems(items.filter(i => i.id !== id));
+    if (!error) queryClient.invalidateQueries({ queryKey: ['inventory'] });
   }
 
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Plus, Printer, Loader2,
   FileText, Clock, CheckCircle2, AlertCircle, Building2,
@@ -54,8 +55,7 @@ const UNITS = ["Liter", "Gallon", "Can", "Piece", "Kilogram", "Meter"];
 export default function PurchaseOrdersPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Print / view
@@ -81,12 +81,9 @@ export default function PurchaseOrdersPage() {
   const [itemSearch, setItemSearch] = useState("");
   const [showItemPicker, setShowItemPicker] = useState(false);
 
-  useEffect(() => { fetchOrders(); }, [selectedBranchId]);
-
-  // ─── Orders ────────────────────────────────────────────────────────────────
-  async function fetchOrders() {
-    try {
-      setLoading(true);
+  const { data: orders = [], isLoading: loading } = useQuery({
+    queryKey: ['purchase-orders', selectedBranchId],
+    queryFn: async () => {
       let query = supabase
         .from("purchase_orders")
         .select("*, supplier:suppliers(name), branch:branches(name)")
@@ -94,10 +91,22 @@ export default function PurchaseOrdersPage() {
       if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
       const { data, error } = await query;
       if (error) throw error;
-      setOrders(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }
+      return (data as PurchaseOrder[]) || [];
+    }
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('po-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBranchId, queryClient]);
 
   // ─── Print ─────────────────────────────────────────────────────────────────
   const handleViewDoc = async (id: string) => {
@@ -124,7 +133,7 @@ export default function PurchaseOrdersPage() {
       await supabase.from("purchase_order_items").delete().eq("po_id", deleteTarget.id);
       const { error } = await supabase.from("purchase_orders").delete().eq("id", deleteTarget.id);
       if (error) throw error;
-      setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setDeleteTarget(null);
     } catch (e) {
       console.error(e);
@@ -257,11 +266,7 @@ export default function PurchaseOrdersPage() {
       }
 
       // 3. Reflect in local state
-      setOrders(prev => prev.map(o =>
-        o.id === editTarget.id
-          ? { ...o, terms: editTerms, status: editStatus, order_date: editDate, total_amount: computedTotal }
-          : o
-      ));
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       setEditTarget(null);
     } catch (e) {
       console.error(e);

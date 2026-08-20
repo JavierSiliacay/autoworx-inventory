@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Search,
@@ -102,8 +103,7 @@ export default function PayablesPage() {
   const role = (session?.user as any)?.role || "staff";
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [records, setRecords] = useState<SupplierPayable[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
 
@@ -136,24 +136,52 @@ export default function PayablesPage() {
   }, [searchParams]);
 
   // ── Data Fetching ──────────────────────────────────────────────────────────
+  const { data: records = [], isLoading: loading } = useQuery({
+    queryKey: ['payables', filterBranch],
+    queryFn: async () => {
+      const userBranchIds = (session?.user as any)?.branch_ids || [];
+
+      let query = supabase
+        .from("supplier_payables")
+        .select("*, branches(name)")
+        .order("created_at", { ascending: false });
+
+      if (filterBranch) {
+        if (role === "staff" && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+          return [];
+        }
+        query = query.eq("branch_id", filterBranch);
+      } else if (role === "staff" && userBranchIds.length > 0) {
+        query = query.in("branch_id", userBranchIds);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data as SupplierPayable[]) || [];
+    },
+    enabled: !!session
+  });
+
   useEffect(() => {
     if (session) { 
-      fetchPayables(); 
       fetchBranches(); 
       fetchSuppliers();
-
-      const channel = supabase
-        .channel('payables-live')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
-          fetchPayables();
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [session, selectedBranchId]);
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('payables-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['payables'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, queryClient]);
 
   async function fetchSuppliers() {
     const { data } = await supabase.from("suppliers").select("id, name").order("name", { ascending: true });
@@ -165,34 +193,7 @@ export default function PayablesPage() {
     setBranches(data || []);
   }
 
-  async function fetchPayables() {
-    try {
-      setLoading(true);
-      const userBranchIds = (session?.user as any)?.branch_ids || [];
 
-      let query = supabase
-        .from("supplier_payables")
-        .select("*, branches(name)")
-        .order("created_at", { ascending: false });
-
-      if (filterBranch) {
-        if (role === "staff" && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
-          setRecords([]); return;
-        }
-        query = query.eq("branch_id", filterBranch);
-      } else if (role === "staff" && userBranchIds.length > 0) {
-        query = query.in("branch_id", userBranchIds);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setRecords(data || []);
-    } catch (e) {
-      console.error("Error fetching supplier payables:", e);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // ── Sorting & Filtering ────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -291,7 +292,7 @@ export default function PayablesPage() {
         if (error) throw error;
       }
 
-      await fetchPayables();
+      await queryClient.invalidateQueries({ queryKey: ['payables'] });
       setEditRecord(null);
     } catch (e: any) {
       alert("Error saving: " + e.message);
@@ -345,7 +346,7 @@ export default function PayablesPage() {
         .eq("id", selectedRecord.id);
       if (updErr) throw updErr;
 
-      await fetchPayables();
+      await queryClient.invalidateQueries({ queryKey: ['payables'] });
       setSelectedRecord(prev => prev ? { ...prev, paid_amount: newPaid, balance: newBalance, status: newStatus } : null);
       setPayAmount("");
       setPayNotes("");
@@ -385,7 +386,7 @@ export default function PayablesPage() {
         .eq("id", selectedRecord.id);
       if (updErr) throw updErr;
 
-      await fetchPayables();
+      await queryClient.invalidateQueries({ queryKey: ['payables'] });
       setSelectedRecord(prev => prev ? { ...prev, paid_amount: newPaid, balance: newBalance, status: newStatus } : null);
       
       const { data } = await supabase
@@ -624,7 +625,7 @@ export default function PayablesPage() {
                               e.stopPropagation();
                               if (confirm("Are you sure you want to delete this payable? This will remove all payment history.")) {
                                 await supabase.from("supplier_payables").delete().eq("id", record.id);
-                                fetchPayables();
+                                queryClient.invalidateQueries({ queryKey: ['payables'] });
                               }
                             }}
                             className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -709,7 +710,7 @@ export default function PayablesPage() {
                         e.stopPropagation();
                         if (confirm("Are you sure you want to delete this payable?")) {
                           await supabase.from("supplier_payables").delete().eq("id", record.id);
-                          fetchPayables();
+                          queryClient.invalidateQueries({ queryKey: ['payables'] });
                         }
                       }} 
                       className="p-2 border border-red-100 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center"

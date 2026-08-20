@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, CheckCircle2, History, Loader2, AlertCircle, CreditCard, Building2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -26,33 +27,15 @@ export default function AccountReceivablesPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
   
-  const [records, setRecords] = useState<ReceivableRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRecord, setSelectedRecord] = useState<ReceivableRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (session) {
-      fetchReceivables();
-      
-      const channel = supabase
-        .channel('receivables-room')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts_receivable' }, () => {
-          fetchReceivables();
-        })
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [session, selectedBranchId]);
-
-  async function fetchReceivables() {
-    try {
-      setLoading(true);
+  const { data: records = [], isLoading: loading } = useQuery({
+    queryKey: ['receivables', selectedBranchId],
+    queryFn: async () => {
       let query = supabase
         .from('accounts_receivable')
         .select('*')
@@ -63,15 +46,25 @@ export default function AccountReceivablesPage() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setRecords(data || []);
-    } catch (e) {
-      console.error("Error fetching accounts_receivable:", e);
-    } finally {
-      setLoading(false);
-    }
-  }
+      return (data as ReceivableRecord[]) || [];
+    },
+    enabled: !!session
+  });
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('receivables-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts_receivable' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, queryClient]);
 
   const formatNum = (num: any) => Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatDate = (d: any) => d ? new Date(d).toLocaleDateString() : '—';
@@ -240,7 +233,7 @@ export default function AccountReceivablesPage() {
                           if (window.confirm("Are you sure? This action is irreversible and will wipe out all linked payments and billing statements.")) {
                             const { error } = await supabase.from('accounts_receivable').delete().eq('id', record.id);
                             if (error) alert("Failed to delete record: " + error.message);
-                            else fetchReceivables();
+                            else queryClient.invalidateQueries({ queryKey: ['receivables'] });
                           }
                         }}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -263,7 +256,7 @@ export default function AccountReceivablesPage() {
         onClose={() => setIsModalOpen(false)} 
         record={selectedRecord} 
         onSuccess={() => {
-          fetchReceivables();
+          queryClient.invalidateQueries({ queryKey: ['receivables'] });
         }}
       />
       <EditReceivableModal
@@ -271,7 +264,7 @@ export default function AccountReceivablesPage() {
         onClose={() => setIsEditModalOpen(false)}
         record={selectedRecord}
         onSuccess={() => {
-          fetchReceivables();
+          queryClient.invalidateQueries({ queryKey: ['receivables'] });
         }}
       />
     </>

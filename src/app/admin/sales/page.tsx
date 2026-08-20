@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -53,9 +54,9 @@ export default function AdminSalesPage() {
   const { selectedBranchId } = useNetwork();
   const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
-  const [sales, setSales] = useState<SaleEntry[]>([]);
+  const queryClient = useQueryClient();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [removedItems, setRemovedItems] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -81,7 +82,6 @@ export default function AdminSalesPage() {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [totalInvoices, setTotalInvoices] = useState(0);
   const [printSales, setPrintSales] = useState<any[]>([]);
   const [isFetchingPrint, setIsFetchingPrint] = useState(false);
 
@@ -107,6 +107,95 @@ export default function AdminSalesPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  const { data: salesData, isLoading: isSalesLoading } = useQuery({
+    queryKey: ['sales', selectedBranchId, filterMonth, debouncedSearchTerm, filterPayment, currentPage],
+    queryFn: async () => {
+      let p_start_date = null;
+      let p_end_date = null;
+
+      if (filterMonth !== 'all') {
+        if (filterMonth.length === 7) {
+          const [year, month] = filterMonth.split('-');
+          p_start_date = `${filterMonth}-01`;
+          const lastDay = new Date(Number(year), Number(month), 0).getDate();
+          p_end_date = `${filterMonth}-${lastDay}`;
+        } else if (filterMonth.length === 10) {
+          p_start_date = filterMonth;
+          p_end_date = filterMonth;
+        }
+      }
+
+      const branchToSearch = filterBranch || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null);
+
+      if (filterBranch && isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
+         return { sales: [], totalInvoices: 0 };
+      }
+
+      const { data: lightData, error: idError } = await supabase.rpc('search_sales_invoices', {
+        search_term: debouncedSearchTerm,
+        p_branch_id: branchToSearch,
+        p_start_date: p_start_date,
+        p_end_date: p_end_date,
+        p_payment_type: filterPayment === 'all' ? null : filterPayment
+      });
+      
+      if (idError) {
+        if (idError.message.includes('function search_sales_invoices') || idError.message.includes('does not exist')) {
+          alert("Database update required for search. Please run SEARCH_SALES_RPC.sql in your Supabase SQL Editor.");
+          return { sales: [], totalInvoices: 0 };
+        }
+        if (idError.message.includes('relation "public.sales" does not exist') || idError.code === '42P01') {
+          setShowSetupAlert(true);
+          return { sales: [], totalInvoices: 0 };
+        }
+        throw idError;
+      }
+
+      const uniqueInvoices = (lightData || []).map((row: any) => row.invoice_no);
+      const totalInvoices = uniqueInvoices.length;
+
+      const paginatedInvoiceNos = uniqueInvoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      if (paginatedInvoiceNos.length === 0) {
+         return { sales: [], totalInvoices };
+      }
+
+      const { data: fullData, error: fullError } = await supabase
+        .from('sales')
+        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
+        .in('invoice_no', paginatedInvoiceNos)
+        .order('created_at', { ascending: false });
+
+      if (fullError) throw fullError;
+
+      let staffMap: Record<string, string> = {};
+      try {
+        const { data: staffData } = await supabase.from("users").select("email, name, role");
+        if (staffData) {
+          staffData.forEach(u => { 
+             if (u.email) {
+                const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
+                staffMap[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
+             }
+          });
+        }
+      } catch (e) { console.warn("Staff map fetch error"); }
+
+      const results = (fullData || []).map((s: any) => ({
+        ...s,
+        inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
+        branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
+        performed_by_name: s.performed_by ? (staffMap[s.performed_by.toLowerCase()] || s.performed_by.split('@')[0]) : "Unknown"
+      }));
+      
+      return { sales: results, totalInvoices };
+    },
+    enabled: !!session,
+  });
+
+  const sales = salesData?.sales || [];
+  const totalInvoices = salesData?.totalInvoices || 0;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -240,12 +329,10 @@ export default function AdminSalesPage() {
 
   useEffect(() => {
     if (session) {
-      fetchSales();
-
       const channel = supabase
         .channel('sales-transactions-live')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-          fetchSales();
+          queryClient.invalidateQueries({ queryKey: ['sales'] });
         })
         .subscribe();
 
@@ -253,7 +340,7 @@ export default function AdminSalesPage() {
         supabase.removeChannel(channel);
       };
     }
-  }, [session, selectedBranchId, filterMonth, debouncedSearchTerm, filterPayment, currentPage]);
+  }, [session, queryClient]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
@@ -292,105 +379,7 @@ export default function AdminSalesPage() {
     }
   }
 
-  async function fetchSales() {
-    try {
-      setLoading(true);
-
-      let p_start_date = null;
-      let p_end_date = null;
-
-      if (filterMonth !== 'all') {
-        if (filterMonth.length === 7) {
-          const [year, month] = filterMonth.split('-');
-          p_start_date = `${filterMonth}-01`;
-          const lastDay = new Date(Number(year), Number(month), 0).getDate();
-          p_end_date = `${filterMonth}-${lastDay}`;
-        } else if (filterMonth.length === 10) {
-          p_start_date = filterMonth;
-          p_end_date = filterMonth;
-        }
-      }
-
-      const branchToSearch = filterBranch || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null);
-
-      if (filterBranch && isStaff && userBranchIds.length > 0 && !userBranchIds.includes(filterBranch)) {
-         setSales([]);
-         setTotalInvoices(0);
-         setLoading(false);
-         return;
-      }
-
-      // STEP 1: Use RPC to bypass the 1000 row limit and search everything directly on the server
-      const { data: lightData, error: idError } = await supabase.rpc('search_sales_invoices', {
-        search_term: debouncedSearchTerm,
-        p_branch_id: branchToSearch,
-        p_start_date: p_start_date,
-        p_end_date: p_end_date,
-        p_payment_type: filterPayment === 'all' ? null : filterPayment
-      });
-      
-      if (idError) {
-        if (idError.message.includes('function search_sales_invoices') || idError.message.includes('does not exist')) {
-          alert("Database update required for search. Please run SEARCH_SALES_RPC.sql in your Supabase SQL Editor.");
-          setLoading(false);
-          return;
-        }
-        if (idError.message.includes('relation "public.sales" does not exist') || idError.code === '42P01') {
-          setShowSetupAlert(true);
-          return;
-        }
-        throw idError;
-      }
-
-      const uniqueInvoices = (lightData || []).map((row: any) => row.invoice_no);
-      setTotalInvoices(uniqueInvoices.length);
-
-      // STEP 2: Paginate the invoice list
-      const paginatedInvoiceNos = uniqueInvoices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-      if (paginatedInvoiceNos.length === 0) {
-         setSales([]);
-         setLoading(false);
-         return;
-      }
-
-      // STEP 3: Fetch full details for the paginated invoices
-      const { data: fullData, error: fullError } = await supabase
-        .from('sales')
-        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
-        .in('invoice_no', paginatedInvoiceNos)
-        .order('created_at', { ascending: false });
-
-      if (fullError) throw fullError;
-
-      // Fetch Staff Map
-      let staffMap: Record<string, string> = {};
-      try {
-        const { data: staffData } = await supabase.from("users").select("email, name, role");
-        if (staffData) {
-          staffData.forEach(u => { 
-             if (u.email) {
-                const roleFormatted = u.role ? (u.role.charAt(0).toUpperCase() + u.role.slice(1)) : 'Staff';
-                staffMap[u.email.toLowerCase()] = `${u.name || u.email} (${roleFormatted})`; 
-             }
-          });
-        }
-      } catch (e) { console.warn("Staff map fetch error"); }
-
-      const results = (fullData || []).map((s: any) => ({
-        ...s,
-        inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
-        branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
-        performed_by_name: s.performed_by ? (staffMap[s.performed_by.toLowerCase()] || s.performed_by.split('@')[0]) : "Unknown"
-      }));
-      
-      setSales(results);
-    } catch (err) {
-      console.error("Fetch Sales Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // React Query handles fetchSales
 
   async function fetchPrintData() {
     try {
@@ -496,6 +485,14 @@ export default function AdminSalesPage() {
         if (!currentSale.branch_id) {
           setCurrentSale(prev => ({ ...prev, branch_id: invItem.branch_id }));
         }
+
+        setTimeout(() => {
+          const el = document.getElementById(`qty-input-${index}`);
+          if (el) {
+            el.focus();
+            (el as HTMLInputElement).select();
+          }
+        }, 50);
       } else {
         item.unit_price = 0;
         item.subtotal = 0;
@@ -688,7 +685,7 @@ export default function AdminSalesPage() {
           color_code: ""
         }))
       });
-      fetchSales();
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
       fetchInventory();
     } catch (err: any) {
       alert("Error saving sale: " + err.message);
@@ -746,7 +743,7 @@ export default function AdminSalesPage() {
       }
 
       alert("Test record deleted and inventory reverted.");
-      fetchSales();
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
       fetchInventory();
     } catch (err: any) {
       alert("Error deleting record: " + err.message);
@@ -804,7 +801,7 @@ export default function AdminSalesPage() {
 
       alert(`${selectedSaleIds.length} invoice(s) purged and inventory reverted.`);
       setSelectedSaleIds([]);
-      fetchSales();
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
       fetchInventory();
     } catch (err: any) {
       alert("Error during bulk delete: " + err.message);
@@ -1045,7 +1042,7 @@ export default function AdminSalesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {loading ? (
+              {isSalesLoading || loading ? (
                 <tr>
                   <td colSpan={mounted && role === 'developer' ? 7 : 6} className="px-6 py-20 text-center">
                     <Loader2 className="w-8 h-8 text-[#16a34a] animate-spin mx-auto mb-2" />
@@ -1191,7 +1188,7 @@ export default function AdminSalesPage() {
                                         {mounted && role === 'developer' && (
                                           <td className="px-4 py-3 text-right">
                                              <button 
-                                               disabled={loading}
+                                               disabled={isSalesLoading || loading}
                                                onClick={() => handleDeleteSale(item.id)}
                                                className="p-1 text-slate-300 hover:text-red-500 transition-all"
                                              >
@@ -1307,7 +1304,15 @@ export default function AdminSalesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveSale} className="p-4 md:p-4 md:p-8 space-y-6">
+            <form 
+              onSubmit={handleSaveSale} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+                  e.preventDefault();
+                }
+              }}
+              className="p-4 md:p-4 md:p-8 space-y-6"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Date */}
                 <div className="space-y-2">
@@ -1436,9 +1441,10 @@ export default function AdminSalesPage() {
                             </td>
                             <td className="px-2 py-2">
                               <input
+                                id={`qty-input-${idx}`}
                                 type="number"
                                 min="0.01" step="any"
-                                className="w-full px-1 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold"
+                                className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
                                 value={item.quantity === undefined ? "" : item.quantity}
                                 onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
                               />
@@ -1447,7 +1453,7 @@ export default function AdminSalesPage() {
                               <input
                                 type="text"
                                 placeholder="e.g. ARC WHITE"
-                                className="w-full px-3 py-2 bg-transparent border-0 rounded-lg text-sm text-center focus:ring-0 focus:bg-white font-bold text-slate-600"
+                                className="w-full px-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-slate-600 placeholder:font-medium placeholder:text-slate-300"
                                 value={item.color_code || ""}
                                 onChange={(e) => handleRowChange(idx, 'color_code', e.target.value)}
                               />
@@ -1459,7 +1465,7 @@ export default function AdminSalesPage() {
                               <FormattedNumberInput
                                 autoSize
                                 prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
-                                className="pl-8 pr-3 py-2 bg-transparent border-0 rounded-lg text-sm text-right focus:ring-0 focus:bg-white font-bold text-[#1a1b20]"
+                                className="pl-8 pr-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-right focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
                                 value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
                                 onChange={(val) => handleRowChange(idx, 'subtotal', val)}
                               />
@@ -1757,7 +1763,7 @@ export default function AdminSalesPage() {
       inventory={inventory}
       customers={customers}
       onSuccess={() => {
-        fetchSales();
+        queryClient.invalidateQueries({ queryKey: ['sales'] });
         fetchInventory();
       }}
       session={session}

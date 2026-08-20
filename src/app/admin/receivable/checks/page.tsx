@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, CalendarDays, Wallet, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -21,10 +22,8 @@ interface CheckLogRecord {
 export default function CheckLogsPage() {
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
-  
-  const [checkLogs, setCheckLogs] = useState<CheckLogRecord[]>([]);
-  const [arRecords, setArRecords] = useState<any[]>([]);
-  const [checksLoading, setChecksLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [checksLoading, setChecksLoading] = useState(false);
   
   // Custom date selection state
   const currentDate = new Date();
@@ -43,15 +42,9 @@ export default function CheckLogsPage() {
     check_amount: "",
   });
 
-  useEffect(() => {
-    if (session) {
-      fetchCheckLogs();
-    }
-  }, [session, selectedBranchId]);
-
-  async function fetchCheckLogs() {
-    try {
-      setChecksLoading(true);
+  const { data: { checkLogs, arRecords } = { checkLogs: [], arRecords: [] }, isLoading } = useQuery({
+    queryKey: ['checks', selectedBranchId],
+    queryFn: async () => {
       let query = supabase
         .from('check_logs')
         .select('*')
@@ -62,9 +55,7 @@ export default function CheckLogsPage() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setCheckLogs(data || []);
 
       let arQuery = supabase
         .from('accounts_receivable')
@@ -77,15 +68,26 @@ export default function CheckLogsPage() {
       }
         
       const { data: arData, error: arError } = await arQuery;
-        
       if (arError) throw arError;
-      setArRecords(arData || []);
-    } catch (e) {
-      console.error("Error fetching data:", e);
-    } finally {
-      setChecksLoading(false);
-    }
-  }
+      
+      return { checkLogs: data || [], arRecords: arData || [] };
+    },
+    enabled: !!session
+  });
+
+  useEffect(() => {
+    if (!session) return;
+    const channel = supabase
+      .channel('checks-room')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'check_logs' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['checks'] });
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, queryClient]);
 
   async function updateCheckStatus(id: string, newStatus: string) {
     try {
@@ -94,7 +96,7 @@ export default function CheckLogsPage() {
         .update({ status: newStatus })
         .eq('id', id);
       if (error) throw error;
-      fetchCheckLogs();
+      queryClient.invalidateQueries({ queryKey: ['checks'] });
     } catch (e) {
       console.error("Error updating check status:", e);
       alert("Failed to update status");
@@ -122,7 +124,7 @@ export default function CheckLogsPage() {
       }]);
       if (error) throw error;
       setIsAddModalOpen(false);
-      fetchCheckLogs();
+      queryClient.invalidateQueries({ queryKey: ['checks'] });
     } catch (e: any) {
       console.error(e);
       alert("Failed to add check: " + (e.message || JSON.stringify(e)));
@@ -150,7 +152,7 @@ export default function CheckLogsPage() {
       </div>
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden relative min-h-[400px]">
-        {checksLoading && (
+        {(checksLoading || isLoading) && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-10 h-10 text-[#1e40af] animate-spin" />
             <p className="text-[10px] font-bold text-[#1e40af] uppercase tracking-[0.2em]">Loading Check Logs...</p>
@@ -248,7 +250,7 @@ export default function CheckLogsPage() {
                         if (window.confirm("Are you sure you want to delete this check? This will reverse any payments applied from it.")) {
                           const { error } = await supabase.from('check_logs').delete().eq('id', check.id);
                           if (error) alert("Failed to delete check: " + error.message);
-                          else fetchCheckLogs();
+                          else queryClient.invalidateQueries({ queryKey: ['checks'] });
                         }
                       }}
                       className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
