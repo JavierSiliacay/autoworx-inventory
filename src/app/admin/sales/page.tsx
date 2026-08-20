@@ -241,6 +241,17 @@ export default function AdminSalesPage() {
   useEffect(() => {
     if (session) {
       fetchSales();
+
+      const channel = supabase
+        .channel('sales-transactions-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+          fetchSales();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session, selectedBranchId, filterMonth, debouncedSearchTerm, filterPayment, currentPage]);
 

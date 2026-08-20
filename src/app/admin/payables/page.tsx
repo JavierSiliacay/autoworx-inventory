@@ -141,6 +141,17 @@ export default function PayablesPage() {
       fetchPayables(); 
       fetchBranches(); 
       fetchSuppliers();
+
+      const channel = supabase
+        .channel('payables-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
+          fetchPayables();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session, selectedBranchId]);
 

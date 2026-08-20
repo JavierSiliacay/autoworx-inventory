@@ -36,6 +36,17 @@ export default function AccountReceivablesPage() {
   useEffect(() => {
     if (session) {
       fetchReceivables();
+      
+      const channel = supabase
+        .channel('receivables-room')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts_receivable' }, () => {
+          fetchReceivables();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session, selectedBranchId]);
 
