@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowLeft,
@@ -49,46 +50,18 @@ export default function SalesActivityPage() {
   const { data: session } = useSession();
   const agentId = session?.user?.id; // Assuming next-auth session has user.id
 
-  const [loading, setLoading] = useState(true);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    approved: 0,
-    declined: 0,
-    pending: 0,
-    totalUnits: 0,
-    approvalRate: 0,
-  });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [topClients, setTopClients] = useState<{name: string, count: number, totalUnits: number}[]>([]);
+  const queryClient = useQueryClient();
+
   const [feedFilter, setFeedFilter] = useState<'all' | 'pending' | 'approved' | 'cancelled' | 'logs'>('all');
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  
-  const [rawReservations, setRawReservations] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-
-  useEffect(() => {
-    // If agentId is missing, we wait or it might be they are not logged in.
-    // In a real app we'd wait for session to resolve. For now we will fetch if we have it or use a default if missing.
-    // But since session takes a moment to load, we depend on it.
-    if (agentId) {
-      fetchActivityData();
-    } else {
-      // For demo purposes if session doesn't have ID, we might try fetching all or just wait.
-      // Let's assume session is valid.
-      // If it doesn't fire immediately, it will once agentId is set.
-      const timeout = setTimeout(() => {
-        if (!agentId) fetchActivityData(); // Fallback if no session user ID available in testing
-      }, 1000);
-      return () => clearTimeout(timeout);
-    }
-  }, [agentId]);
-
-  async function fetchActivityData() {
-    setLoading(true);
-    try {
-      const matchQuery = agentId ? { agent_id: agentId } : {};
+  
+  const { data: activityData, isLoading: loading } = useQuery({
+    queryKey: ['agent-activity', agentId],
+    enabled: !!agentId, // Only run query if agentId is available
+    queryFn: async () => {
+      const matchQuery = { agent_id: agentId };
 
       // 1. Fetch Reservations
       let resData: any[] = [];
@@ -100,12 +73,11 @@ export default function SalesActivityPage() {
       if (!resError && reservations) {
         resData = reservations;
       } else {
-        // Fallback to local storage if DB fails (since we saw it in another file)
         try {
           const local = localStorage.getItem("autoworx_agent_reservations");
           if (local) {
              const parsed = JSON.parse(local);
-             resData = agentId ? parsed.filter((r: any) => r.agent_id === agentId) : parsed;
+             resData = parsed.filter((r: any) => r.agent_id === agentId);
           }
         } catch (e) {}
       }
@@ -118,100 +90,136 @@ export default function SalesActivityPage() {
 
       const logData = (!logError && logs) ? logs : [];
 
-      setRawReservations(resData);
+      // 3. Fetch My Official Sales (Quota)
+      let myTotalSales = 0;
+      let myInvoiceCount = 0;
+      let isTrackingAgent = false;
+      let mySalesData: any[] = [];
+      
+      const { data: saData } = await supabase.from('sales_agents').select('name').eq('user_id', agentId).single();
+      if (saData?.name) {
+        isTrackingAgent = true;
+        const { data: mySales } = await supabase.from('sales').select('id, invoice_no, total_amount, date').eq('sales_agent', saData.name);
+        if (mySales) {
+          mySalesData = mySales;
+          myTotalSales = mySales.reduce((acc, sale) => acc + (Number(sale.total_amount) || 0), 0);
+          myInvoiceCount = mySales.length;
+        }
+      }
+
+      return { 
+        resData, 
+        logData, 
+        mySalesData,
+        myQuota: isTrackingAgent ? myTotalSales : null, 
+        myQuotaInvoices: myInvoiceCount 
+      };
+    }
+  });
 
       // --- Process Data ---
 
-      // KPIs
-      const approved = resData.filter(r => r.status === 'approved').length;
-      const declined = resData.filter(r => r.status === 'declined' || r.status === 'cancelled').length;
-      const pending = resData.filter(r => r.status === 'pending_approval' || !r.status).length;
-      const validRes = resData.filter(r => r.status !== 'deleted');
-      const total = validRes.length;
-      const totalUnits = validRes.reduce((sum, r) => sum + (Number(r.quantity) || 1), 0);
-      
-      setStats({
-        total,
-        approved,
-        declined,
-        pending,
-        totalUnits,
-        approvalRate: total > 0 ? Math.round((approved / total) * 100) : 0
+  const processedData = useMemo(() => {
+    const resData = activityData?.resData || [];
+    const logData = activityData?.logData || [];
+    const mySalesData = activityData?.mySalesData || [];
+
+    // KPIs
+    const approved = resData.filter(r => r.status === 'approved').length;
+    const declined = resData.filter(r => r.status === 'declined' || r.status === 'cancelled').length;
+    const pending = resData.filter(r => r.status === 'pending_approval' || !r.status).length;
+    const validRes = resData.filter(r => r.status !== 'deleted');
+    const total = validRes.length;
+    const totalUnits = validRes.reduce((sum, r) => sum + (Number(r.quantity) || 1), 0);
+    
+    const stats = {
+      total,
+      approved,
+      declined,
+      pending,
+      totalUnits,
+      approvalRate: total > 0 ? Math.round((approved / total) * 100) : 0
+    };
+
+    // Top Clients
+    const clientStatsMap = validRes.reduce((acc, curr) => {
+      const name = curr.client_name || "Unknown";
+      if (!acc[name]) {
+        acc[name] = { count: 0, totalUnits: 0 };
+      }
+      acc[name].count += 1;
+      acc[name].totalUnits += Number(curr.quantity) || 1;
+      return acc;
+    }, {} as Record<string, { count: number; totalUnits: number }>);
+    
+    const topClients = Object.entries(clientStatsMap)
+      .map(([name, dataVal]) => {
+        const data = dataVal as { count: number; totalUnits: number };
+        return { name, count: data.count, totalUnits: data.totalUnits };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Chart Data (Last 7 days of reservations)
+    const chartData = Array.from({ length: 7 }).map((_, i) => {
+      const d = subDays(new Date(), i);
+      return {
+        dateStr: format(d, 'MMM dd'),
+        dateObj: d,
+        requests: 0,
+      };
+    }).reverse();
+
+    resData.forEach(r => {
+      const d = new Date(r.created_at || new Date());
+      const dateStr = format(d, 'MMM dd');
+      const dayEntry = chartData.find(day => day.dateStr === dateStr);
+      if (dayEntry) dayEntry.requests += 1;
+    });
+
+    // Unified Feed
+    const feedItems: FeedItem[] = [];
+
+    resData.forEach(r => {
+      feedItems.push({
+        id: `res-${r.id}`,
+        type: 'reservation',
+        status: r.status,
+        title: r.product_name,
+        description: `Requested ${r.quantity} unit(s) for ${r.client_name} • ${r.branch_name || 'Main Branch'}`,
+        date: new Date(r.created_at || new Date()),
+        metadata: r
       });
+    });
 
-      // Top Clients
-      const clientStatsMap = validRes.reduce((acc, curr) => {
-        const name = curr.client_name || "Unknown";
-        if (!acc[name]) {
-          acc[name] = { count: 0, totalUnits: 0 };
-        }
-        acc[name].count += 1;
-        acc[name].totalUnits += Number(curr.quantity) || 1;
-        return acc;
-      }, {} as Record<string, { count: number; totalUnits: number }>);
-      
-      const sortedClients = Object.entries(clientStatsMap)
-        .map(([name, dataVal]) => {
-          const data = dataVal as { count: number; totalUnits: number };
-          return { name, count: data.count, totalUnits: data.totalUnits };
-        })
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-      setTopClients(sortedClients);
-
-      // Chart Data (Last 7 days of reservations)
-      const last7Days = Array.from({ length: 7 }).map((_, i) => {
-        const d = subDays(new Date(), i);
-        return {
-          dateStr: format(d, 'MMM dd'),
-          dateObj: d,
-          requests: 0,
-        };
-      }).reverse();
-
-      resData.forEach(r => {
-        const d = new Date(r.created_at || new Date());
-        const dateStr = format(d, 'MMM dd');
-        const dayEntry = last7Days.find(day => day.dateStr === dateStr);
-        if (dayEntry) dayEntry.requests += 1;
+    logData.forEach(l => {
+      feedItems.push({
+        id: `log-${l.id}`,
+        type: 'log',
+        title: l.action_type.replace(/_/g, ' '),
+        description: l.description,
+        date: new Date(l.created_at),
       });
-      setChartData(last7Days);
+    });
 
-      // Unified Feed
-      const feedItems: FeedItem[] = [];
-
-      resData.forEach(r => {
-        feedItems.push({
-          id: `res-${r.id}`,
-          type: 'reservation',
-          status: r.status,
-          title: r.product_name,
-          description: `Requested ${r.quantity} unit(s) for ${r.client_name} • ${r.branch_name || 'Main Branch'}`,
-          date: new Date(r.created_at || new Date()),
-          metadata: r
-        });
+    mySalesData.forEach(sale => {
+      feedItems.push({
+        id: `sale-${sale.id}`,
+        type: 'log',
+        title: `Sales Invoice Issued`,
+        description: `Invoice #${sale.invoice_no || 'Pending'} was successfully processed and credited to your quota for ₱${Number(sale.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`,
+        date: new Date(sale.date || new Date()),
       });
+    });
 
-      logData.forEach(l => {
-        feedItems.push({
-          id: `log-${l.id}`,
-          type: 'log',
-          title: l.action_type.replace(/_/g, ' '),
-          description: l.description,
-          date: new Date(l.created_at),
-        });
-      });
+    feedItems.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-      // Sort by date descending
-      feedItems.sort((a, b) => b.date.getTime() - a.date.getTime());
-      setFeed(feedItems);
+    return { stats, topClients, chartData, feed: feedItems, rawReservations: resData };
+  }, [activityData]);
 
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { stats, topClients, chartData, feed, rawReservations } = processedData;
+  const myQuota = activityData?.myQuota ?? null;
+  const myQuotaInvoices = activityData?.myQuotaInvoices ?? 0;
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-manrope">
@@ -235,7 +243,7 @@ export default function SalesActivityPage() {
 
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => fetchActivityData()}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['agent-activity'] })}
               className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
               title="Refresh Feed"
             >
@@ -259,6 +267,33 @@ export default function SalesActivityPage() {
         ) : (
           <div className="space-y-8">
             
+            {/* Sales Quota Banner (if applicable) */}
+            {myQuota !== null && (
+              <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-[2rem] p-6 sm:p-8 text-white shadow-xl shadow-orange-500/20 relative overflow-hidden group animate-in slide-in-from-top-4 duration-500">
+                <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-[0.1] pointer-events-none group-hover:scale-105 transition-transform duration-700" />
+                <div className="absolute top-0 right-0 p-8 opacity-20 hidden md:block group-hover:rotate-12 group-hover:scale-110 transition-transform duration-500">
+                  <TrendingUp className="w-32 h-32" />
+                </div>
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-xs">Official Performance</span>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl font-black mb-1 drop-shadow-sm">My Closed Sales</h2>
+                    <p className="text-orange-100 font-medium text-sm">Real-time quota tracking across all active branches.</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-4xl sm:text-5xl font-black text-white drop-shadow-md">
+                      ₱{myQuota.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-orange-100 font-bold mt-2 text-sm bg-white/10 w-fit ml-auto px-3 py-1 rounded-lg backdrop-blur-sm border border-white/10">
+                      {myQuotaInvoices} Invoices Processed
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Executive KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition-colors">

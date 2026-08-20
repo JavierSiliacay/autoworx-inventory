@@ -825,25 +825,6 @@ export default function AdminSalesPage() {
       setLoading(false);
     }
   };
-  const agentPerformance = React.useMemo(() => {
-    if (!sales) return [];
-    const perf: Record<string, { total_amount: number, invoice_count: Set<string> }> = {};
-    (sales || []).forEach(sale => {
-      if (sale.sales_agent) {
-        if (!perf[sale.sales_agent]) {
-          perf[sale.sales_agent] = { total_amount: 0, invoice_count: new Set() };
-        }
-        perf[sale.sales_agent].total_amount += sale.total_amount;
-        perf[sale.sales_agent].invoice_count.add(sale.invoice_no);
-      }
-    });
-    return Object.entries(perf).map(([name, data]) => ({
-      name,
-      total_amount: data.total_amount,
-      invoice_count: data.invoice_count.size
-    })).sort((a, b) => b.total_amount - a.total_amount);
-  }, [sales]);
-
   const groupedSales = React.useMemo(() => {
     const groups: Record<string, any> = {};
     
@@ -1031,42 +1012,6 @@ export default function AdminSalesPage() {
           </button>
         </div>
       </div>
-
-        {/* Sales Agent Performance Dashboard (Main Distribution Only) */}
-        {branches.find(b => b.id === (filterBranch || selectedBranchId || currentSale.branch_id))?.name?.toLowerCase().includes('main') && agentPerformance.length > 0 && (
-          <div className="bg-gradient-to-br from-[#f59e0b]/10 via-[#f59e0b]/5 to-transparent border border-[#f59e0b]/20 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/20 flex items-center justify-center text-[#d97706]">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-manrope font-extrabold text-[#d97706]">Sales Agent Performance</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Main Distribution Quota Monitor</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {agentPerformance.map((agent, idx) => (
-                <div key={idx} className="bg-white/60 backdrop-blur-md border border-[#f59e0b]/20 rounded-xl p-4 flex flex-col justify-between hover:bg-white hover:shadow-md transition-all group">
-                  <div className="flex items-center gap-2 mb-3">
-                    <User className="w-4 h-4 text-[#f59e0b] group-hover:scale-110 transition-transform" />
-                    <span className="font-bold text-slate-700 truncate">{agent.name}</span>
-                  </div>
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sales</div>
-                      <div className="text-lg font-black text-[#d97706]">₱{agent.total_amount.toLocaleString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Invoices</div>
-                      <div className="text-sm font-bold text-slate-600">{agent.invoice_count}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
       {/* Bulk Actions Bar */}
       {mounted && role === 'developer' && selectedSaleIds.length > 0 && (

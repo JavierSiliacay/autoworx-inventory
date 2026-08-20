@@ -141,6 +141,7 @@ export default function Sidebar() {
       children: [
         { name: "Sales Invoice", href: "/admin/sales", icon: FileText },
         { name: "Customers List", href: "/admin/sales/customers", icon: Users },
+        { name: "Agent Performance", href: "/admin/sales/agent-performance", icon: TrendingUp },
       ]
     },
     { 
