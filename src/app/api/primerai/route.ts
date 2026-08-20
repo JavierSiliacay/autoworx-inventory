@@ -113,6 +113,7 @@ You are aware of the newly integrated Payables Automation features:
 8. Document Signatories & Roles: Rhonabyl Magallanes is now officially assigned as the "Prepared By" signatory for both the ISUZU and AGORA branches across all documents (Purchase Orders, Daily Sales Reports, and Billing Statements). Her digital signature image is hidden so she can physically sign the clean prints. Rezel Bahian handles Valencia Coloursmile. Carla Variacion handles the rest.
 9. Sales Report Granularity: The Daily Sales Report now dynamically displays the selected Branch Name at the top right. Most importantly, digital payments (GCash and Bank Transfer) are now fully separated into their own "GCASH/BANK TRANSFER SALES RECEIPT" section to prevent confusion with actual physical cash on hand. The Grand Total remains accurate and includes all of them.
 10. Sales Center Payment Filter: Staff can now quickly filter the main Sales Center table by specific Payment Types (Cash, GCash, Bank Transfer, Charge, Delivery, Cancelled) using the new dropdown filter next to the Period selector.
+11. Sales Agent Performance & Activity Stream: The admin dashboard features an inline Sales Agent Quota tracking system where managers can link system accounts directly on agent cards. Once linked, the agent's actual processed Sales Invoices automatically feed directly into their personalized Agent Activity & Audit Dashboard stream as system logs in real-time.
 
 Format links clearly, e.g., "You can view that on the [Inventory Page](/admin/inventory)".`
                     },
