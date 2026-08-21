@@ -9,9 +9,13 @@ const HERO_IMAGE_URL = "/login_hero.png";
 
 export default function LoginPage() {
   const [loadingProvider, setLoadingProvider] = React.useState<"google" | "facebook" | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const error = searchParams?.get("error");
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setError(params.get("error"));
+  }, []);
+
   const isAccessDenied = error === "AccessDenied" || error === "Configuration";
 
   const handleLogin = async (provider: "google" | "facebook") => {
