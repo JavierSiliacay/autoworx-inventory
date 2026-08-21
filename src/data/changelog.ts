@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787281082544",
+    version: "v1.8.21",
+    date: "2026-08-21",
+    type: "fix",
+    title: "Login page crash fixed",
+    description: "Fixed a crash that occurred when redirecting after a login error, making the login process smoother and more reliable."
+  },
+
+  {
     id: "update-1787216079478",
     version: "v1.8.20",
     date: "2026-08-20",
