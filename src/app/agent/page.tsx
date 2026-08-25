@@ -17,6 +17,7 @@ import {
   BadgeCheck
 } from "lucide-react";
 import AgentSignOutModal from "@/components/agent/AgentSignOutModal";
+import InstallPromptBanner from "@/components/agent/InstallPromptBanner";
 
 export default function AgentDashboard() {
   const { data: session } = useSession();
@@ -181,6 +182,9 @@ export default function AgentDashboard() {
             </Link>
           </div>
         </div>
+
+        {/* In-Page Install App Section on Bottom */}
+        <InstallPromptBanner />
 
       </main>
 

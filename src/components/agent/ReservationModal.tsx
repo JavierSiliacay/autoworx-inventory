@@ -12,6 +12,7 @@ export interface InventoryItem {
   quantity: number;
   unit?: string | null;
   price?: number | null;
+  dealers_price?: number | null;
   branch_id?: string | null;
   branches?: { name: string } | { name: string }[] | null;
 }
