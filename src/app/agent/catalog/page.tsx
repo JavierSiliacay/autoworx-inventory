@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import ReservationModal, { InventoryItem } from "@/components/agent/ReservationModal";
+import { useSession } from "next-auth/react";
 
 interface BranchOption {
   id: string;
@@ -59,6 +60,9 @@ export default function AgentCatalogPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
 
+  const { data: session } = useSession();
+  const userBranchIds = (session?.user as any)?.branch_ids || [];
+
   const searchTokens = useMemo(() => {
     return debouncedSearch.toLowerCase().split(/\s+/).filter(Boolean);
   }, [debouncedSearch]);
@@ -83,26 +87,52 @@ export default function AgentCatalogPage() {
   useEffect(() => {
     const fetchBranches = async () => {
       try {
-        const { data } = await supabase.from("branches").select("id, name").order("name");
+        let query = supabase.from("branches").select("id, name").order("name");
+        
+        // If the agent has specific assigned branches, only fetch those
+        if (userBranchIds.length > 0) {
+          query = query.in("id", userBranchIds);
+        }
+
+        const { data } = await query;
         if (data) setBranches(data);
       } catch (err) {
         console.error("Error fetching branches:", err);
       }
     };
-    fetchBranches();
-  }, []);
+    if (session) {
+      fetchBranches();
+    }
+  }, [session, userBranchIds.length]);
 
   // Fetch paginated inventory from Supabase
   const fetchInventory = useCallback(async () => {
     setLoading(true);
     try {
+      // If agent has no branches assigned at all, they shouldn't see anything.
+      if (userBranchIds.length === 0) {
+        setItems([]);
+        setTotalCount(0);
+        return;
+      }
+
       let query = supabase
         .from("inventory")
         .select("id, product_name, sku, quantity, unit, price, branch_id, branches(name)", { count: "exact" });
 
-      // Apply branch filter if selected
+      // Apply branch filter if selected, otherwise restrict to ALL assigned branches
       if (selectedBranchId !== "all") {
-        query = query.eq("branch_id", selectedBranchId);
+        // Double check they are allowed to see this branch
+        if (userBranchIds.includes(selectedBranchId)) {
+          query = query.eq("branch_id", selectedBranchId);
+        } else {
+          // Selecting a branch they don't have access to
+          setItems([]);
+          setTotalCount(0);
+          return;
+        }
+      } else {
+        query = query.in("branch_id", userBranchIds);
       }
 
       // Apply tokenized search filter (each word token must match product_name or sku)
@@ -132,7 +162,7 @@ export default function AgentCatalogPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedBranchId, debouncedSearch]);
+  }, [currentPage, pageSize, selectedBranchId, debouncedSearch, userBranchIds]);
 
   // Trigger data fetch when dependencies change
   useEffect(() => {
@@ -396,18 +426,18 @@ export default function AgentCatalogPage() {
             </div>
 
             {/* Pagination Controls Bar */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col xl:flex-row items-center justify-between gap-4 sm:gap-5">
               {/* Pagination Info */}
-              <div className="text-xs font-medium text-slate-500">
+              <div className="text-xs font-medium text-slate-500 text-center xl:text-left w-full xl:w-auto">
                 Showing <span className="font-bold text-slate-900">{Math.min((currentPage - 1) * pageSize + 1, totalCount)}</span> to{" "}
                 <span className="font-bold text-slate-900">{Math.min(currentPage * pageSize, totalCount)}</span> of{" "}
                 <span className="font-bold text-slate-900">{totalCount}</span> products
               </div>
 
               {/* Page Size Selector & Controls */}
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full xl:w-auto justify-center">
                 {/* Items Per Page Picker */}
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium shrink-0 whitespace-nowrap">
                   <span>Per page:</span>
                   <select
                     value={pageSize}
@@ -422,7 +452,7 @@ export default function AgentCatalogPage() {
                 </div>
 
                 {/* Page Navigation Buttons */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
