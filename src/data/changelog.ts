@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787646514169",
+    version: "v1.8.25",
+    date: "2026-08-25",
+    type: "improvement",
+    title: "Agent Portal: Faster, Offline‑Ready with Clearer Stock & Pricing",
+    description: "Stock items now show the most available first, dealer pricing is visible for Main Distribution agents, page transitions are smoother thanks to smarter caching, and you can install the portal as a progressive web app for offline access and quicker loading."
+  },
+
+  {
     id: "update-1787628056976",
     version: "v1.8.25",
     date: "2026-08-25",
