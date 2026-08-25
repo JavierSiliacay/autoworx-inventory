@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787628056976",
+    version: "v1.8.25",
+    date: "2026-08-25",
+    type: "improvement",
+    title: "Enhanced print sheets and mobile catalog experience",
+    description: "Print sheets now show clearer column formatting and stock levels are color‑coded for quick visibility, while catalog pagination works smoothly on mobile devices for easier browsing."
+  },
+
+  {
     id: "update-1787281082544",
     version: "v1.8.21",
     date: "2026-08-21",
