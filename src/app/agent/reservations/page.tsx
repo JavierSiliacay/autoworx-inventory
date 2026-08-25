@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import EditReservationModal from "@/components/agent/EditReservationModal";
 import ReservationDetailsModal from "@/components/inventory/ReservationDetailsModal";
 import CancelReservationModal from "@/components/agent/CancelReservationModal";
+import { useSession } from "next-auth/react";
 
 interface AgentReservation {
   id: string;
@@ -47,6 +48,9 @@ export default function AgentReservationsPage() {
   const [editingReservation, setEditingReservation] = useState<AgentReservation | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<AgentReservation | null>(null);
 
+  const { data: session } = useSession();
+  const userBranchIds = (session?.user as any)?.branch_ids || [];
+
   const handleSaveEdit = (updatedItem: AgentReservation) => {
     setReservations((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
@@ -54,6 +58,7 @@ export default function AgentReservationsPage() {
   };
 
   const fetchReservations = async () => {
+    if (!session) return;
     setLoading(true);
     try {
       let combined: AgentReservation[] = [];
@@ -69,11 +74,17 @@ export default function AgentReservationsPage() {
       }
 
       // Read Supabase table
-      const { data, error } = await supabase
+      let query = supabase
         .from("agent_reservations")
         .select("*")
-        .neq('status', 'deleted')
-        .order("created_at", { ascending: false });
+        .neq('status', 'deleted');
+
+      // Filter by agent's branch assignment
+      if (userBranchIds.length > 0) {
+        query = query.in("branch_id", userBranchIds);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (!error && data) {
         // Completely overwrite combined with fresh data from database
@@ -125,7 +136,7 @@ export default function AgentReservationsPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [session, userBranchIds.length]);
 
   const handleCancelClick = (item: AgentReservation) => {
     setCancellingReservation(item);

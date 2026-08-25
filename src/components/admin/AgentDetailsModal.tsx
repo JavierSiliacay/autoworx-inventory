@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Calendar, Activity, CheckCircle, Package, ExternalLink, Loader2, User } from "lucide-react";
+import { X, Calendar, Activity, CheckCircle, Package, ExternalLink, Loader2, User, Building2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface ActivityLog {
@@ -27,6 +27,9 @@ interface AgentDetailsModalProps {
 export default function AgentDetailsModal({ agent, onClose }: AgentDetailsModalProps) {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [savingBranches, setSavingBranches] = useState(false);
   const [stats, setStats] = useState({
     reservations: 0,
     approved: 0,
@@ -40,6 +43,12 @@ export default function AgentDetailsModal({ agent, onClose }: AgentDetailsModalP
   async function fetchAgentData() {
     setLoading(true);
     try {
+      // 0. Fetch Branches & User's Branch Assignments
+      const { data: branchData } = await supabase.from('branches').select('id, name').order('name');
+      const { data: userData } = await supabase.from('users').select('branch_ids').eq('id', agent.id).single();
+      if (branchData) setBranches(branchData);
+      if (userData?.branch_ids) setSelectedBranches(userData.branch_ids);
+
       // 1. Fetch Activity Logs
       const { data: logData, error: logError } = await supabase
         .from('agent_activity_logs')
@@ -117,6 +126,25 @@ export default function AgentDetailsModal({ agent, onClose }: AgentDetailsModalP
       setLoading(false);
     }
   }
+
+  const handleSaveBranches = async () => {
+    setSavingBranches(true);
+    try {
+      const { error } = await supabase.from('users').update({ branch_ids: selectedBranches }).eq('id', agent.id);
+      if (error) throw error;
+      alert("Branch access updated successfully.");
+    } catch (e: any) {
+      alert("Error updating branches: " + e.message);
+    } finally {
+      setSavingBranches(false);
+    }
+  };
+
+  const toggleBranch = (branchId: string) => {
+    setSelectedBranches(prev => 
+      prev.includes(branchId) ? prev.filter(id => id !== branchId) : [...prev, branchId]
+    );
+  };
 
   // Handle closing when clicking outside
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -247,6 +275,40 @@ export default function AgentDetailsModal({ agent, onClose }: AgentDetailsModalP
               ))}
             </div>
           )}
+        </div>
+
+        {/* Branch Access Assignment */}
+        <div className="p-8 border-t border-slate-100 bg-white">
+          <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-emerald-500" />
+            Branch Assignment
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">Select which branches this agent is allowed to view and request stock for.</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-h-40 overflow-y-auto pr-2">
+            {branches.map(b => (
+              <label key={b.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedBranches.includes(b.id) ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}>
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  checked={selectedBranches.includes(b.id)}
+                  onChange={() => toggleBranch(b.id)}
+                />
+                <span className={`text-xs font-bold ${selectedBranches.includes(b.id) ? 'text-blue-700' : 'text-slate-700'}`}>{b.name}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex justify-end">
+            <button 
+              onClick={handleSaveBranches}
+              disabled={savingBranches}
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {savingBranches && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save Assignments
+            </button>
+          </div>
         </div>
       </div>
     </div>

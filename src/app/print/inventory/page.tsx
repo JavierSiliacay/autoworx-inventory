@@ -167,18 +167,21 @@ export default function InventoryPrintPage() {
                    </tr>
                  </thead>
                  <tbody>
-                   {categoryItems.map((item, i) => (
-                     <tr key={item.id} className="border-b border-gray-300 h-5">
-                       <td className="border-r border-black px-1 text-gray-600 font-mono text-[8px]">{item.sku || "-"}</td>
-                       <td className="border-r border-black px-1 font-bold uppercase text-[9px]">{item.product_name}</td>
-                       <td className="border-r border-black px-1 text-center text-gray-600">{unitAbbr[item.unit] || item.unit || "-"}</td>
-                       <td className="border-r border-black px-1 text-center font-bold bg-gray-50">{parseFloat(item.quantity.toString()).toFixed(1)}</td>
-                       <td className="px-1">
-                         {/* Empty space for writing */}
-                         <div className="w-full border-b border-gray-400 border-dotted h-3 mt-1"></div>
-                       </td>
-                     </tr>
-                   ))}
+                   {categoryItems.map((item, i) => {
+                     const textColor = item.quantity < 0 ? "text-yellow-600"  : item.quantity === 0 ? "text-red-600" : "text-black";
+                     return (
+                       <tr key={item.id} className="border-b border-gray-300 h-5">
+                         <td className={`border-r border-black px-1 font-bold font-mono text-[9px] ${textColor}`}>{item.sku || "-"}</td>
+                         <td className={`border-r border-black px-1 font-bold uppercase text-[9px] ${textColor}`}>{item.product_name}</td>
+                         <td className={`border-r border-black px-1 text-center font-bold text-[9px] ${textColor}`}>{unitAbbr[item.unit] || item.unit || "-"}</td>
+                         <td className={`border-r border-black px-1 text-center font-bold bg-gray-50 ${textColor}`}>{parseFloat(item.quantity.toString()).toFixed(1)}</td>
+                         <td className="px-1">
+                           {/* Empty space for writing */}
+                           <div className="w-full border-b border-gray-400 border-dotted h-3 mt-1"></div>
+                         </td>
+                       </tr>
+                     );
+                   })}
                  </tbody>
                </table>
             </div>

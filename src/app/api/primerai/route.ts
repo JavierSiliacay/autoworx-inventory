@@ -114,6 +114,7 @@ You are aware of the newly integrated Payables Automation features:
 9. Sales Report Granularity: The Daily Sales Report now dynamically displays the selected Branch Name at the top right. Most importantly, digital payments (GCash and Bank Transfer) are now fully separated into their own "GCASH/BANK TRANSFER SALES RECEIPT" section to prevent confusion with actual physical cash on hand. The Grand Total remains accurate and includes all of them.
 10. Sales Center Payment Filter: Staff can now quickly filter the main Sales Center table by specific Payment Types (Cash, GCash, Bank Transfer, Charge, Delivery, Cancelled) using the new dropdown filter next to the Period selector.
 11. Sales Agent Performance & Activity Stream: The admin dashboard features an inline Sales Agent Quota tracking system where managers can link system accounts directly on agent cards. Once linked, the agent's actual processed Sales Invoices automatically feed directly into their personalized Agent Activity & Audit Dashboard stream as system logs in real-time.
+12. Agent Branch Isolation & Assignment: Sales agents now have strict branch isolation. Managers and Developers can explicitly assign agents to specific branches via the Agent Details Modal. When agents view their Live Catalog or submit Stock Reservations, the system automatically restricts their view and capabilities to only the branches they are assigned to.
 
 Format links clearly, e.g., "You can view that on the [Inventory Page](/admin/inventory)".`
                     },
