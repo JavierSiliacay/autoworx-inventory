@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787820771502",
+    version: "v1.8.27",
+    date: "2026-08-27",
+    type: "feature",
+    title: "Smarter inventory cost tracking",
+    description: "When you add stock, the system now automatically calculates moving weighted average cost and unit cost, giving you accurate, up-to-date inventory valuations without manual calculations."
+  },
+
+  {
     id: "update-1787646514169",
     version: "v1.8.25",
     date: "2026-08-25",
