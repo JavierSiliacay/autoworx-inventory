@@ -20,6 +20,13 @@ DECLARE
   v_supplier_name text;
   v_supplier_due_days int;
   v_payable_amount decimal := 0;
+  v_curr_qty decimal;
+  v_curr_cost decimal;
+  v_qty_in decimal;
+  v_line_total decimal;
+  v_new_qty decimal;
+  v_final_cost decimal;
+  v_movement_type text;
 BEGIN
   -- 1. Parse PO ID if it exists (and is not empty string)
   IF (log_payload->>'reference_po_id') IS NOT NULL AND (log_payload->>'reference_po_id') != '' THEN
@@ -90,10 +97,39 @@ BEGIN
       v_payable_amount := v_payable_amount + COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * (v_item->>'unit_cost')::decimal);
     END IF;
 
-    -- Update inventory quantities and latest cost
+    -- Retrieve current stock and cost for Weighted Average Cost calculation
+    SELECT quantity, cost INTO v_curr_qty, v_curr_cost
+    FROM public.inventory
+    WHERE id = v_inventory_id;
+
+    v_movement_type := COALESCE(v_item->>'movement_type', 'Stock In');
+    v_qty_in := (v_item->>'quantity_received')::decimal;
+    v_line_total := COALESCE((v_item->>'total_amount')::decimal, v_qty_in * (v_item->>'unit_cost')::decimal);
+    v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_in;
+
+    -- Compute Weighted Average Cost:
+    -- If adding stock (Stock In or Adj (+)), blend current value with new line total.
+    -- If deducting stock (Adj (-)), cost per unit stays the same.
+    IF v_qty_in > 0 THEN
+      IF COALESCE(v_curr_qty, 0) <= 0 THEN
+        -- If previous stock was 0 or negative, set cost directly to batch unit cost
+        v_final_cost := v_line_total / NULLIF(v_qty_in, 0);
+      ELSE
+        -- Weighted Average Cost = (Old Value + Incoming Value) / (Old Qty + Incoming Qty)
+        v_final_cost := ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) + v_line_total ) / NULLIF(v_new_qty, 0);
+      END IF;
+    ELSE
+      -- On reduction, keep the existing unit cost
+      v_final_cost := COALESCE(v_curr_cost, (v_item->>'unit_cost')::decimal);
+    END IF;
+
+    -- Round cost to 4 decimal places for precision
+    v_final_cost := ROUND(COALESCE(v_final_cost, (v_item->>'unit_cost')::decimal), 4);
+
+    -- Update inventory quantities and weighted average cost
     UPDATE public.inventory
-    SET quantity = quantity + (v_item->>'quantity_received')::decimal,
-        cost = (v_item->>'unit_cost')::decimal,
+    SET quantity = v_new_qty,
+        cost = v_final_cost,
         last_modified_by = log_payload->>'received_by',
         updated_at = timezone('utc'::text, now())
     WHERE id = v_inventory_id;
@@ -105,9 +141,9 @@ BEGIN
       v_inventory_id,
       (log_payload->>'branch_id')::uuid,
       'IN',
-      (v_item->>'quantity_received')::decimal,
-      COALESCE((v_item->>'total_amount')::decimal / NULLIF((v_item->>'quantity_received')::decimal, 0), (v_item->>'unit_cost')::decimal),
-      COALESCE(v_item->>'movement_type', 'Stock In') || ': ' || COALESCE(log_payload->>'invoice_number', 'N/A')
+      v_qty_in,
+      (v_item->>'unit_cost')::decimal,
+      v_movement_type || ': ' || COALESCE(log_payload->>'invoice_number', 'N/A')
     );
   END LOOP;
 

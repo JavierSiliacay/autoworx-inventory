@@ -118,7 +118,16 @@ export default function NewStockInPage() {
       setSupplierId(po.supplier_id);
       setItems(po.items.map((pi: any) => {
         const inv = inventory.find(i => i.product_name === pi.product_name);
-        return { inventory_id: inv?.id || "", product_name: pi.product_name, quantity_received: pi.quantity, unit_cost: pi.unit_price };
+        const qty = Number(pi.quantity) || 1;
+        const unitPrice = Number(pi.unit_price) || 0;
+        return { 
+          inventory_id: inv?.id || "", 
+          product_name: pi.product_name, 
+          quantity_received: qty, 
+          unit_cost: unitPrice,
+          total_amount: Number((qty * unitPrice).toFixed(2)),
+          movement_type: "Stock In"
+        };
       }));
     }
   };
@@ -131,7 +140,18 @@ export default function NewStockInPage() {
     
     if (!confirm(`Are you sure you want to add ${product.product_name}?`)) return;
 
-    setItems(prev => [...prev, { inventory_id: product.id, product_name: product.product_name, quantity_received: 1, unit_cost: product.cost || 0, movement_type: "Stock In" }]);
+    const defaultCost = product.cost || 0;
+    const initialQty = 1;
+    const initialTotal = defaultCost * initialQty;
+
+    setItems(prev => [...prev, { 
+      inventory_id: product.id, 
+      product_name: product.product_name, 
+      quantity_received: initialQty, 
+      unit_cost: defaultCost, 
+      total_amount: initialTotal,
+      movement_type: "Stock In" 
+    }]);
     setItemSearch("");
     
     setTimeout(() => {
@@ -149,7 +169,28 @@ export default function NewStockInPage() {
   };
 
   const updateItem = (idx: number, field: keyof StockInItem, value: any) => {
-    setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+    setItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+
+      const updated = { ...item, [field]: value };
+
+      if (field === "total_amount") {
+        const totalAmt = Number(value) || 0;
+        const qty = Number(updated.quantity_received) || 0;
+        updated.unit_cost = qty > 0 ? Number((totalAmt / qty).toFixed(4)) : 0;
+      } else if (field === "quantity_received") {
+        const qty = Number(value) || 0;
+        const totalAmt = Number(updated.total_amount) || 0;
+        if (totalAmt > 0 && qty > 0) {
+          updated.unit_cost = Number((totalAmt / qty).toFixed(4));
+        } else if (qty > 0 && updated.unit_cost > 0) {
+          // If total_amount was not yet set, preserve existing unit cost and compute total
+          updated.total_amount = Number((updated.unit_cost * qty).toFixed(2));
+        }
+      }
+
+      return updated;
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +200,8 @@ export default function NewStockInPage() {
 
   const total = items.reduce((s, i) => {
     const m = i.movement_type === "Adjustment (-)" ? -1 : 1;
-    return s + (i.total_amount !== undefined ? Number(i.total_amount) * m : i.quantity_received * i.unit_cost * m);
+    const itemTotal = i.total_amount !== undefined ? Number(i.total_amount) : (Number(i.quantity_received) * Number(i.unit_cost));
+    return s + (itemTotal * m);
   }, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -475,17 +517,31 @@ export default function NewStockInPage() {
                       <tr id={`desktop-row-${item.inventory_id}`} key={idx} className="transition-colors">
                         <td className="px-5 py-3">
                           <div className="text-sm font-medium text-slate-800">{item.product_name}</div>
-                          {item.movement_type?.includes("Adjustment") && (() => {
+                          {(() => {
                             const template = inventory.find(i => i.product_name === item.product_name);
                             const currentStock = template?.quantity || 0;
                             const currentCost = template?.cost || 0;
                             const currentValue = currentStock * currentCost;
                             const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
-                            const newStock = currentStock + (item.quantity_received * multiplier);
-                            const newValue = newStock * currentCost;
+                            const qtyIn = item.quantity_received * multiplier;
+                            const newStock = currentStock + qtyIn;
+                            const lineTotal = (item.total_amount !== undefined ? Number(item.total_amount) : (item.quantity_received * item.unit_cost)) * multiplier;
+                            
+                            let projectedCost = currentCost;
+                            if (multiplier > 0) {
+                              if (currentStock <= 0) {
+                                projectedCost = item.quantity_received > 0 ? (lineTotal / item.quantity_received) : currentCost;
+                              } else if (newStock > 0) {
+                                projectedCost = (currentValue + lineTotal) / newStock;
+                              }
+                            }
+                            const projectedValue = newStock * projectedCost;
+
                             return (
-                              <div className="text-[10px] text-slate-500 mt-1">
-                                Stock: {currentStock} <span className="text-slate-300 mx-1">➔</span> <span className={`font-bold ${newStock < 0 ? 'text-red-500' : 'text-blue-600'}`}>{newStock}</span> | Value: ₱{currentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-slate-300 mx-1">➔</span> <span className="font-mono font-medium">₱{newValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-2">
+                                <span>Stock: {currentStock} <span className="text-slate-300">➔</span> <strong className={newStock < 0 ? 'text-red-500' : 'text-slate-800'}>{newStock}</strong></span>
+                                <span className="text-slate-300">•</span>
+                                <span>Master Cost: ₱{currentCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-slate-300">➔</span> <strong className="text-[#16a34a]">₱{projectedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                               </div>
                             );
                           })()}
@@ -545,17 +601,30 @@ export default function NewStockInPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-semibold text-slate-800">{item.product_name}</p>
-                        {item.movement_type?.includes("Adjustment") && (() => {
+                        {(() => {
                           const template = inventory.find(i => i.product_name === item.product_name);
                           const currentStock = template?.quantity || 0;
                           const currentCost = template?.cost || 0;
                           const currentValue = currentStock * currentCost;
                           const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
-                          const newStock = currentStock + (item.quantity_received * multiplier);
-                          const newValue = newStock * currentCost;
+                          const qtyIn = item.quantity_received * multiplier;
+                          const newStock = currentStock + qtyIn;
+                          const lineTotal = (item.total_amount !== undefined ? Number(item.total_amount) : (item.quantity_received * item.unit_cost)) * multiplier;
+                          
+                          let projectedCost = currentCost;
+                          if (multiplier > 0) {
+                            if (currentStock <= 0) {
+                              projectedCost = item.quantity_received > 0 ? (lineTotal / item.quantity_received) : currentCost;
+                            } else if (newStock > 0) {
+                              projectedCost = (currentValue + lineTotal) / newStock;
+                            }
+                          }
+
                           return (
-                            <div className="text-[10px] text-slate-500 mt-0.5">
-                              Stock: {currentStock} ➔ <span className={`font-bold ${newStock < 0 ? 'text-red-500' : 'text-blue-600'}`}>{newStock}</span> | ₱{newValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-1.5">
+                              <span>Stock: {currentStock} ➔ <strong className={newStock < 0 ? 'text-red-500' : 'text-slate-800'}>{newStock}</strong></span>
+                              <span className="text-slate-300">•</span>
+                              <span>Cost: ₱{currentCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ➔ <strong className="text-[#16a34a]">₱{projectedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                             </div>
                           );
                         })()}
