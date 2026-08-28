@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1787883638285",
+    version: "v1.8.28",
+    date: "2026-08-28",
+    type: "feature",
+    title: "Faster, More Accurate Dashboard",
+    description: "The main distribution system has been fully migrated, and the dashboard now automatically syncs with the latest data, giving you up-to-date information with less effort."
+  },
+
+  {
     id: "update-1787820771502",
     version: "v1.8.27",
     date: "2026-08-27",
