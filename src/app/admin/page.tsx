@@ -270,10 +270,58 @@ export default function AdminDashboardPage() {
         console.error("Revenue Fetch error:", err);
       }
 
+      // Calculate Purchases strictly matching Google Sheet Dashboard (Type = 'Stock In' only, excluding Transfers & Adjustments)
+      let purchasesSum = 0;
+      try {
+        let silQuery = supabase
+          .from('stock_in_logs')
+          .select('id');
+          
+        if (filterBranch) {
+          silQuery = silQuery.eq('branch_id', filterBranch);
+        } else if (isStaff && userBranchIds.length > 0) {
+          silQuery = silQuery.in('branch_id', userBranchIds);
+        }
+        
+        if (filterMonth !== "all") {
+          const [year, month, day] = filterMonth.split('-');
+          if (day) {
+            silQuery = silQuery.gte('date_received', `${year}-${month}-${day}T00:00:00`).lte('date_received', `${year}-${month}-${day}T23:59:59`);
+          } else {
+            const nextMonth = Number(month) === 12 ? 1 : Number(month) + 1;
+            const nextYear = Number(month) === 12 ? Number(year) + 1 : Number(year);
+            silQuery = silQuery.gte('date_received', `${year}-${month}-01T00:00:00`).lt('date_received', `${nextYear}-${String(nextMonth).padStart(2, '0')}-01T00:00:00`);
+          }
+        }
+        
+        const { data: logDocs } = await silQuery;
+        if (logDocs && logDocs.length > 0) {
+          const logIds = logDocs.map(l => l.id);
+          // Query in chunks of 50 to avoid URL query limits
+          let totalItemsSum = 0;
+          for (let i = 0; i < logIds.length; i += 50) {
+            const chunk = logIds.slice(i, i + 50);
+            const { data: pItems } = await supabase
+              .from('stock_in_items')
+              .select('total_cost, movement_type')
+              .in('stock_in_id', chunk);
+            if (pItems) {
+              const valid = pItems.filter(it => it.movement_type === 'Stock In' || it.movement_type === 'STOCK IN');
+              totalItemsSum += valid.reduce((acc, it) => acc + Number(it.total_cost || 0), 0);
+            }
+          }
+          purchasesSum = totalItemsSum;
+        } else {
+          purchasesSum = 0;
+        }
+      } catch (pErr) {
+        console.warn("Purchases calculation error:", pErr);
+      }
+
       setStats({
         products: uniqueProdCount,
         stock: totalVolume,
-        value: totalPurchaseValue,
+        value: purchasesSum,
         currentStockValue: currentStockCost,
         branches: bList.length
       });
