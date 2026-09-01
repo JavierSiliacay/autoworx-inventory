@@ -120,7 +120,9 @@ export default function BillingStatementsPage() {
       const { data: branchData } = await supabase.from('branches').select('name').eq('id', activeBranchId).single();
       
       let preparedBy = (session?.user as any)?.name || 'Staff';
-      if (branchData?.name?.toUpperCase().includes('ISUZU') || branchData?.name?.toUpperCase().includes('AGORA')) {
+      if (branchData?.name?.toUpperCase().includes('KAUSWAGAN') || branchData?.name?.toUpperCase().includes('VALENCIA DISTRIBUTION')) {
+        preparedBy = '_________________________';
+      } else if (branchData?.name?.toUpperCase().includes('ISUZU') || branchData?.name?.toUpperCase().includes('AGORA')) {
         preparedBy = 'RHONABYL MAGALLANES';
       } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION')) {
         preparedBy = 'CARLA VARIACION';

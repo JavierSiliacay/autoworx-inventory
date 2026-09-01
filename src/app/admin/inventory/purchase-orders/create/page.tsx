@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus, Trash2, Save, ArrowLeft, Loader2, Search,
-  Building2, Package, Calendar, CreditCard, UserCheck
+  Building2, Package, Calendar, CreditCard, UserCheck, Hash
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -53,6 +53,7 @@ export default function CreatePurchaseOrderPage() {
   const [supplierSearch, setSupplierSearch] = useState("");
   const [isSupplierSearching, setIsSupplierSearching] = useState(false);
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0]);
+  const [poNumberPreview, setPoNumberPreview] = useState("");
   const [terms, setTerms] = useState("PDC 60 DAYS");
   const [customTerms, setCustomTerms] = useState("");
   const [approvedBy, setApprovedBy] = useState("LIZA V. AGBONG");
@@ -60,7 +61,43 @@ export default function CreatePurchaseOrderPage() {
   const [itemSearch, setItemSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => { fetchData(); }, [selectedBranchId]);
+  const fetchNextPoNumber = async (dateStr: string) => {
+    try {
+      const ymd = dateStr ? dateStr.replace(/-/g, "") : (() => {
+        const now = new Date();
+        return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+      })();
+
+      const { count, data } = await supabase
+        .from("purchase_orders")
+        .select("po_number", { count: "exact" });
+
+      let maxSeq = count || 0;
+      if (data && data.length > 0) {
+        data.forEach(p => {
+          const match = p.po_number?.match(/-(\d+)$/);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxSeq) {
+              maxSeq = num;
+            }
+          }
+        });
+      }
+      const nextSeq = maxSeq + 1;
+      setPoNumberPreview(`${ymd}-${String(nextSeq).padStart(4, "0")}`);
+    } catch (err) {
+      console.error("Error generating PO preview:", err);
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    fetchNextPoNumber(orderDate);
+  }, [orderDate]);
 
   async function fetchData() {
     if (!session) return;
@@ -132,11 +169,26 @@ export default function CreatePurchaseOrderPage() {
     try {
       setLoading(true);
       const now = new Date();
-      const ymd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
+      const ymd = orderDate ? orderDate.replace(/-/g, "") : `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       
-      const { count } = await supabase.from("purchase_orders").select("*", { count: "exact", head: true });
-      const seq = 295 + (count || 0);
-      const poNumber = `PO-${ymd}-${seq}`;
+      const { count, data } = await supabase
+        .from("purchase_orders")
+        .select("po_number", { count: "exact" });
+
+      let maxSeq = count || 0;
+      if (data && data.length > 0) {
+        data.forEach(p => {
+          const match = p.po_number?.match(/-(\d+)$/);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxSeq) {
+              maxSeq = num;
+            }
+          }
+        });
+      }
+      const nextSeq = maxSeq + 1;
+      const poNumber = `${ymd}-${String(nextSeq).padStart(4, "0")}`;
       
       const finalTerms = terms === "CUSTOM" ? customTerms : terms;
       
@@ -183,6 +235,24 @@ export default function CreatePurchaseOrderPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Form Grid */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* System Generated PO Number Badge */}
+          <div className="sm:col-span-2 bg-gradient-to-r from-emerald-50/70 via-green-50/50 to-transparent border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#16a34a]/10 flex items-center justify-center text-[#16a34a]">
+                <Hash className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Purchase Order Number</p>
+                <p className="text-sm font-bold text-slate-900 font-mono tracking-wide">
+                  {poNumberPreview || `${orderDate.replace(/-/g, "")}-0001`}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#16a34a] bg-emerald-100/60 px-2.5 py-1 rounded-full border border-emerald-200/50">
+              System Generated
+            </span>
+          </div>
+
           {/* Supplier */}
           <div className="relative z-20">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Supplier</label>

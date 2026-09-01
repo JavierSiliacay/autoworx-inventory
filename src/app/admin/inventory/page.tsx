@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -265,7 +265,8 @@ export default function AdminInventoryPage() {
   const filtered = items.filter(p => {
     let matchSearch = true;
     if (searchTokens.length > 0) {
-      const searchableText = `${p.product_name} ${p.sku || ""} ${p.category}`.toLowerCase();
+      const modifierName = p.last_modified_by ? (staffMap[p.last_modified_by.toLowerCase()] || p.last_modified_by) : "System Migration";
+      const searchableText = `${p.product_name} ${p.sku || ""} ${p.category} ${p.branch_name || ""} ${p.last_modified_by || ""} ${modifierName}`.toLowerCase();
       matchSearch = searchTokens.every(token => searchableText.includes(token));
     }
     
@@ -348,7 +349,7 @@ export default function AdminInventoryPage() {
             <Search className="w-5 h-5 text-[#16a34a] shrink-0" />
             <input
               className="bg-transparent border-none outline-none text-base w-full placeholder:text-slate-400 font-medium text-slate-800"
-              placeholder="Search master inventory..."
+              placeholder="Search product, SKU, category, or creator (e.g. Javier, System)..."
               value={filter}
               onChange={e => { setFilter(e.target.value); setCurrentPage(1); }}
             />
@@ -425,14 +426,18 @@ export default function AdminInventoryPage() {
                           <p className="text-sm font-semibold text-slate-900">
                             <HighlightText text={product.product_name} tokens={searchTokens} />
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <span className="text-[10px] font-semibold text-[#1e40af]">{product.branch_name}</span>
                             {product.sku && <span className="text-[10px] text-slate-400 font-mono">{product.sku}</span>}
+                            <span className="text-[9px] bg-slate-100/90 text-slate-600 px-1.5 py-0.5 rounded-md font-medium border border-slate-200/70 inline-flex items-center gap-1">
+                              <span className="text-slate-400 font-normal">By:</span>
+                              <HighlightText text={product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System Migration"} tokens={searchTokens} />
+                            </span>
                           </div>
                           {/* Audit tooltip */}
                           <div className="absolute left-0 top-full mt-1 z-50 opacity-0 group-hover/audit:opacity-100 pointer-events-none transition-opacity hidden lg:block">
                             <div className="bg-slate-900 text-white text-[10px] px-3 py-2 rounded-xl shadow-xl whitespace-nowrap">
-                              <p className="text-slate-400">Modified by: <span className="text-white font-semibold">{product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System"}</span></p>
+                              <p className="text-slate-400">Modified by: <span className="text-white font-semibold">{product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System Migration"}</span></p>
                               <p className="text-slate-400 mt-0.5">{new Date(product.updated_at).toLocaleString()}</p>
                             </div>
                           </div>
@@ -567,11 +572,15 @@ export default function AdminInventoryPage() {
                     <p className="text-sm font-semibold text-slate-900">
                       <HighlightText text={product.product_name} tokens={searchTokens} />
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide ${categoryBadge[product.category] || "bg-slate-100 text-slate-500"}`}>
                         {product.category}
                       </span>
                       <span className="text-[10px] text-[#1e40af] font-semibold">{product.branch_name}</span>
+                      <span className="text-[9px] bg-slate-100/90 text-slate-600 px-1.5 py-0.5 rounded-md font-medium border border-slate-200/70 inline-flex items-center gap-1">
+                        <span className="text-slate-400 font-normal">By:</span>
+                        <HighlightText text={product.last_modified_by ? (staffMap[product.last_modified_by.toLowerCase()] || product.last_modified_by) : "System Migration"} tokens={searchTokens} />
+                      </span>
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">

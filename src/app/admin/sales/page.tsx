@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, TrendingUp, AlertTriangle, Loader2, X, ShoppingBag, Calendar, User, FileText, CheckCircle2, Package, Trash2, Beaker, ChevronDown, ChevronUp, Printer, Edit2, Undo2, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -87,6 +87,7 @@ export default function AdminSalesPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [printSales, setPrintSales] = useState<any[]>([]);
   const [isFetchingPrint, setIsFetchingPrint] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(80);
 
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [filterMonth, setFilterMonth] = useState("all");
@@ -214,6 +215,9 @@ export default function AdminSalesPage() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [transmittalChecks, setTransmittalChecks] = useState<{name: string; ref: string; amount: string; bank: string}[]>([{ name: '', ref: '', amount: '', bank: '' }]);
   const [transmittalNotes, setTransmittalNotes] = useState<string[]>(['']);
+  const [pettyCashBeginning, setPettyCashBeginning] = useState<number | string>(474.00);
+  const [pettyCashExpenses, setPettyCashExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [distributionExpenses, setDistributionExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [mounted, setMounted] = useState(false);
 
   const toggleExpandSale = async (invoiceNo: string) => {
@@ -1552,195 +1556,517 @@ export default function AdminSalesPage() {
         </div>
       )}
       {/* Print Report Modal */}
-      {isPrintModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
-            <div className="px-6 pt-6 pb-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-manrope font-extrabold text-[#1a1b20]">Export Report</h3>
-                  <p className="text-xs text-slate-500 font-medium">Configure report settings.</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsPrintModalOpen(false)}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4">
-                <button
-                  onClick={() => setPrintType('yearly')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'yearly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Yearly
-                </button>
-                <button
-                  onClick={() => setPrintType('monthly')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Monthly
-                </button>
-                <button
-                  onClick={() => setPrintType('daily')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  Daily
-                </button>
-              </div>
+      {isPrintModalOpen && (() => {
+        const selectedBranchName = branches.find(b => b.id === filterBranch)?.name || '';
+        const isValenciaColoursmile = Boolean(
+          selectedBranchName && (
+            selectedBranchName.toUpperCase().includes('COLOURSMILE') || 
+            (selectedBranchName.toUpperCase().includes('VALENCIA') && !selectedBranchName.toUpperCase().includes('DISTRIBUTION'))
+          )
+        );
+        const isMainDistribution = !selectedBranchName || selectedBranchName.toUpperCase().includes('MAIN DISTRIBUTION') || selectedBranchName.toUpperCase() === 'MAIN';
 
-              {printType === 'monthly' || printType === 'yearly' ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {printType === 'monthly' && (
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Month</label>
-                      <select
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
-                        value={printMonth}
-                        onChange={(e) => setPrintMonth(Number(e.target.value))}
-                      >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                          <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString('default', { month: 'short' })}</option>
-                        ))}
-                      </select>
-                    </div>
+        const totalPettyCashExp = pettyCashExpenses.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const totalDistExp = distributionExpenses.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const onHand = (Number(pettyCashBeginning) || 0) - totalPettyCashExp - totalDistExp;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className={`bg-white rounded-[2rem] shadow-2xl w-full ${isValenciaColoursmile && printType === 'daily' ? 'max-w-4xl' : 'max-w-xl'} max-h-[92vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300`}>
+              {/* Modal Header */}
+              <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-manrope font-extrabold text-[#1a1b20]">Export Report</h3>
+                    <p className="text-xs text-slate-500 font-medium">Configure report settings & parameters.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isValenciaColoursmile && (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                      Valencia ColourSmile
+                    </span>
                   )}
-                  <div className={`space-y-2 ${printType === 'yearly' ? 'col-span-2' : ''}`}>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Year</label>
-                    <select
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
-                      value={printYear}
-                      onChange={(e) => setPrintYear(Number(e.target.value))}
-                    >
-                      {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
-                    value={printDate}
-                    onChange={(e) => setPrintDate(e.target.value)}
-                  />
-                </div>
-              )}
-
-              {/* Payment Type Filter */}
-              <div className="space-y-2 pt-2">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                  {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setPrintPaymentType(type as any)}
-                      className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                  {isMainDistribution && (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full border border-blue-200">
+                      Main Distribution
+                    </span>
+                  )}
+                  <button 
+                    onClick={() => setIsPrintModalOpen(false)}
+                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Transmittal Config */}
-              {printType === 'daily' && (
-                <div className="pt-4 border-t border-slate-100 mt-4">
-                  <h4 className="text-sm font-bold mb-3">Transmittal Configuration</h4>
-                  <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-2">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-                        <span>Check Payments</span>
-                        <button onClick={() => setTransmittalChecks([...transmittalChecks, { name: '', ref: '', amount: '', bank: '' }])} className="text-indigo-600 hover:text-indigo-700">Add Check</button>
-                      </label>
-                      {transmittalChecks.map((check, i) => (
-                        <div key={i} className="flex flex-col gap-1 mb-2 bg-slate-50 p-2 rounded-lg">
-                          <div className="grid grid-cols-4 gap-2">
-                            <input type="text" placeholder="Customer Name" value={check.name} onChange={e => { const n = [...transmittalChecks]; n[i].name = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
-                            <input type="text" placeholder="Invoice/Ref" value={check.ref} onChange={e => { const n = [...transmittalChecks]; n[i].ref = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
-                            <input 
-                              type="text" 
-                              placeholder="Amount" 
-                              value={check.amount} 
-                              onChange={e => { 
-                                const val = e.target.value.replace(/[^0-9.]/g, '');
-                                const parts = val.split('.');
-                                let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                                if (parts.length > 1) {
-                                  // limit strictly to 1 decimal dot naturally reconstructing string
-                                  formatted += '.' + parts[1];
-                                }
-                                const n = [...transmittalChecks]; 
-                                n[i].amount = formatted; 
-                                setTransmittalChecks(n); 
-                              }} 
-                              className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
-                            />
-                            <input type="text" placeholder="Bank" value={check.bank} onChange={e => { const n = [...transmittalChecks]; n[i].bank = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
-                          </div>
-                          {transmittalChecks.length > 1 && <div className="text-right"><button onClick={() => setTransmittalChecks(transmittalChecks.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline">REMOVE</button></div>}
+              {/* Modal Scrollable Body */}
+              <div className="p-6 overflow-y-auto flex-1">
+                {isValenciaColoursmile && printType === 'daily' ? (
+                  /* Expanded 2-Column Layout for Valencia ColourSmile */
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {/* Left Column: Date, Filter, Beginning Cash & Calculation Summary */}
+                    <div className="md:col-span-5 space-y-4">
+                      {/* Period Switcher */}
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button onClick={() => setPrintType('yearly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'yearly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Yearly</button>
+                        <button onClick={() => setPrintType('monthly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Monthly</button>
+                        <button onClick={() => setPrintType('daily')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daily</button>
+                      </div>
+
+                      {/* Select Date */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                          value={printDate}
+                          onChange={(e) => setPrintDate(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Payment Filter */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
+                        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                          {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => setPrintPaymentType(type as any)}
+                              className={`py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate px-1 ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              {type}
+                            </button>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Beginning Petty Cash */}
+                      <div className="bg-slate-50 p-3.5 rounded-2xl space-y-1.5 border border-slate-200/80">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Beginning Petty Cash
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={pettyCashBeginning}
+                            onChange={e => setPettyCashBeginning(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+                            className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Summary Breakdown Card */}
+                      <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800">Petty Cash Calculation</p>
+                        <div className="space-y-1.5 text-xs text-slate-600">
+                          <div className="flex justify-between font-medium">
+                            <span>Beginning Balance:</span>
+                            <span className="font-mono font-bold text-slate-800">₱{(Number(pettyCashBeginning) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between font-medium text-amber-700">
+                            <span>- Petty Cash Expenses:</span>
+                            <span className="font-mono font-bold">-₱{totalPettyCashExp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between font-medium text-amber-700">
+                            <span>- Distribution Expenses:</span>
+                            <span className="font-mono font-bold">-₱{totalDistExp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="pt-2 border-t border-emerald-200/60 flex justify-between items-center text-sm font-black text-emerald-900">
+                            <span className="uppercase text-xs tracking-wider">Petty Cash On Hand:</span>
+                            <span className="font-mono text-base">₱{onHand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-                        <span>Full-width Notes</span>
-                        <button onClick={() => setTransmittalNotes([...transmittalNotes, ''])} className="text-indigo-600 hover:text-indigo-700">Add Note</button>
-                      </label>
-                      {transmittalNotes.map((note, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input type="text" placeholder="Write spanning note..." value={note} onChange={e => { const n = [...transmittalNotes]; n[i] = e.target.value; setTransmittalNotes(n); }} className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs" />
-                          {transmittalNotes.length > 1 && <button onClick={() => setTransmittalNotes(transmittalNotes.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline px-2">REM</button>}
+                    {/* Right Column: Expenses Lists */}
+                    <div className="md:col-span-7 space-y-4 md:border-l md:border-slate-100 md:pl-6">
+                      {/* Petty Cash Expenses Section */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Petty Cash Expenses
+                            </label>
+                            <span className="text-[10px] text-slate-400 ml-2">({pettyCashExpenses.length} {pettyCashExpenses.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = pettyCashExpenses.length;
+                              setPettyCashExpenses([...pettyCashExpenses, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`petty-particular-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
                         </div>
-                      ))}
+                        <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
+                          {pettyCashExpenses.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`petty-particular-${idx}`}
+                                type="text"
+                                placeholder="Particular / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...pettyCashExpenses];
+                                  next[idx].particular = e.target.value;
+                                  setPettyCashExpenses(next);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    document.getElementById(`petty-amount-${idx}`)?.focus();
+                                  }
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  id={`petty-amount-${idx}`}
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...pettyCashExpenses];
+                                    next[idx].amount = formatted;
+                                    setPettyCashExpenses(next);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const newLen = pettyCashExpenses.length;
+                                      setPettyCashExpenses([...pettyCashExpenses, { particular: '', amount: '' }]);
+                                      setTimeout(() => {
+                                        document.getElementById(`petty-particular-${newLen}`)?.focus();
+                                      }, 50);
+                                    }
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {pettyCashExpenses.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPettyCashExpenses(pettyCashExpenses.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Distribution Expenses Section */}
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Distribution Expenses
+                            </label>
+                            <span className="text-[10px] text-slate-400 ml-2">({distributionExpenses.length} {distributionExpenses.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = distributionExpenses.length;
+                              setDistributionExpenses([...distributionExpenses, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`dist-particular-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
+                          {distributionExpenses.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`dist-particular-${idx}`}
+                                type="text"
+                                placeholder="Particular / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...distributionExpenses];
+                                  next[idx].particular = e.target.value;
+                                  setDistributionExpenses(next);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    document.getElementById(`dist-amount-${idx}`)?.focus();
+                                  }
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  id={`dist-amount-${idx}`}
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...distributionExpenses];
+                                    next[idx].amount = formatted;
+                                    setDistributionExpenses(next);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      const newLen = distributionExpenses.length;
+                                      setDistributionExpenses([...distributionExpenses, { particular: '', amount: '' }]);
+                                      setTimeout(() => {
+                                        document.getElementById(`dist-particular-${newLen}`)?.focus();
+                                      }, 50);
+                                    }
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {distributionExpenses.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDistributionExpenses(distributionExpenses.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              <button
-                onClick={fetchPrintData}
-                disabled={isFetchingPrint}
-                className="w-full bg-[#1a1b20] text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isFetchingPrint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-                {isFetchingPrint ? "Generating..." : "Generate Print View"}
-              </button>
+                ) : (
+                  /* Standard 1-Column Layout */
+                  <div className="space-y-4">
+                    <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4">
+                      <button onClick={() => setPrintType('yearly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'yearly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Yearly</button>
+                      <button onClick={() => setPrintType('monthly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Monthly</button>
+                      <button onClick={() => setPrintType('daily')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${printType === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daily</button>
+                    </div>
+
+                    {printType === 'monthly' || printType === 'yearly' ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {printType === 'monthly' && (
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Month</label>
+                            <select
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                              value={printMonth}
+                              onChange={(e) => setPrintMonth(Number(e.target.value))}
+                            >
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString('default', { month: 'short' })}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div className={`space-y-2 ${printType === 'yearly' ? 'col-span-2' : ''}`}>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Year</label>
+                          <select
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                            value={printYear}
+                            onChange={(e) => setPrintYear(Number(e.target.value))}
+                          >
+                            {[2024, 2025, 2026, 2027, 2028].map((y) => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                          value={printDate}
+                          onChange={(e) => setPrintDate(e.target.value)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Payment Type Filter */}
+                    <div className="space-y-2 pt-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                        {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setPrintPaymentType(type as any)}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Transmittal Config for Main Distribution */}
+                    {printType === 'daily' && isMainDistribution && (
+                      <div className="pt-4 border-t border-slate-100 mt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-slate-800">Transmittal Configuration</h4>
+                          <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full border border-blue-200">
+                            Main Distribution
+                          </span>
+                        </div>
+                        <div className="space-y-4 max-h-[30vh] overflow-y-auto pr-2">
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                              <span>Check Payments</span>
+                              <button onClick={() => setTransmittalChecks([...transmittalChecks, { name: '', ref: '', amount: '', bank: '' }])} className="text-indigo-600 hover:text-indigo-700">Add Check</button>
+                            </label>
+                            {transmittalChecks.map((check, i) => (
+                              <div key={i} className="flex flex-col gap-1 mb-2 bg-slate-50 p-2 rounded-lg">
+                                <div className="grid grid-cols-4 gap-2">
+                                  <input type="text" placeholder="Customer Name" value={check.name} onChange={e => { const n = [...transmittalChecks]; n[i].name = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                                  <input type="text" placeholder="Invoice/Ref" value={check.ref} onChange={e => { const n = [...transmittalChecks]; n[i].ref = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                                  <input 
+                                    type="text" 
+                                    placeholder="Amount" 
+                                    value={check.amount} 
+                                    onChange={e => { 
+                                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                                      const parts = val.split('.');
+                                      let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                      if (parts.length > 1) {
+                                        formatted += '.' + parts[1];
+                                      }
+                                      const n = [...transmittalChecks]; 
+                                      n[i].amount = formatted; 
+                                      setTransmittalChecks(n); 
+                                    }} 
+                                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" 
+                                  />
+                                  <input type="text" placeholder="Bank" value={check.bank} onChange={e => { const n = [...transmittalChecks]; n[i].bank = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs" />
+                                </div>
+                                {transmittalChecks.length > 1 && <div className="text-right"><button onClick={() => setTransmittalChecks(transmittalChecks.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline">REMOVE</button></div>}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
+                              <span>Full-width Notes</span>
+                              <button onClick={() => setTransmittalNotes([...transmittalNotes, ''])} className="text-indigo-600 hover:text-indigo-700">Add Note</button>
+                            </label>
+                            {transmittalNotes.map((note, i) => (
+                              <div key={i} className="flex gap-2">
+                                <input type="text" placeholder="Write spanning note..." value={note} onChange={e => { const n = [...transmittalNotes]; n[i] = e.target.value; setTransmittalNotes(n); }} className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs" />
+                                <button onClick={() => setTransmittalNotes(transmittalNotes.filter((_, idx) => idx !== i))} className="text-red-500 font-bold text-[10px] hover:underline px-2">REM</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Sticky Action Footer */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsPrintModalOpen(false)}
+                  className="px-5 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={fetchPrintData}
+                  disabled={isFetchingPrint}
+                  className="bg-[#1a1b20] hover:bg-indigo-600 text-white px-7 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shadow-lg shadow-slate-200 disabled:opacity-50 uppercase tracking-wider"
+                >
+                  {isFetchingPrint ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                  {isFetchingPrint ? "Generating..." : "Generate Print View"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
 
     {mounted && isPreviewOpen && (
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 md:p-4 md:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[1240px] max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-2 md:p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[1240px] max-h-[94vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
           {/* Modal Header */}
-          <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                <Printer className="w-6 h-6 text-white" />
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200 text-white">
+                <Printer className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xl font-manrope font-black text-[#1a1b20]">PDF Report Preview</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Verify accuracy before printing</p>
+                <h3 className="text-lg font-manrope font-black text-[#1a1b20]">PDF Report Preview</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verify layout and totals before printing</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Middle Zoom Controls */}
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setPreviewZoom(Math.max(50, previewZoom - 10))}
+                className="p-1.5 hover:bg-white text-slate-600 rounded-lg text-xs font-bold transition-all"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewZoom(80)}
+                className="px-2.5 py-1 hover:bg-white text-slate-700 rounded-lg text-xs font-bold font-mono transition-all"
+                title="Reset Zoom"
+              >
+                {previewZoom}%
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewZoom(Math.min(130, previewZoom + 10))}
+                className="p-1.5 hover:bg-white text-slate-600 rounded-lg text-xs font-bold transition-all"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   setIsPreviewOpen(false);
                   setIsPrintModalOpen(true);
                 }}
-                className="px-6 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all uppercase tracking-wider"
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all uppercase tracking-wider"
               >
                 Close / Back
               </button>
@@ -1749,7 +2075,7 @@ export default function AdminSalesPage() {
                   setIsPreviewOpen(false);
                   setTimeout(() => window.print(), 300);
                 }}
-                className="px-8 py-2.5 bg-indigo-600 hover:bg-[#1a1b20] text-white text-xs font-bold rounded-xl shadow-xl shadow-indigo-100 transition-all flex items-center gap-2 uppercase tracking-wider"
+                className="px-6 py-2 bg-indigo-600 hover:bg-[#1a1b20] text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 uppercase tracking-wider"
               >
                 <Printer className="w-4 h-4" />
                 Confirm Print
@@ -1758,9 +2084,11 @@ export default function AdminSalesPage() {
           </div>
 
           {/* Modal Body (Scrollable Preview Area) */}
-          <div className="flex-1 overflow-auto bg-slate-100/50 p-4 md:p-8 flex justify-center">
-            <div className="relative transform origin-top hover:scale-[1.01] transition-transform duration-500">
-              <div className="absolute -inset-4 bg-indigo-600/5 blur-2xl rounded-full opacity-50" />
+          <div className="flex-1 overflow-auto bg-slate-200/70 p-4 md:p-6 flex justify-center items-start">
+            <div 
+              style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'top center' }} 
+              className="transition-transform duration-150 ease-out"
+            >
               <SalesReportPrint 
                 sales={printSales as any} 
                 month={printMonth} 
@@ -1770,6 +2098,9 @@ export default function AdminSalesPage() {
                 paymentTypeFilter={printPaymentType}
                 transmittalChecks={transmittalChecks} 
                 transmittalNotes={transmittalNotes} 
+                pettyCashBeginning={Number(pettyCashBeginning) || 0}
+                pettyCashExpenses={pettyCashExpenses}
+                distributionExpenses={distributionExpenses}
                 isPreview={true}
                 branchName={branches.find(b => b.id === filterBranch)?.name || ''}
               />
@@ -1788,6 +2119,9 @@ export default function AdminSalesPage() {
       paymentTypeFilter={printPaymentType}
       transmittalChecks={transmittalChecks} 
       transmittalNotes={transmittalNotes} 
+      pettyCashBeginning={Number(pettyCashBeginning) || 0}
+      pettyCashExpenses={pettyCashExpenses}
+      distributionExpenses={distributionExpenses}
       isPreview={false}
       branchName={branches.find(b => b.id === filterBranch)?.name || ''}
     />

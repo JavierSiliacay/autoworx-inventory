@@ -92,7 +92,7 @@ export default function SavedBillingStatementPrintPage() {
   const handlePrint = () => { window.print(); };
 
   const branchName = data.branches?.name?.toUpperCase() || "";
-  const defaultPreparedBy = (branchName.includes('ISUZU') || branchName.includes('AGORA')) ? 'RHONABYL MAGALLANES' : (branchName.includes('VALENCIA') ? 'REZEL BAHIAN' : 'CARLA B. VARIACION');
+  const defaultPreparedBy = (branchName.includes('KAUSWAGAN') || branchName.includes('VALENCIA DISTRIBUTION')) ? '_________________________' : ((branchName.includes('ISUZU') || branchName.includes('AGORA')) ? 'RHONABYL MAGALLANES' : (branchName.includes('VALENCIA') ? 'REZEL BAHIAN' : 'CARLA B. VARIACION'));
 
   const ITEMS_PER_PAGE = 20;
   const chunks = [];

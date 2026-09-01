@@ -245,7 +245,10 @@ export default function BillingStatementPrintPage() {
                     let preparedBy = "CARLA B. VARIACION";
                     let showSignature = true;
 
-                    if (branchName.includes('ISUZU') || branchName.includes('AGORA')) {
+                    if (branchName.includes('KAUSWAGAN') || branchName.includes('VALENCIA DISTRIBUTION')) {
+                      preparedBy = "_________________________";
+                      showSignature = false;
+                    } else if (branchName.includes('ISUZU') || branchName.includes('AGORA')) {
                       preparedBy = "RHONABYL MAGALLANES";
                       showSignature = false;
                     } else if (branchName.includes('VALENCIA')) {

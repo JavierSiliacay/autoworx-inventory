@@ -21,6 +21,9 @@ interface SalesReportPrintProps {
   paymentTypeFilter?: 'All' | 'Cash' | 'GCash' | 'Bank Transfer' | 'Charge' | 'Delivery' | 'Cancelled';
   transmittalChecks?: { name: string; ref: string; amount: string; bank: string }[];
   transmittalNotes?: string[];
+  pettyCashBeginning?: number;
+  pettyCashExpenses?: { particular: string; amount: string }[];
+  distributionExpenses?: { particular: string; amount: string }[];
   isPreview?: boolean;
   branchName?: string;
 }
@@ -34,11 +37,21 @@ export default function SalesReportPrint({
   paymentTypeFilter = 'All',
   transmittalChecks = [], 
   transmittalNotes = [],
+  pettyCashBeginning = 0,
+  pettyCashExpenses = [],
+  distributionExpenses = [],
   isPreview = false,
   branchName
 }: SalesReportPrintProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
+
+  const isValenciaColoursmile = Boolean(
+    branchName && (
+      branchName.toUpperCase().includes('COLOURSMILE') || 
+      (branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('DISTRIBUTION'))
+    )
+  );
 
   // Filter sales based on month/year OR exact date AND payment type
   const filteredSales = sales.filter(s => {
@@ -89,87 +102,146 @@ export default function SalesReportPrint({
   const cancelledSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cancelled' ? acc + sale.total_amount : acc, 0);
   const totalSales = cashSales + digitalSales + chargeSales + deliverySales;
 
-  const cashSalesArr = filteredSales.filter(s => s.payment_type === 'Cash');
+  // Valencia specific classification
+  const cashSalesWithReceipt = filteredSales.filter(s => s.payment_type === 'Cash' && s.invoice_no && !s.invoice_no.startsWith('MIG-NO-REC') && !s.invoice_no.startsWith('NO-REC'));
+  const cashSalesNoReceipt = filteredSales.filter(s => s.payment_type === 'Cash' && (!s.invoice_no || s.invoice_no.startsWith('MIG-NO-REC') || s.invoice_no.startsWith('NO-REC')));
   const digitalSalesArr = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
   const chargeSalesArr = filteredSales.filter(s => s.payment_type === 'Charge');
   const deliverySalesArr = filteredSales.filter(s => s.payment_type === 'Delivery');
   const cancelledSalesArr = filteredSales.filter(s => s.payment_type === 'Cancelled');
 
+  const cashWithReceiptTotal = cashSalesWithReceipt.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const cashNoReceiptTotal = cashSalesNoReceipt.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const chargeTotal = chargeSalesArr.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const deliveryTotal = deliverySalesArr.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const gcashTotal = digitalSalesArr.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const overallTotal = cashWithReceiptTotal + cashNoReceiptTotal + chargeTotal + deliveryTotal + gcashTotal;
+
+  // Expenses calculations
+  const totalPettyCashExpenses = (pettyCashExpenses || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+  const totalDistExpenses = (distributionExpenses || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+  const pettyCashOnHand = (pettyCashBeginning || 0) - totalPettyCashExpenses - totalDistExpenses;
+
+  const valenciaFormattedDate = (() => {
+    try {
+      const d = new Date(printDate);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+    } catch {
+      return printDate;
+    }
+  })();
+
   // Intelligent Print Scaling (Calculate Exact Logical Row Footprint to Maximize 98vh Use)
   let scaleFactor = 1;
   
   if (reportType === 'daily') {
-    let logicalRows = 0;
-    logicalRows += 5; // Base layout components (Header margins + title spaces)
-    
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
-      logicalRows += 3; // Cash Sales Table Base
-      logicalRows += Math.max(1, cashSalesArr.length); // Cash rows
-    }
+    if (isValenciaColoursmile) {
+      const leftRows = Math.max(1, cashSalesWithReceipt.length) + Math.max(1, cashSalesNoReceipt.length) + Math.max(1, chargeSalesArr.length) + Math.max(1, deliverySalesArr.length) + 8;
+      const rightRows = Math.max(1, (pettyCashExpenses || []).length) + Math.max(1, (distributionExpenses || []).length) + 6;
+      const maxRows = Math.max(leftRows, rightRows) + 8;
+      scaleFactor = Math.min(1.20, Math.max(0.40, 26.5 / maxRows));
+    } else {
+      let logicalRows = 0;
+      logicalRows += 5; // Base layout components (Header margins + title spaces)
+      
+      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
+        logicalRows += 3; // Cash Sales Table Base
+        logicalRows += Math.max(1, (filteredSales.filter(s => s.payment_type === 'Cash')).length); // Cash rows
+      }
 
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
-      logicalRows += 3; // Digital Sales Table Base
-      logicalRows += Math.max(1, digitalSalesArr.length); // Digital rows
-    }
-    
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') {
-      logicalRows += 2; // Delivery Sales Base
-      logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
-    }
+      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
+        logicalRows += 3; // Digital Sales Table Base
+        logicalRows += Math.max(1, digitalSalesArr.length); // Digital rows
+      }
+      
+      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') {
+        logicalRows += 2; // Delivery Sales Base
+        logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
+      }
 
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') {
-      logicalRows += 2; // Charge Sales Base
-      logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
+      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') {
+        logicalRows += 2; // Charge Sales Base
+        logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
+      }
+
+      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cancelled') {
+        logicalRows += 2; // Cancelled Sales Base
+        logicalRows += Math.max(1, cancelledSalesArr.length); // Cancelled rows
+      }
+
+      logicalRows += 5; // Totals Footer block (expanded for delivery)
+
+      const hasTransmittal = transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n);
+      if (hasTransmittal) {
+        logicalRows += 3; // Section Title + Headers
+        logicalRows += transmittalChecks.filter(c => c.name || c.ref || c.amount || c.bank).length;
+        logicalRows += transmittalNotes.filter(n => n).length;
+      }
+      
+      logicalRows += 5; // Signature Block Space
+
+      const optimalPageCapacity = 26.5; 
+      scaleFactor = Math.min(1.40, Math.max(0.40, optimalPageCapacity / logicalRows));
     }
-
-    if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cancelled') {
-      logicalRows += 2; // Cancelled Sales Base
-      logicalRows += Math.max(1, cancelledSalesArr.length); // Cancelled rows
-    }
-
-    logicalRows += 5; // Totals Footer block (expanded for delivery)
-
-    const hasTransmittal = transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n);
-    if (hasTransmittal) {
-      logicalRows += 3; // Section Title + Headers
-      logicalRows += transmittalChecks.filter(c => c.name || c.ref || c.amount || c.bank).length;
-      logicalRows += transmittalNotes.filter(n => n).length;
-    }
-    
-    logicalRows += 5; // Signature Block Space
-
-    // A4 Landscape effectively houses ~26 logic rows cleanly at 1.0x Scale without overflowing.
-    const optimalPageCapacity = 26.5; 
-    
-    // Scale up (or down) structurally forcing the layout to expand exactly to bounds!
-    // Strict Cap constraints applied to avoid text becoming grotesquely gigantic if there's only 4 rows.
-    scaleFactor = Math.min(1.40, Math.max(0.40, optimalPageCapacity / logicalRows));
   }
 
   return (
     <>
       <div 
         id={isPreview ? 'sales-report-preview-container' : 'sales-report-print-container'}
-        className={`${isPreview ? 'block w-[1122px] shadow-2xl mx-auto rounded-none my-8' : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
-        style={reportType === 'daily' ? { 
+        className={`${isPreview ? 'block w-[920px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300' : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
+        style={!isPreview && reportType === 'daily' ? { 
            zoom: scaleFactor, 
-           minHeight: isPreview ? '794px' : '100%',
+           minHeight: '100%',
            height: 'auto'
-        } : { minHeight: isPreview ? '794px' : '100%', height: 'auto' }}
+        } : { minHeight: isPreview ? '650px' : '100%', height: 'auto' }}
       >
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Header */}
-        <div className="mb-4 flex justify-between items-end shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold uppercase tracking-wider">{headerTitle}</h1>
-            <p className="text-sm text-gray-600 font-medium">Generated on: {mounted ? generateTimestamp : ''}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">{branchName || 'Autoworx Inventory System'}</p>
-          </div>
-        </div>
+        
+        {/* ─── HEADER SECTION ────────────────────────────────────────── */}
+        {isValenciaColoursmile && reportType === 'daily' ? (
+          <div className="mb-4 shrink-0 flex flex-col items-center">
+            {/* Top Brand Header: Logo + Business Name & Address in close proximity */}
+            <div className="flex items-center justify-center gap-4">
+              <img 
+                src="/coloursmile_logo.png" 
+                alt="Valencia Coloursmile Logo" 
+                className="h-16 w-auto object-contain shrink-0" 
+              />
+              <div className="text-left">
+                <h2 className="text-[22px] font-black uppercase tracking-wide text-black leading-tight">
+                  VALENCIA COLOURSMILE PAINT TRADING
+                </h2>
+                <p className="text-[13px] text-black font-medium">
+                  Alkuino Bldg, Sayre Highway, Poblacion, Valencia City
+                </p>
+              </div>
+            </div>
 
-      {/* Report Table */}
+            {/* Centered Title & Date */}
+            <div className="text-center mt-2">
+              <h3 className="text-[14px] font-black uppercase tracking-widest border-y border-black py-0.5 inline-block px-10">
+                DAILY SALES REPORT
+              </h3>
+              <p className="text-[13px] font-bold mt-1 text-black font-mono">
+                {valenciaFormattedDate}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 flex justify-between items-end shrink-0">
+            <div>
+              <h1 className="text-2xl font-bold uppercase tracking-wider">{headerTitle}</h1>
+              <p className="text-sm text-gray-600 font-medium">Generated on: {mounted ? generateTimestamp : ''}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">{branchName || 'Autoworx Inventory System'}</p>
+            </div>
+          </div>
+        )}
+
+      {/* ─── BODY REPORT TABLES ────────────────────────────────────── */}
       {reportType === 'monthly' || reportType === 'yearly' ? (
         <table className="w-full border-collapse border border-black text-sm">
           <thead>
@@ -220,7 +292,219 @@ export default function SalesReportPrint({
             </tbody>
           )}
         </table>
+      ) : isValenciaColoursmile ? (
+        /* ─── VALENCIA COLOURSMILE 2-COLUMN DAILY REPORT ────────────────────────── */
+        <div className="w-full flex-1 flex flex-col min-h-0">
+          <div className="grid grid-cols-12 gap-3 w-full items-start">
+            
+            {/* LEFT COLUMN: SALES */}
+            <div className="col-span-7 flex flex-col gap-2">
+              <table className="w-full border-collapse border border-black text-xs">
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase text-sm tracking-wider">SALES</th>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[50%]">CUSTOMER'S NAME</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">INV. NO</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* CASH SALES SECTION */}
+                  <tr>
+                    <td colSpan={3} className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">CASH SALES:</td>
+                  </tr>
+                  {cashSalesWithReceipt.length > 0 ? (
+                    cashSalesWithReceipt.map((s, i) => (
+                      <tr key={`cash-rec-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
+                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no}</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-black h-5">
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                    </tr>
+                  )}
+
+                  {/* CASH SALES NO RECEIPT SECTION */}
+                  <tr>
+                    <td colSpan={3} className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">CASH SALES - NO RECEIPT:</td>
+                  </tr>
+                  {cashSalesNoReceipt.length > 0 ? (
+                    cashSalesNoReceipt.map((s, i) => (
+                      <tr key={`cash-norec-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
+                        <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-500">NO RECEIPT</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-black h-5">
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                    </tr>
+                  )}
+
+                  {/* CHARGE SALES SECTION */}
+                  <tr>
+                    <td colSpan={3} className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">CHARGE SALES:</td>
+                  </tr>
+                  {chargeSalesArr.length > 0 ? (
+                    chargeSalesArr.map((s, i) => (
+                      <tr key={`charge-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-black h-5">
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                    </tr>
+                  )}
+
+                  {/* DELIVERY RECEIPT SALES SECTION */}
+                  <tr>
+                    <td colSpan={3} className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">DELIVERY RECEIPT SALES:</td>
+                  </tr>
+                  {deliverySalesArr.length > 0 ? (
+                    deliverySalesArr.map((s, i) => (
+                      <tr key={`delivery-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-black h-5">
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {/* SALES SUMMARY SUB-TABLE */}
+              <table className="w-full border-collapse border border-black text-xs font-bold mt-1">
+                <tbody>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50 w-[60%]">GCASH PAYMENT:</td>
+                    <td className="border border-black px-2 py-0.5 text-right w-[40%]">₱{gcashTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CASH SALES W/RECEIPT:</td>
+                    <td className="border border-black px-2 py-0.5 text-right">₱{cashWithReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CASH SALES NO RECEIPT:</td>
+                    <td className="border border-black px-2 py-0.5 text-right">₱{cashNoReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CHARGE SALES:</td>
+                    <td className="border border-black px-2 py-0.5 text-right">₱{chargeTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">DELIVERY SALES RECEIPT:</td>
+                    <td className="border border-black px-2 py-0.5 text-right">₱{deliveryTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                    <td className="border border-black px-2 py-1 uppercase">OVERALL TOTAL SALES:</td>
+                    <td className="border border-black px-2 py-1 text-right">₱{overallTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* RIGHT COLUMN: EXPENSES & PETTY CASH */}
+            <div className="col-span-5 flex flex-col gap-2">
+              <table className="w-full border-collapse border border-black text-xs">
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th colSpan={2} className="border border-black px-2 py-1 text-center font-black uppercase text-sm tracking-wider">EXPENSES</th>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[65%]">PARTICULAR</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[35%]">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* PETTY CASH SECTION */}
+                  <tr>
+                    <td className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">PETTY CASH</td>
+                    <td className="border border-black px-2 py-1 text-right font-bold bg-slate-50">₱{(pettyCashBeginning || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                  {(pettyCashExpenses && pettyCashExpenses.length > 0) ? (
+                    pettyCashExpenses.map((exp, i) => (
+                      <tr key={`petty-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{exp.particular || 'Expense Item'}</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <>
+                      <tr className="border-b border-black h-5">
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                      </tr>
+                      <tr className="border-b border-black h-5">
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                      </tr>
+                    </>
+                  )}
+
+                  {/* DISTRIBUTION EXPENSES SECTION */}
+                  <tr>
+                    <td colSpan={2} className="border border-black px-2 py-1 font-bold uppercase bg-slate-50 text-left underline">DISTRIBUTION EXP.</td>
+                  </tr>
+                  {(distributionExpenses && distributionExpenses.length > 0) ? (
+                    distributionExpenses.map((exp, i) => (
+                      <tr key={`dist-${i}`} className="border-b border-black">
+                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{exp.particular || 'Distribution Expense'}</td>
+                        <td className="border border-black px-2 py-0.5 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <>
+                      <tr className="border-b border-black h-5">
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                      </tr>
+                      <tr className="border-b border-black h-5">
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
+
+              {/* PETTY CASH ON-HAND BOX */}
+              <table className="w-full border-collapse border border-black text-xs font-bold mt-1">
+                <tbody>
+                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                    <td className="border border-black px-2 py-1 uppercase w-[60%]">PETTY CASH ONHAND:</td>
+                    <td className="border border-black px-2 py-1 text-right w-[40%]">
+                      ₱{pettyCashOnHand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
       ) : (
+        /* ─── STANDARD BRANCHES DAILY SALES REPORT ────────────────────────── */
         <div className="w-full flex-1 flex flex-col min-h-0">
           <table className="w-full border-collapse border border-black text-sm print-daily-table shrink-0">
           <thead>
@@ -237,7 +521,7 @@ export default function SalesReportPrint({
                 <tr>
                   <td colSpan={4} className="border border-black px-2 py-2 font-black uppercase underline tracking-wider bg-white text-left text-sm mt-4">CASH SALES RECEIPT:</td>
                 </tr>
-                {cashSalesArr.map((sale, i) => (
+                {cashSalesWithReceipt.concat(cashSalesNoReceipt).map((sale, i) => (
                   <tr key={`cash-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
@@ -245,7 +529,7 @@ export default function SalesReportPrint({
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN {sale.payment_type.toUpperCase()}</td>
                   </tr>
                 ))}
-                {cashSalesArr.length === 0 && (
+                {cashSalesWithReceipt.length === 0 && cashSalesNoReceipt.length === 0 && (
                   <tr>
                     <td colSpan={4} className="border border-black px-2 py-3 text-center text-gray-400 font-bold uppercase text-xs">No Cash Sales</td>
                   </tr>
@@ -384,7 +668,7 @@ export default function SalesReportPrint({
           </tbody>
         </table>
 
-         {(transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n)) && (
+         {Boolean(!branchName || branchName.toUpperCase().includes('MAIN DISTRIBUTION') || branchName.toUpperCase() === 'MAIN') && (transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n)) && (
             <div className="mt-6">
               <p className="font-black text-[12px] uppercase mb-1 tracking-wider mt-2">TRANSMITTAL:</p>
               <table className="w-full border-collapse border border-black text-sm print-daily-table">
@@ -434,16 +718,18 @@ export default function SalesReportPrint({
         <div className="mt-2 flex flex-col items-start px-2 shrink-0 z-10 page-break-inside-avoid pb-2 pt-4">
            {/* Center compose image natively intersecting the typography */}
            <div className="flex flex-col items-center">
-             {(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA'))) && (
+             {(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('KAUSWAGAN'))) && (
                <img 
                   src="/carla_signature.png" 
                   alt="Signature" 
                   className="h-[5rem] w-auto object-contain translate-y-[20px] translate-x-[28px] relative z-20 pointer-events-none drop-shadow-sm" 
                />
              )}
-             <p className={`font-bold text-[12px] uppercase tracking-wider relative z-10 ${(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA'))) ? 'mt-[-2px]' : 'mt-[3rem]'}`}>
+             <p className={`font-bold text-[12px] uppercase tracking-wider relative z-10 ${(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('KAUSWAGAN'))) ? 'mt-[-2px]' : 'mt-[2rem]'}`}>
                PREPARED BY: {
-                 (branchName?.toUpperCase().includes('ISUZU') || branchName?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
+                 isValenciaColoursmile ? 'REZEL C. BAHIAN'
+                 : (branchName?.toUpperCase().includes('KAUSWAGAN') || branchName?.toUpperCase().includes('VALENCIA DISTRIBUTION')) ? '_________________________'
+                 : (branchName?.toUpperCase().includes('ISUZU') || branchName?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
                  : branchName?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' 
                  : 'CARLA VARIACION'
                }

@@ -200,7 +200,7 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
            <div className="flex justify-between w-full items-end pb-2">
               {/* Prepared By Block */}
               <div className="flex flex-col items-center">
-                {(!po.branch?.name?.toUpperCase().includes('VALENCIA') && !po.branch?.name?.toUpperCase().includes('ISUZU') && !po.branch?.name?.toUpperCase().includes('AGORA')) && (
+                {(!po.branch?.name?.toUpperCase().includes('VALENCIA') && !po.branch?.name?.toUpperCase().includes('ISUZU') && !po.branch?.name?.toUpperCase().includes('AGORA') && !po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) && (
                   <img 
                       src="/carla_signature.png" 
                       alt="Signature" 
@@ -208,12 +208,13 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
                       onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 )}
-                {(po.branch?.name?.toUpperCase().includes('VALENCIA') || po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA')) && (
+                {(po.branch?.name?.toUpperCase().includes('VALENCIA') || po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA') || po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) && (
                   <div className="h-[5rem] translate-y-[25px] relative z-20"></div>
                 )}
                 <p className="font-bold text-[12px] uppercase tracking-wider relative z-10 mt-[-2px]">
                   PREPARED BY: {
-                    (po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
+                    (po.branch?.name?.toUpperCase().includes('KAUSWAGAN') || po.branch?.name?.toUpperCase().includes('VALENCIA DISTRIBUTION')) ? '_________________________'
+                    : (po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
                     : po.branch?.name?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' 
                     : 'CARLA VARIACION'
                   }
