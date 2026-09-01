@@ -54,7 +54,15 @@ export default function BillingStatementPrintPage() {
   const handlePrint = () => { window.print(); };
 
   const branchName = data.branches?.name?.toUpperCase() || "";
-  const defaultPreparedBy = (branchName.includes('KAUSWAGAN') || branchName.includes('VALENCIA DISTRIBUTION')) ? '_________________________' : ((branchName.includes('ISUZU') || branchName.includes('AGORA')) ? 'RHONABYL MAGALLANES' : (branchName.includes('VALENCIA') ? 'REZEL BAHIAN' : 'CARLA B. VARIACION'));
+  const defaultPreparedBy = branchName.includes('VALENCIA DISTRIBUTION')
+    ? 'CELESTY G. LAPUZ'
+    : branchName.includes('KAUSWAGAN')
+    ? '_________________________'
+    : (branchName.includes('ISUZU') || branchName.includes('AGORA'))
+    ? 'RHONABYL MAGALLANES'
+    : branchName.includes('VALENCIA')
+    ? 'REZEL BAHIAN'
+    : 'CARLA B. VARIACION';
 
   const ITEMS_PER_PAGE = 20;
   const chunks = [];
@@ -143,7 +151,7 @@ export default function BillingStatementPrintPage() {
               
               {/* LOGO & ADDRESS */}
               <div className="text-center mb-2 shrink-0">
-                {branchName.includes('VALENCIA') ? (
+                {branchName.includes('COLOURSMILE') ? (
                   <div className="flex items-center justify-center gap-2">
                     <img src="/coloursmile_logo.png" alt="Valencia Coloursmile Paint Trading" className="h-28 object-contain mb-0" />
                     <div className="text-center mt-4">
@@ -151,6 +159,11 @@ export default function BillingStatementPrintPage() {
                       <p className="text-[16px] text-black font-medium" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>Alkuino Bldg, Sayre Highway, Poblacion, Valencia City</p>
                     </div>
                   </div>
+                ) : branchName.includes('KAUSWAGAN') ? (
+                  <>
+                    <img src="/logo.png" alt="Autoworx Paint Center" className="h-32 mx-auto object-contain mb-0" />
+                    <p className="text-[14px] -mt-6 font-medium">National Highway, Kauswagan, Cagayan de Oro City</p>
+                  </>
                 ) : (
                   <>
                     <img src="/logo.png" alt="Autoworx Paint Center" className="h-32 mx-auto object-contain mb-0" />

@@ -237,6 +237,13 @@ export default function SalesReportPrint({
             </div>
             <div className="text-right">
               <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">{branchName || 'Autoworx Inventory System'}</p>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {branchName?.toUpperCase().includes('KAUSWAGAN')
+                  ? 'National Highway, Kauswagan, Cagayan de Oro City'
+                  : isValenciaColoursmile
+                  ? 'Alkuino Bldg, Sayre Highway, Poblacion, Valencia City'
+                  : 'Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City'}
+              </p>
             </div>
           </div>
         )}
@@ -730,7 +737,6 @@ export default function SalesReportPrint({
                  isValenciaColoursmile ? 'REZEL C. BAHIAN'
                  : (branchName?.toUpperCase().includes('KAUSWAGAN') || branchName?.toUpperCase().includes('VALENCIA DISTRIBUTION')) ? '_________________________'
                  : (branchName?.toUpperCase().includes('ISUZU') || branchName?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
-                 : branchName?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' 
                  : 'CARLA VARIACION'
                }
              </p>

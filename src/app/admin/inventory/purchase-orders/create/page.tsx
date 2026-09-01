@@ -61,18 +61,26 @@ export default function CreatePurchaseOrderPage() {
   const [itemSearch, setItemSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
-  const fetchNextPoNumber = async (dateStr: string) => {
+  const fetchNextPoNumber = async (dateStr: string, branchId?: string) => {
     try {
       const ymd = dateStr ? dateStr.replace(/-/g, "") : (() => {
         const now = new Date();
         return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       })();
 
-      const { count, data } = await supabase
+      const targetBranch = branchId !== undefined ? branchId : selectedBranchId;
+
+      let poQuery = supabase
         .from("purchase_orders")
         .select("po_number", { count: "exact" });
 
-      let maxSeq = count || 0;
+      if (targetBranch && targetBranch !== "all") {
+        poQuery = poQuery.eq("branch_id", targetBranch);
+      }
+
+      const { count, data } = await poQuery;
+
+      let maxSeq = 0;
       if (data && data.length > 0) {
         data.forEach(p => {
           const match = p.po_number?.match(/-(\d+)$/);
@@ -83,6 +91,8 @@ export default function CreatePurchaseOrderPage() {
             }
           }
         });
+      } else {
+        maxSeq = count || 0;
       }
       const nextSeq = maxSeq + 1;
       setPoNumberPreview(`${ymd}-${String(nextSeq).padStart(4, "0")}`);
@@ -93,11 +103,20 @@ export default function CreatePurchaseOrderPage() {
 
   useEffect(() => { 
     fetchData(); 
-  }, [selectedBranchId]);
+    fetchNextPoNumber(orderDate, selectedBranchId);
 
-  useEffect(() => {
-    fetchNextPoNumber(orderDate);
-  }, [orderDate]);
+    // Setup real-time listener on purchase_orders for live sequence sync
+    const channel = supabase
+      .channel(`po_create_seq_${selectedBranchId || 'all'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, () => {
+        fetchNextPoNumber(orderDate, selectedBranchId);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBranchId, orderDate]);
 
   async function fetchData() {
     if (!session) return;
@@ -166,16 +185,26 @@ export default function CreatePurchaseOrderPage() {
       alert("Please select a supplier and add at least one item.");
       return;
     }
+    if (!selectedBranchId || selectedBranchId === "all") {
+      alert("Please select a specific branch from the header before creating a Purchase Order.");
+      return;
+    }
     try {
       setLoading(true);
       const now = new Date();
       const ymd = orderDate ? orderDate.replace(/-/g, "") : `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
       
-      const { count, data } = await supabase
+      let poQuery = supabase
         .from("purchase_orders")
         .select("po_number", { count: "exact" });
 
-      let maxSeq = count || 0;
+      if (selectedBranchId && selectedBranchId !== "all") {
+        poQuery = poQuery.eq("branch_id", selectedBranchId);
+      }
+
+      const { count, data } = await poQuery;
+
+      let maxSeq = 0;
       if (data && data.length > 0) {
         data.forEach(p => {
           const match = p.po_number?.match(/-(\d+)$/);
@@ -186,6 +215,8 @@ export default function CreatePurchaseOrderPage() {
             }
           }
         });
+      } else {
+        maxSeq = count || 0;
       }
       const nextSeq = maxSeq + 1;
       const poNumber = `${ymd}-${String(nextSeq).padStart(4, "0")}`;
@@ -194,7 +225,17 @@ export default function CreatePurchaseOrderPage() {
       
       const { data: po, error: poErr } = await supabase
         .from("purchase_orders")
-        .insert([{ po_number: poNumber, supplier_id: supplierId, branch_id: selectedBranchId, order_date: orderDate, terms: finalTerms, prepared_by: session?.user?.name || session?.user?.email, approved_by: approvedBy, total_amount: total, status: "pending" }])
+        .insert([{ 
+          po_number: poNumber, 
+          supplier_id: supplierId, 
+          branch_id: selectedBranchId, 
+          order_date: orderDate, 
+          terms: finalTerms, 
+          prepared_by: "CARLA B. VARIACION", 
+          approved_by: approvedBy, 
+          total_amount: total, 
+          status: "pending" 
+        }])
         .select().single();
       if (poErr) throw poErr;
       const { error: itemsErr } = await supabase.from("purchase_order_items").insert(
@@ -202,9 +243,9 @@ export default function CreatePurchaseOrderPage() {
       );
       if (itemsErr) throw itemsErr;
       router.push("/admin/inventory/purchase-orders");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save Purchase Order.");
+    } catch (err: any) {
+      console.error("Error creating purchase order:", err);
+      alert(`Failed to save Purchase Order: ${err?.message || err?.error_description || JSON.stringify(err)}`);
     } finally {
       setLoading(false);
     }

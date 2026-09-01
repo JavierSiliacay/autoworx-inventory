@@ -131,6 +131,7 @@ export default function BillingStatementPrintPage() {
         const items = groupedItems[custName];
         const info = customerInfo[custName] || { address: "", terms: "" };
         const totalAmount = items.reduce((sum, item) => sum + Number(item.remaining_balance || 0), 0);
+        const branchName = items[0]?.branch?.name?.toUpperCase() || "";
         
         // Calculate empty rows
         let logicalRows = 12 + 1 + items.length + 5;
@@ -155,8 +156,25 @@ export default function BillingStatementPrintPage() {
             <div className="flex-1 flex flex-col min-h-0">
               {/* LOGO & ADDRESS */}
               <div className="text-center mb-4 shrink-0 -mt-2">
-                <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
-                <p className="text-[14px] -mt-10 font-medium">Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City</p>
+                {branchName.includes('COLOURSMILE') ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <img src="/coloursmile_logo.png" alt="Valencia Coloursmile Paint Trading" className="h-28 object-contain mb-0" />
+                    <div className="text-center mt-4">
+                      <h2 className="text-[26px] text-black font-extrabold tracking-wide mb-1 whitespace-nowrap" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>VALENCIA COLOURSMILE PAINT TRADING</h2>
+                      <p className="text-[16px] text-black font-medium" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>Alkuino Bldg, Sayre Highway, Poblacion, Valencia City</p>
+                    </div>
+                  </div>
+                ) : branchName.includes('KAUSWAGAN') ? (
+                  <>
+                    <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
+                    <p className="text-[14px] -mt-10 font-medium">National Highway, Kauswagan, Cagayan de Oro City</p>
+                  </>
+                ) : (
+                  <>
+                    <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
+                    <p className="text-[14px] -mt-10 font-medium">Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City</p>
+                  </>
+                )}
               </div>
 
               {/* TITLE */}
@@ -241,19 +259,25 @@ export default function BillingStatementPrintPage() {
                <div className="flex justify-between w-full items-end pb-2">
                   {/* Prepared By Block */}
                   {(() => {
-                    const branchName = items[0]?.branch?.name?.toUpperCase() || "";
+                    const branchUpper = branchName || "";
                     let preparedBy = "CARLA B. VARIACION";
                     let showSignature = true;
 
-                    if (branchName.includes('KAUSWAGAN') || branchName.includes('VALENCIA DISTRIBUTION')) {
+                    if (branchUpper.includes('VALENCIA DISTRIBUTION')) {
+                      preparedBy = "CELESTY G. LAPUZ";
+                      showSignature = false;
+                    } else if (branchUpper.includes('KAUSWAGAN')) {
                       preparedBy = "_________________________";
                       showSignature = false;
-                    } else if (branchName.includes('ISUZU') || branchName.includes('AGORA')) {
+                    } else if (branchUpper.includes('ISUZU') || branchUpper.includes('AGORA')) {
                       preparedBy = "RHONABYL MAGALLANES";
                       showSignature = false;
-                    } else if (branchName.includes('VALENCIA')) {
+                    } else if (branchUpper.includes('VALENCIA')) {
                       preparedBy = "REZEL BAHIAN";
                       showSignature = false;
+                    } else if (branchUpper.includes('MAIN')) {
+                      preparedBy = "CARLA B. VARIACION";
+                      showSignature = true;
                     }
 
                     return (

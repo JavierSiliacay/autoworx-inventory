@@ -97,7 +97,7 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
         <div className="flex-1 flex flex-col min-h-0">
           {/* LOGO & ADDRESS (Tight Header Block) */}
           <div className="text-center mb-4 shrink-0 -mt-2">
-            {po.branch?.name?.toUpperCase().includes('VALENCIA') ? (
+            {po.branch?.name?.toUpperCase().includes('COLOURSMILE') ? (
               <div className="flex items-center justify-center gap-2">
                 <img src="/coloursmile_logo.png" alt="Valencia Coloursmile Paint Trading" className="h-28 object-contain mb-0" />
                 <div className="text-center mt-4">
@@ -105,10 +105,15 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
                   <p className="text-[16px] text-black font-medium" style={{ fontFamily: 'Times New Roman, Georgia, serif' }}>Alkuino Bldg, Sayre Highway, Poblacion, Valencia City</p>
                 </div>
               </div>
+            ) : po.branch?.name?.toUpperCase().includes('KAUSWAGAN') ? (
+              <>
+                <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
+                <p className="text-[14px] -mt-10 font-medium">National Highway, Kauswagan, Cagayan de Oro City</p>
+              </>
             ) : (
               <>
                 <img src="/logo.png" alt="Autoworx Paint Center" className="h-40 mx-auto object-contain mb-0" />
-                <p className="text-[14px] -mt-10 font-medium">Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City</p>
+                <p className="text-[14px] -mt-10 font-medium">Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City</p>
               </>
             )}
           </div>
@@ -200,23 +205,21 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
            <div className="flex justify-between w-full items-end pb-2">
               {/* Prepared By Block */}
               <div className="flex flex-col items-center">
-                {(!po.branch?.name?.toUpperCase().includes('VALENCIA') && !po.branch?.name?.toUpperCase().includes('ISUZU') && !po.branch?.name?.toUpperCase().includes('AGORA') && !po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) && (
+                {(!po.branch?.name?.toUpperCase().includes('VALENCIA') && !po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) ? (
                   <img 
                       src="/carla_signature.png" 
                       alt="Signature" 
                       className="h-[5rem] w-auto object-contain translate-y-[25px] translate-x-[29px] relative z-20 pointer-events-none drop-shadow-sm" 
                       onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
-                )}
-                {(po.branch?.name?.toUpperCase().includes('VALENCIA') || po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA') || po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) && (
+                ) : (
                   <div className="h-[5rem] translate-y-[25px] relative z-20"></div>
                 )}
                 <p className="font-bold text-[12px] uppercase tracking-wider relative z-10 mt-[-2px]">
                   PREPARED BY: {
-                    (po.branch?.name?.toUpperCase().includes('KAUSWAGAN') || po.branch?.name?.toUpperCase().includes('VALENCIA DISTRIBUTION')) ? '_________________________'
-                    : (po.branch?.name?.toUpperCase().includes('ISUZU') || po.branch?.name?.toUpperCase().includes('AGORA')) ? 'RHONABYL MAGALLANES' 
-                    : po.branch?.name?.toUpperCase().includes('VALENCIA') ? 'REZEL BAHIAN' 
-                    : 'CARLA VARIACION'
+                    (po.branch?.name?.toUpperCase().includes('VALENCIA') || po.branch?.name?.toUpperCase().includes('KAUSWAGAN'))
+                      ? '_________________________'
+                      : (po.prepared_by ? po.prepared_by.toUpperCase() : 'CARLA B. VARIACION')
                   }
                 </p>
               </div>

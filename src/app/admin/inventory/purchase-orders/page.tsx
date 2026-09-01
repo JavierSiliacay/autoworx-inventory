@@ -81,7 +81,7 @@ export default function PurchaseOrdersPage() {
   const [itemSearch, setItemSearch] = useState("");
   const [showItemPicker, setShowItemPicker] = useState(false);
 
-  const { data: orders = [], isLoading: loading } = useQuery({
+  const { data: orders = [], isLoading: loading, refetch } = useQuery({
     queryKey: ['purchase-orders', selectedBranchId],
     queryFn: async () => {
       let query = supabase
@@ -92,21 +92,28 @@ export default function PurchaseOrdersPage() {
       const { data, error } = await query;
       if (error) throw error;
       return (data as PurchaseOrder[]) || [];
-    }
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   useEffect(() => {
     const channel = supabase
-      .channel('po-room')
+      .channel(`realtime_po_list_${selectedBranchId || 'all'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders' }, () => {
         queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+        refetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_order_items' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+        refetch();
       })
       .subscribe();
       
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedBranchId, queryClient]);
+  }, [selectedBranchId, queryClient, refetch]);
 
   // ─── Print ─────────────────────────────────────────────────────────────────
   const handleViewDoc = async (id: string) => {

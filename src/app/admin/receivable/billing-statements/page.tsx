@@ -119,15 +119,18 @@ export default function BillingStatementsPage() {
       const activeBranchId = selectedBranchId !== "all" ? selectedBranchId : ars[0].branch_id;
       const { data: branchData } = await supabase.from('branches').select('name').eq('id', activeBranchId).single();
       
-      let preparedBy = (session?.user as any)?.name || 'Staff';
-      if (branchData?.name?.toUpperCase().includes('KAUSWAGAN') || branchData?.name?.toUpperCase().includes('VALENCIA DISTRIBUTION')) {
+      const branchUpper = branchData?.name?.toUpperCase() || "";
+      let preparedBy = 'CARLA B. VARIACION';
+      if (branchUpper.includes('VALENCIA DISTRIBUTION')) {
+        preparedBy = 'CELESTY G. LAPUZ';
+      } else if (branchUpper.includes('KAUSWAGAN')) {
         preparedBy = '_________________________';
-      } else if (branchData?.name?.toUpperCase().includes('ISUZU') || branchData?.name?.toUpperCase().includes('AGORA')) {
+      } else if (branchUpper.includes('ISUZU') || branchUpper.includes('AGORA')) {
         preparedBy = 'RHONABYL MAGALLANES';
-      } else if (branchData?.name?.toUpperCase().includes('MAIN DISTRIBUTION')) {
-        preparedBy = 'CARLA VARIACION';
-      } else if (branchData?.name?.toUpperCase().includes('VALENCIA')) {
+      } else if (branchUpper.includes('VALENCIA')) {
         preparedBy = 'REZEL BAHIAN';
+      } else if (branchUpper.includes('MAIN')) {
+        preparedBy = 'CARLA B. VARIACION';
       }
 
       // 4. Insert Header
