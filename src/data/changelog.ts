@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788234607284",
+    version: "v1.9.1",
+    date: "2026-09-01",
+    type: "feature",
+    title: "Enhanced creator search & Valencia daily report",
+    description: "Staff can now search inventory and sales by creator, view a daily Valencia report, and benefit from automatic sync of 509 master items for more accurate, up‑to‑date data."
+  },
+
+  {
     id: "update-1787883638285",
     version: "v1.8.28",
     date: "2026-08-28",
