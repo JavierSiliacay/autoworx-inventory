@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788248357565",
+    version: "v1.9.1",
+    date: "2026-09-01",
+    type: "improvement",
+    title: "Smarter login and enhanced daily sales reports",
+    description: "Staff using shared workstations now see a Google account picker at login, avoiding wrong sign‑ins. The Agora and Kauswagan daily sales reports got a fresh 2‑column layout, live summary cards, and Google‑Sheets‑style auto‑save drafts that keep your work safe and let you resume exactly where you left off."
+  },
+
+  {
     id: "update-1788234607284",
     version: "v1.9.1",
     date: "2026-09-01",
