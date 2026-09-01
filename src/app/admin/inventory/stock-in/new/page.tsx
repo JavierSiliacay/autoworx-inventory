@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
+import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; quantity?: number; }
@@ -84,6 +85,7 @@ export default function NewStockInPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   useEffect(() => { setFocusedIndex(-1); }, [itemSearch]);
 
@@ -110,6 +112,42 @@ export default function NewStockInPage() {
     setInventory(Array.from(uniqueMap.values()));
     setPurchaseOrders(pRes.data || []);
   }
+
+  // ─── STOCK-IN DRAFT PERSISTENCE ─────────────────────────────────────
+  useEffect(() => {
+    try {
+      const branchKey = selectedBranchId || 'default';
+      const saved = localStorage.getItem(`stock_in_draft_${branchKey}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.supplierId) setSupplierId(parsed.supplierId);
+        if (parsed.invoiceNumber) setInvoiceNumber(parsed.invoiceNumber);
+        if (parsed.selectedPO) setSelectedPO(parsed.selectedPO);
+        if (parsed.dateReceived) setDateReceived(parsed.dateReceived);
+        if (Array.isArray(parsed.items) && parsed.items.length > 0) setItems(parsed.items);
+      }
+    } catch (e) {
+      console.error("Error restoring stock-in draft:", e);
+    }
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    const branchKey = selectedBranchId || 'default';
+    const hasData = Boolean(supplierId) || Boolean(invoiceNumber) || Boolean(selectedPO) || items.length > 0;
+    try {
+      if (hasData) {
+        localStorage.setItem(`stock_in_draft_${branchKey}`, JSON.stringify({
+          supplierId,
+          invoiceNumber,
+          selectedPO,
+          dateReceived,
+          items
+        }));
+      }
+    } catch (e) {
+      console.error("Error saving stock-in draft:", e);
+    }
+  }, [supplierId, invoiceNumber, selectedPO, dateReceived, items, selectedBranchId]);
 
   const handlePOSelect = (poId: string) => {
     setSelectedPO(poId);
@@ -294,6 +332,9 @@ export default function NewStockInPage() {
       });
 
       if (rpcErr) throw rpcErr;
+      try {
+        localStorage.removeItem(`stock_in_draft_${selectedBranchId || 'default'}`);
+      } catch (e) {}
       router.push("/admin/inventory/stock-in");
     } catch (err: any) {
       console.error(err);
@@ -310,21 +351,63 @@ export default function NewStockInPage() {
     return itemSearchTokens.every(token => searchableText.includes(token));
   }).slice(0, 50);
 
+  const handleClearDraft = () => {
+    if (confirm("Clear this stock-in draft and start fresh?")) {
+      setSupplierId("");
+      setInvoiceNumber("");
+      setSelectedPO("");
+      setItems([]);
+      try {
+        localStorage.removeItem(`stock_in_draft_${selectedBranchId || 'default'}`);
+      } catch (e) {}
+    }
+  };
+
+  const hasDraftContent = items.length > 0 || Boolean(supplierId) || Boolean(invoiceNumber) || Boolean(selectedPO);
+
+  const handleBack = () => {
+    if (hasDraftContent) {
+      setAutoSaveToast({ show: true, message: "Stock-in draft saved" });
+      setTimeout(() => {
+        router.back();
+      }, 1400);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <div className="pb-24 w-full md:w-fit md:min-w-[768px] max-w-[95vw] mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">
-            Record Stock-In / Adjustment
-          </h1>
-          <p className="text-sm text-slate-500">
-            Verify and log incoming inventory or correct discrepancies.
-          </p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button onClick={handleBack} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">
+                Record Stock-In / Adjustment
+              </h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                Auto-Saved Draft
+              </span>
+            </div>
+            <p className="text-sm text-slate-500">
+              Verify and log incoming inventory or correct discrepancies.
+            </p>
+          </div>
         </div>
+
+        {hasDraftContent && (
+          <button
+            type="button"
+            onClick={handleClearDraft}
+            className="px-3.5 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 border border-red-200/60 rounded-xl transition-all shadow-sm"
+          >
+            Clear Draft
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -708,8 +791,17 @@ export default function NewStockInPage() {
         </div>
 
         {/* Sticky Footer */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex justify-end gap-3 z-40 sm:static sm:bg-transparent sm:border-none sm:p-0">
-          <button type="button" onClick={() => router.back()}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex justify-end items-center gap-3 z-40 sm:static sm:bg-transparent sm:border-none sm:p-0">
+          {hasDraftContent && (
+            <button 
+              type="button" 
+              onClick={handleClearDraft}
+              className="px-4 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 border border-red-200/60 rounded-xl transition-all mr-auto"
+            >
+              Clear Draft
+            </button>
+          )}
+          <button type="button" onClick={handleBack}
             className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
             Cancel
           </button>
@@ -720,6 +812,12 @@ export default function NewStockInPage() {
           </button>
         </div>
       </form>
+
+      <AutoSaveToast
+        show={autoSaveToast.show}
+        message={autoSaveToast.message}
+        onClose={() => setAutoSaveToast(prev => ({ ...prev, show: false }))}
+      />
     </div>
   );
 }

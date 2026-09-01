@@ -26,6 +26,11 @@ interface SalesReportPrintProps {
   distributionExpenses?: { particular: string; amount: string }[];
   isPreview?: boolean;
   branchName?: string;
+  // Agora-specific deduction props (dynamic arrays)
+  agoraCommissions?: { particular: string; amount: string }[];
+  agoraCashAdvances?: { particular: string; amount: string }[];
+  agoraExpenses?: { particular: string; amount: string }[];
+  agoraRemit?: string;
 }
 
 export default function SalesReportPrint({ 
@@ -41,7 +46,11 @@ export default function SalesReportPrint({
   pettyCashExpenses = [],
   distributionExpenses = [],
   isPreview = false,
-  branchName
+  branchName,
+  agoraCommissions = [],
+  agoraCashAdvances = [],
+  agoraExpenses = [],
+  agoraRemit = '',
 }: SalesReportPrintProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -52,6 +61,17 @@ export default function SalesReportPrint({
       (branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('DISTRIBUTION'))
     )
   );
+
+  const isKauswagan = Boolean(branchName && branchName.toUpperCase().includes('KAUSWAGAN'));
+  const isAgora = Boolean(
+    branchName && (
+      branchName.toUpperCase().includes('AGORA') ||
+      branchName.toUpperCase().includes('LAPASAN')
+    )
+  );
+  const isAgoraOrKauswagan = isAgora || isKauswagan;
+
+  const parseInput = (v: string | number) => parseFloat(String(v || 0).replace(/,/g, '')) || 0;
 
   // Filter sales based on month/year OR exact date AND payment type
   const filteredSales = sales.filter(s => {
@@ -136,7 +156,12 @@ export default function SalesReportPrint({
   let scaleFactor = 1;
   
   if (reportType === 'daily') {
-    if (isValenciaColoursmile) {
+    if (isAgora) {
+      const cashRows = Math.max(1, cashSalesWithReceipt.concat(cashSalesNoReceipt).concat(digitalSalesArr).length);
+      const chargeRows = Math.max(1, chargeSalesArr.length);
+      const maxRows = Math.max(cashRows, chargeRows) + 14;
+      scaleFactor = Math.min(1.20, Math.max(0.40, 28 / maxRows));
+    } else if (isValenciaColoursmile) {
       const leftRows = Math.max(1, cashSalesWithReceipt.length) + Math.max(1, cashSalesNoReceipt.length) + Math.max(1, chargeSalesArr.length) + Math.max(1, deliverySalesArr.length) + 8;
       const rightRows = Math.max(1, (pettyCashExpenses || []).length) + Math.max(1, (distributionExpenses || []).length) + 6;
       const maxRows = Math.max(leftRows, rightRows) + 8;
@@ -190,17 +215,36 @@ export default function SalesReportPrint({
     <>
       <div 
         id={isPreview ? 'sales-report-preview-container' : 'sales-report-print-container'}
-        className={`${isPreview ? 'block w-[920px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300' : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
+        className={`${isPreview ? (isAgoraOrKauswagan && reportType === 'daily' ? 'block w-[640px] shadow-2xl mx-auto rounded-none bg-white text-black p-6 border border-slate-300' : 'block w-[920px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300') : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
         style={!isPreview && reportType === 'daily' ? { 
            zoom: scaleFactor, 
            minHeight: '100%',
            height: 'auto'
-        } : { minHeight: isPreview ? '650px' : '100%', height: 'auto' }}
+        } : { minHeight: isPreview ? (isAgoraOrKauswagan && reportType === 'daily' ? '905px' : '650px') : '100%', height: 'auto' }}
       >
       <div className="flex-1 flex flex-col min-h-0">
         
         {/* ─── HEADER SECTION ────────────────────────────────────────── */}
-        {isValenciaColoursmile && reportType === 'daily' ? (
+        {isAgoraOrKauswagan && reportType === 'daily' ? (
+          <div className="mb-4 shrink-0 flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center text-center">
+              <img src="/logo.png" alt="Autoworx Logo" className="h-14 w-auto object-contain shrink-0 mb-1" />
+              <p className="text-[11px] text-black font-semibold tracking-tight">
+                {isKauswagan 
+                  ? "National Highway, Kauswagan, Cagayan de Oro City"
+                  : "Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City"}
+              </p>
+            </div>
+            <div className="text-center mt-3">
+              <h3 className="text-[14px] font-black uppercase tracking-widest border-y border-black py-0.5 inline-block px-12">
+                SALES REPORT
+              </h3>
+              <p className="text-[12px] font-bold mt-1 text-black font-mono">
+                {valenciaFormattedDate}
+              </p>
+            </div>
+          </div>
+        ) : isValenciaColoursmile && reportType === 'daily' ? (
           <div className="mb-4 shrink-0 flex flex-col items-center">
             {/* Top Brand Header: Logo + Business Name & Address in close proximity */}
             <div className="flex items-center justify-center gap-4">
@@ -299,6 +343,180 @@ export default function SalesReportPrint({
             </tbody>
           )}
         </table>
+      ) : isAgoraOrKauswagan ? (
+        /* ─── AGORA / KAUSWAGAN BRANCH 2-COLUMN DAILY SALES REPORT ─────────────────────────── */
+        (() => {
+          // Left Column: Counter transactions (Cash + GCash + Bank Transfer)
+          const agoraCashArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
+          const agoraChargeArr = filteredSales.filter(s => s.payment_type === 'Charge');
+          const agoraGcashTotal = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer').reduce((a, s) => a + (s.total_amount || 0), 0);
+          const agoraCashTotal = agoraCashArr.reduce((a, s) => a + (s.total_amount || 0), 0);
+          const agoraChargeTotal = agoraChargeArr.reduce((a, s) => a + (s.total_amount || 0), 0);
+
+          const totalCommission = (agoraCommissions || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+          const totalCashAdvance = (agoraCashAdvances || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+          const totalExpenses = (agoraExpenses || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+          const remit = parseInput(agoraRemit);
+
+          // Total Cash for Remittance: Cash Sales - GCash - Commission - Expenses - Cash Advance - Remit = Physical Cash on hand
+          const totalCashForRemittance = agoraCashTotal - agoraGcashTotal - totalCommission - totalExpenses - totalCashAdvance - remit;
+          const overallTotalSales = agoraCashTotal + agoraChargeTotal;
+
+          const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          const commItems = (agoraCommissions || []).filter(c => c.particular || c.amount);
+          const caItems = (agoraCashAdvances || []).filter(c => c.particular || c.amount);
+          const expItems = (agoraExpenses || []).filter(c => c.particular || c.amount);
+
+          return (
+            <div className="w-full flex-1 flex flex-col min-h-0">
+              {/* TWO-COLUMN BODY */}
+              <div className="grid grid-cols-2 gap-2 w-full items-start">
+
+                {/* LEFT: CASH SALES */}
+                <table className="w-full border-collapse border border-black text-xs">
+                  <thead>
+                    <tr>
+                      <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase bg-slate-100 tracking-wider">CASH SALES</th>
+                    </tr>
+                    <tr>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[45%]">CUSTOMER</th>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[30%]">INVOICE NO.</th>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agoraCashArr.length > 0 ? (
+                      agoraCashArr.map((s, i) => (
+                        <tr key={`agora-cash-${i}`} className="border-b border-black">
+                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH'}</td>
+                          <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={3} className="border border-black px-2 py-2 text-center text-slate-300 font-medium">No Cash Sales</td></tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* RIGHT: CHARGE SALES + COMMISSION, CASH ADVANCE, EXPENSES */}
+                <table className="w-full border-collapse border border-black text-xs">
+                  <thead>
+                    <tr>
+                      <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase bg-slate-100 tracking-wider">CHARGE SALES</th>
+                    </tr>
+                    <tr>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[45%]">CUSTOMER</th>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[30%]">INVOICE NO.</th>
+                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agoraChargeArr.length > 0 ? (
+                      agoraChargeArr.map((s, i) => (
+                        <tr key={`agora-charge-${i}`} className="border-b border-black">
+                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                          <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={3} className="border border-black px-2 py-2 text-center text-slate-300 font-medium">No Charge Sales</td></tr>
+                    )}
+
+                    {/* COMMISSION SECTION */}
+                    <tr className="border-t border-black bg-slate-50">
+                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">COMMISSION:</td>
+                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalCommission)}</td>
+                    </tr>
+                    {commItems.length > 0 ? (
+                      commItems.map((c, i) => (
+                        <tr key={`agora-comm-${i}`} className="border-b border-black">
+                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'COMMISSION'}</td>
+                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">COMMISSION</td>
+                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                        </tr>
+                      ))
+                    ) : null}
+
+                    {/* CASH ADVANCE SECTION */}
+                    <tr className="border-t border-black bg-slate-50">
+                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">CASH ADVANCE:</td>
+                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalCashAdvance)}</td>
+                    </tr>
+                    {caItems.length > 0 ? (
+                      caItems.map((c, i) => (
+                        <tr key={`agora-ca-${i}`} className="border-b border-black">
+                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'CASH ADVANCE'}</td>
+                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">CASH ADVANCE</td>
+                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                        </tr>
+                      ))
+                    ) : null}
+
+                    {/* EXPENSES SECTION */}
+                    <tr className="border-t border-black bg-slate-50">
+                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">EXPENSES:</td>
+                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalExpenses)}</td>
+                    </tr>
+                    {expItems.length > 0 ? (
+                      expItems.map((c, i) => (
+                        <tr key={`agora-exp-${i}`} className="border-b border-black">
+                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'EXPENSE'}</td>
+                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">EXPENSES</td>
+                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                        </tr>
+                      ))
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* SUMMARY SECTION */}
+              <table className="w-full border-collapse border border-black text-xs font-bold mt-2">
+                <tbody>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50 w-[60%]">CASH SALES:</td>
+                    <td className="border border-black px-2 py-1 text-right w-[40%]">{fmt(agoraCashTotal)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS GCASH PAYMENT:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(agoraGcashTotal)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS COMMISSION:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCommission)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS EXPENSES:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(totalExpenses)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS CASH ADVANCE:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCashAdvance)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS REMIT:</td>
+                    <td className="border border-black px-2 py-1 text-right font-bold">{fmt(remit)}</td>
+                  </tr>
+                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                    <td className="border border-black px-2 py-1 uppercase">TOTAL CASH FOR REMITTANCE:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCashForRemittance)}</td>
+                  </tr>
+                  <tr className="border-b border-black">
+                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">TOTAL CHARGE SALES:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(agoraChargeTotal)}</td>
+                  </tr>
+                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                    <td className="border border-black px-2 py-1 uppercase">OVERALL TOTAL SALES:</td>
+                    <td className="border border-black px-2 py-1 text-right">{fmt(overallTotalSales)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })()
       ) : isValenciaColoursmile ? (
         /* ─── VALENCIA COLOURSMILE 2-COLUMN DAILY REPORT ────────────────────────── */
         <div className="w-full flex-1 flex flex-col min-h-0">
@@ -745,10 +963,10 @@ export default function SalesReportPrint({
       )}
     </div>
       
-      {/* Print Page Styles to force landscape and A4 */}
+      {/* Print Page Styles - Portrait for Agora / Kauswagan, Landscape for others */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: A4 ${isAgoraOrKauswagan && reportType === 'daily' ? 'portrait' : 'landscape'}; margin: 8mm; }
           
           body * {
             visibility: hidden !important;

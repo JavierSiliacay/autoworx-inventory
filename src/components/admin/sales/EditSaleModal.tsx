@@ -144,10 +144,8 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
   };
 
   const handleClose = () => {
-    if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-      setRemovedItems([]);
-      onClose();
-    }
+    setRemovedItems([]);
+    onClose();
   };
 
   const calculateTotal = () => {

@@ -11,6 +11,7 @@ import SalesReportPrint from "@/components/sales/SalesReportPrint";
 import EditSaleModal from "@/components/admin/sales/EditSaleModal";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
+import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 
 interface SaleEntry {
   id: string;
@@ -52,7 +53,7 @@ interface InventoryItem {
 export default function AdminSalesPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
-  const { selectedBranchId } = useNetwork();
+  const { selectedBranchId, setSelectedBranchId } = useNetwork();
   const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
   const queryClient = useQueryClient();
@@ -218,7 +219,12 @@ export default function AdminSalesPage() {
   const [pettyCashBeginning, setPettyCashBeginning] = useState<number | string>(474.00);
   const [pettyCashExpenses, setPettyCashExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [distributionExpenses, setDistributionExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [agoraCommissions, setAgoraCommissions] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [agoraCashAdvances, setAgoraCashAdvances] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [agoraExpensesList, setAgoraExpensesList] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [agoraRemit, setAgoraRemit] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const toggleExpandSale = async (invoiceNo: string) => {
     if (expandedSaleId === invoiceNo) {
@@ -349,6 +355,92 @@ export default function AdminSalesPage() {
       };
     }
   }, [session, queryClient]);
+
+  // ─── AGORA DAILY DEDUCTIONS PERSISTENCE (BY DATE & BRANCH) ───────────
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `agora_daily_${effectiveBranchId}_${printDate}`;
+    
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.commissions) && parsed.commissions.length > 0) setAgoraCommissions(parsed.commissions);
+        if (Array.isArray(parsed.cashAdvances) && parsed.cashAdvances.length > 0) setAgoraCashAdvances(parsed.cashAdvances);
+        if (Array.isArray(parsed.expenses) && parsed.expenses.length > 0) setAgoraExpensesList(parsed.expenses);
+        if (typeof parsed.remit === 'string') setAgoraRemit(parsed.remit);
+      } else {
+        setAgoraCommissions([{ particular: '', amount: '' }]);
+        setAgoraCashAdvances([{ particular: '', amount: '' }]);
+        setAgoraExpensesList([{ particular: '', amount: '' }]);
+        setAgoraRemit('');
+      }
+    } catch (e) {
+      console.error("Error loading Agora daily deductions:", e);
+    }
+  }, [printDate, filterBranch, selectedBranchId, mounted]);
+
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `agora_daily_${effectiveBranchId}_${printDate}`;
+    
+    const hasContent = 
+      agoraCommissions.some(c => c.particular || c.amount) ||
+      agoraCashAdvances.some(c => c.particular || c.amount) ||
+      agoraExpensesList.some(e => e.particular || e.amount) ||
+      Boolean(agoraRemit);
+
+    try {
+      if (hasContent) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          commissions: agoraCommissions,
+          cashAdvances: agoraCashAdvances,
+          expenses: agoraExpensesList,
+          remit: agoraRemit
+        }));
+      }
+    } catch (e) {
+      console.error("Error saving Agora daily deductions:", e);
+    }
+  }, [agoraCommissions, agoraCashAdvances, agoraExpensesList, agoraRemit, printDate, filterBranch, selectedBranchId, mounted]);
+
+  // ─── SALES INVOICE DRAFT PERSISTENCE (BY BRANCH) ────────────────────
+  useEffect(() => {
+    if (!mounted) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const draftKey = `sales_invoice_draft_${effectiveBranchId}`;
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed && typeof parsed === 'object') {
+          setCurrentSale(prev => ({
+            ...prev,
+            ...parsed,
+            items: Array.isArray(parsed.items) && parsed.items.length > 0 ? parsed.items : prev.items
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading sales invoice draft:", e);
+    }
+  }, [mounted, filterBranch, selectedBranchId]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const draftKey = `sales_invoice_draft_${effectiveBranchId}`;
+    try {
+      const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.sales_agent || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
+      if (hasData) {
+        localStorage.setItem(draftKey, JSON.stringify(currentSale));
+      }
+    } catch (e) {
+      console.error("Error saving sales invoice draft:", e);
+    }
+  }, [currentSale, mounted, filterBranch, selectedBranchId]);
 
   async function fetchBranches() {
     const { data } = await supabase.from('branches').select('id, name');
@@ -555,9 +647,42 @@ export default function AdminSalesPage() {
   };
 
   const handleCloseModal = () => {
-    if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-      setIsModalOpen(false);
+    setIsModalOpen(false);
+    setRemovedItems([]);
+    const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
+    if (hasData) {
+      setAutoSaveToast({ show: true, message: "Sales invoice draft saved" });
+    }
+  };
+
+  const handleClosePrintModal = () => {
+    setIsPrintModalOpen(false);
+    const hasData = agoraCommissions.some(c => c.particular || c.amount) || agoraExpensesList.some(e => e.particular || e.amount) || Boolean(agoraRemit);
+    if (hasData) {
+      setAutoSaveToast({ show: true, message: "Daily report deductions saved" });
+    }
+  };
+
+  const handleClearDraft = () => {
+    if (confirm("Clear this sales invoice draft and start fresh?")) {
+      setCurrentSale({
+        date: new Date().toISOString().split('T')[0],
+        invoice_no: "",
+        customer_name: "",
+        sales_agent: "",
+        payment_type: "Cash",
+        branch_id: "",
+        items: Array(10).fill(null).map(() => ({
+          item_id: "",
+          quantity: 1,
+          unit_price: 0,
+          subtotal: 0,
+          color_code: ""
+        }))
+      });
       setRemovedItems([]);
+      const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+      try { localStorage.removeItem(`sales_invoice_draft_${effectiveBranchId}`); } catch (e) {}
     }
   };
 
@@ -705,6 +830,8 @@ export default function AdminSalesPage() {
           color_code: ""
         }))
       });
+      const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+      try { localStorage.removeItem(`sales_invoice_draft_${effectiveBranchId}`); } catch (e) {}
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       fetchInventory();
     } catch (err: any) {
@@ -1312,7 +1439,12 @@ export default function AdminSalesPage() {
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-manrope font-extrabold text-[#1a1b20]">New Sale Record</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-manrope font-extrabold text-[#1a1b20]">New Sale Record</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                      Auto-Saved Draft
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500 font-medium">Record a professional customer invoice.</p>
                 </div>
               </div>
@@ -1331,215 +1463,202 @@ export default function AdminSalesPage() {
                   e.preventDefault();
                 }
               }}
-              className="p-4 md:p-4 md:p-8 space-y-6"
+              className="p-4 md:p-8 space-y-8 max-h-[80vh] overflow-y-auto"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Date */}
+              {/* Form Content */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sale Date</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sale Date</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="date"
+                    <input 
+                      type="date" 
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
                       value={currentSale.date}
                       onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
                     />
                   </div>
                 </div>
 
-                {/* Invoice No */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoice No.</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Invoice No.</label>
                   <div className="relative">
                     <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       required
                       placeholder="e.g. 00123"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
                       value={currentSale.invoice_no}
                       onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
                     />
                   </div>
                 </div>
 
-                {/* Customer Selection */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <SearchableSelect
-                      options={customers.map(c => ({ value: c.name, label: c.name }))}
-                      value={currentSale.customer_name}
-                      onChange={(val) => setCurrentSale({...currentSale, customer_name: val, invoice_no: val === 'CASH SALES - NO RECEIPT' ? 'CASH SALES - NO RECEIPT' : (currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? '' : currentSale.invoice_no)})}
-                      placeholder="Select a customer..."
-                      className="pl-8"
-                    />
-                  </div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Customer</label>
+                  <SearchableSelect
+                    options={customers.map(c => ({ value: c.name, label: c.name }))}
+                    value={currentSale.customer_name}
+                    onChange={(val: string) => setCurrentSale({...currentSale, customer_name: val, invoice_no: val === 'CASH SALES - NO RECEIPT' ? 'CASH SALES - NO RECEIPT' : (currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? '' : currentSale.invoice_no)})}
+                    placeholder="Select a customer..."
+                  />
                 </div>
 
-                {/* Sales Agent Selection (Main Distribution Only) */}
-                {branches.find(b => b.id === (currentSale.branch_id || filterBranch || selectedBranchId))?.name?.toLowerCase().includes('main') && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
-                      <TrendingUp className="w-3 h-3" />
-                      Sales Agent (Quota Tracking)
-                    </label>
-                    <div className="relative">
-                      <SearchableSelect
-                        options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
-                        value={currentSale.sales_agent || ""}
-                        onChange={(val) => setCurrentSale({...currentSale, sales_agent: val})}
-                        placeholder="Select sales agent..."
-                        className="border-[#f59e0b]/30 focus:border-[#f59e0b] focus:ring-[#f59e0b]/20"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Payment Type */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Type</label>
-                  <select
-                    className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-bold"
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sales Agent</label>
+                  <SearchableSelect
+                    options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
+                    value={currentSale.sales_agent}
+                    onChange={(val: string) => setCurrentSale({...currentSale, sales_agent: val})}
+                    placeholder="Select an agent..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Payment Type</label>
+                  <select 
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
                     value={currentSale.payment_type}
                     onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
                   >
                     <option value="Cash">Cash</option>
                     <option value="GCash">GCash</option>
                     <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Charge">Charge (Receivable)</option>
-                    <option value="Delivery">Delivery (Receivable)</option>
-                    <option value="Cancelled">Cancelled</option>
+                    <option value="Charge">Charge</option>
+                    <option value="Delivery">Delivery</option>
                   </select>
                 </div>
               </div>
 
-              {/* Multi-Item Table Section */}
+              {/* Items Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-[#1a1b20] uppercase tracking-[0.2em] flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-emerald-600" />
-                    Sold Items Ledger
-                  </label>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Sold Items Ledger</h4>
+                  </div>
                   <div className="flex items-center gap-2">
                     {removedItems.length > 0 && (
-                      <button 
+                      <button
                         type="button"
                         onClick={undoRemoveRow}
-                        className="flex items-center gap-1.5 text-[10px] font-black uppercase text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-all"
+                        className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 transition-all shadow-sm active:scale-95"
                       >
-                        <Undo2 className="w-3 h-3" />
-                        Undo Remove
+                        Undo Delete ({removedItems.length})
                       </button>
                     )}
-                    <button 
+                    <button
                       type="button"
                       onClick={addRow}
-                      className="flex items-center gap-1.5 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-all"
+                      className="text-xs font-bold text-[#1a1b20] hover:text-emerald-600 flex items-center gap-1 bg-slate-100 hover:bg-emerald-50 px-2.5 py-1 rounded-lg transition-all"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-3.5 h-3.5" />
                       Add Entry
                     </button>
                   </div>
                 </div>
 
-                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
-                  <div className="max-h-[300px] overflow-y-auto">
-                    <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left border-collapse table-fixed">
-                      <thead className="sticky top-0 z-10 bg-slate-100">
-                        <tr>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Color Code</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28">Unit Price</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
-                          <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
+                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto max-h-[350px]">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                        <th className="px-4 py-3 w-12 text-center">No</th>
+                        <th className="px-4 py-3">Select Product Item</th>
+                        <th className="px-2 py-3 w-20 text-center">Qty</th>
+                        <th className="px-2 py-3 w-28 text-center">Color Code</th>
+                        <th className="px-4 py-3 w-28 text-right">Unit Price</th>
+                        <th className="px-4 py-3 w-36 text-right">Subtotal</th>
+                        <th className="px-2 py-3 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {currentSale.items.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-4 py-2 text-xs font-bold text-slate-300 text-center">{idx + 1}</td>
+                          <td className="px-2 py-2">
+                             <SearchableSelect
+                                options={inventory.map(inv => ({
+                                   value: inv.id,
+                                   label: inv.product_name,
+                                   subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
+                                   danger: inv.quantity <= 0
+                                }))}
+                                value={item.item_id}
+                                onChange={(val: string) => handleRowChange(idx, 'item_id', val)}
+                                placeholder="- Select Product -"
+                             />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              id={`qty-input-${idx}`}
+                              type="number"
+                              min="0.01" step="any"
+                              className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
+                              value={item.quantity === undefined ? "" : item.quantity}
+                              onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <input
+                              type="text"
+                              placeholder="e.g. ARC WHITE"
+                              className="w-full px-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-slate-600 placeholder:font-medium placeholder:text-slate-300"
+                              value={item.color_code || ""}
+                              onChange={(e) => handleRowChange(idx, 'color_code', e.target.value)}
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
+                            {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <FormattedNumberInput
+                              autoSize
+                              prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
+                              className="pl-8 pr-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-right focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
+                              value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
+                              onChange={(val) => handleRowChange(idx, 'subtotal', val)}
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <button 
+                              type="button"
+                              onClick={() => removeRow(idx)}
+                              className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {currentSale.items.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-white transition-colors group focus-within:bg-emerald-50/30">
-                            <td className="px-4 py-3 text-[10px] font-bold text-slate-400 group-focus-within:text-emerald-600 group-focus-within:scale-125 transition-all origin-left">{idx + 1}</td>
-                            <td className="p-2">
-                               <SearchableSelect
-                                  options={inventory.map(inv => ({ 
-                                     value: inv.id, 
-                                     label: inv.product_name,
-                                     subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
-                                     danger: inv.quantity <= 0
-                                  }))}
-                                  value={item.item_id}
-                                  onChange={(val) => handleRowChange(idx, 'item_id', val)}
-                                  placeholder="- Select Product -"
-                               />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                id={`qty-input-${idx}`}
-                                type="number"
-                                min="0.01" step="any"
-                                className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
-                                value={item.quantity === undefined ? "" : item.quantity}
-                                onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
-                              />
-                            </td>
-                            <td className="px-2 py-2">
-                              <input
-                                type="text"
-                                placeholder="e.g. ARC WHITE"
-                                className="w-full px-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-slate-600 placeholder:font-medium placeholder:text-slate-300"
-                                value={item.color_code || ""}
-                                onChange={(e) => handleRowChange(idx, 'color_code', e.target.value)}
-                              />
-                            </td>
-                            <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
-                              {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
-                            </td>
-                            <td className="px-2 py-2 text-right">
-                              <FormattedNumberInput
-                                autoSize
-                                prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
-                                className="pl-8 pr-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-right focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
-                                value={item.subtotal === undefined ? undefined : Number(item.subtotal)}
-                                onChange={(val) => handleRowChange(idx, 'subtotal', val)}
-                              />
-                            </td>
-                            <td className="px-2 py-2 text-right">
-                              <button 
-                                type="button"
-                                onClick={() => removeRow(idx)}
-                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    </div>
+                      ))}
+                    </tbody>
+                  </table>
                   </div>
                 </div>
               </div>
 
-              {/* Summary */}
+              {/* Summary & Actions */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total Receivable</p>
                   <p className="text-2xl font-extrabold text-[#1a1b20]">₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2 items-center">
+                  <button
+                    type="button"
+                    onClick={handleClearDraft}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 border border-red-200/60 transition-all"
+                  >
+                    Clear Draft
+                  </button>
                   <button
                     type="button"
                     onClick={handleCloseModal}
                     className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all focus:outline-none"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     type="submit"
@@ -1557,22 +1676,58 @@ export default function AdminSalesPage() {
       )}
       {/* Print Report Modal */}
       {isPrintModalOpen && (() => {
-        const selectedBranchName = branches.find(b => b.id === filterBranch)?.name || '';
+        const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null);
+        const selectedBranchName = branches.find(b => b.id === effectiveBranchId)?.name || '';
         const isValenciaColoursmile = Boolean(
           selectedBranchName && (
             selectedBranchName.toUpperCase().includes('COLOURSMILE') || 
             (selectedBranchName.toUpperCase().includes('VALENCIA') && !selectedBranchName.toUpperCase().includes('DISTRIBUTION'))
           )
         );
-        const isMainDistribution = !selectedBranchName || selectedBranchName.toUpperCase().includes('MAIN DISTRIBUTION') || selectedBranchName.toUpperCase() === 'MAIN';
+        const isKauswaganBranch = Boolean(selectedBranchName && selectedBranchName.toUpperCase().includes('KAUSWAGAN'));
+        const isAgoraBranch = Boolean(
+          selectedBranchName && (
+            selectedBranchName.toUpperCase().includes('AGORA') || 
+            selectedBranchName.toUpperCase().includes('LAPASAN')
+          )
+        );
+        const isAgoraOrKauswagan = isAgoraBranch || isKauswaganBranch;
+        const isMainDistribution = (!selectedBranchName || selectedBranchName.toUpperCase().includes('MAIN DISTRIBUTION') || selectedBranchName.toUpperCase() === 'MAIN') && !isAgoraOrKauswagan && !isValenciaColoursmile;
 
         const totalPettyCashExp = pettyCashExpenses.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
         const totalDistExp = distributionExpenses.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
         const onHand = (Number(pettyCashBeginning) || 0) - totalPettyCashExp - totalDistExp;
 
+        const totalAgoraCommissions = agoraCommissions.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const totalAgoraCashAdvances = agoraCashAdvances.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const totalAgoraExpenses = agoraExpensesList.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const agoraRemitVal = parseFloat(String(agoraRemit).replace(/,/g, '')) || 0;
+
+        // Live calculation from grouped sales for selected date
+        const selectedDateSales = (groupedSales || []).filter((s: any) => {
+          if (!s.date) return false;
+          const dStr = s.date.split('T')[0];
+          return dStr === printDate;
+        });
+
+        const modalCashSales = selectedDateSales
+          .filter((s: any) => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer')
+          .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+
+        const modalGcashSales = selectedDateSales
+          .filter((s: any) => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer')
+          .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+
+        const modalChargeSales = selectedDateSales
+          .filter((s: any) => s.payment_type === 'Charge')
+          .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+
+        const totalCashForRemittanceModal = modalCashSales - modalGcashSales - totalAgoraCommissions - totalAgoraExpenses - totalAgoraCashAdvances - agoraRemitVal;
+        const overallTotalSalesModal = modalCashSales + modalChargeSales;
+
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className={`bg-white rounded-[2rem] shadow-2xl w-full ${isValenciaColoursmile && printType === 'daily' ? 'max-w-4xl' : 'max-w-xl'} max-h-[92vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300`}>
+            <div className={`bg-white rounded-[2rem] shadow-2xl w-full ${(isValenciaColoursmile || isAgoraOrKauswagan) && printType === 'daily' ? 'max-w-4xl' : 'max-w-xl'} max-h-[92vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300`}>
               {/* Modal Header */}
               <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
                 <div className="flex items-center gap-3">
@@ -1585,9 +1740,31 @@ export default function AdminSalesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {branches.length > 0 && !filterBranch && (
+                    <select
+                      value={selectedBranchId}
+                      onChange={(e) => setSelectedBranchId(e.target.value)}
+                      className="text-xs font-bold bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1 text-slate-700 outline-none cursor-pointer"
+                    >
+                      <option value="all">Select Branch...</option>
+                      {branches.map(b => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  )}
                   {isValenciaColoursmile && (
                     <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
                       Valencia ColourSmile
+                    </span>
+                  )}
+                  {isAgoraBranch && (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                      Agora Branch
+                    </span>
+                  )}
+                  {isKauswaganBranch && (
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                      Kauswagan Branch
                     </span>
                   )}
                   {isMainDistribution && (
@@ -1596,7 +1773,7 @@ export default function AdminSalesPage() {
                     </span>
                   )}
                   <button 
-                    onClick={() => setIsPrintModalOpen(false)}
+                    onClick={handleClosePrintModal}
                     className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
                   >
                     <X className="w-4 h-4" />
@@ -1606,7 +1783,335 @@ export default function AdminSalesPage() {
 
               {/* Modal Scrollable Body */}
               <div className="p-6 overflow-y-auto flex-1">
-                {isValenciaColoursmile && printType === 'daily' ? (
+                {isAgoraOrKauswagan && printType === 'daily' ? (
+                  /* Expanded 2-Column Layout for Agora / Kauswagan Branch */
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {/* Left Column: Date, Filter, Less Remit & Calculation Summary */}
+                    <div className="md:col-span-5 space-y-4">
+                      {/* Period Switcher */}
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button onClick={() => setPrintType('yearly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'yearly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Yearly</button>
+                        <button onClick={() => setPrintType('monthly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Monthly</button>
+                        <button onClick={() => setPrintType('daily')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daily</button>
+                      </div>
+
+                      {/* Select Date */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                          value={printDate}
+                          onChange={(e) => setPrintDate(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Payment Filter */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
+                        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                          {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => setPrintPaymentType(type as any)}
+                              className={`py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate px-1 ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Less Remit */}
+                      <div className="bg-slate-50 p-3.5 rounded-2xl space-y-1.5 border border-slate-200/80">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Less Remit
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₱</span>
+                          <input
+                            type="text"
+                            placeholder="0.00"
+                            value={agoraRemit}
+                            onChange={e => {
+                              const val = e.target.value.replace(/[^0-9.]/g, '');
+                              const parts = val.split('.');
+                              let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                              if (parts.length > 1) formatted += '.' + parts[1];
+                              setAgoraRemit(formatted);
+                            }}
+                            className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 text-right"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Summary Breakdown Card - Exactly Matching Print View */}
+                      <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800">
+                          Sales & Remittance Summary
+                        </p>
+                        <div className="space-y-1 text-xs text-slate-700 font-medium">
+                          <div className="flex justify-between">
+                            <span className="font-bold text-slate-800">CASH SALES:</span>
+                            <span className="font-mono font-bold text-slate-900">₱{modalCashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-700">
+                            <span>LESS GCASH PAYMENT:</span>
+                            <span className="font-mono font-bold">-₱{modalGcashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-700">
+                            <span>LESS COMMISSION:</span>
+                            <span className="font-mono font-bold">-₱{totalAgoraCommissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-700">
+                            <span>LESS EXPENSES:</span>
+                            <span className="font-mono font-bold">-₱{totalAgoraExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-700">
+                            <span>LESS CASH ADVANCE:</span>
+                            <span className="font-mono font-bold">-₱{totalAgoraCashAdvances.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-700">
+                            <span>LESS REMIT:</span>
+                            <span className="font-mono font-bold">-₱{agoraRemitVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          
+                          <div className="pt-2 border-t border-emerald-300 flex justify-between items-center text-xs font-black text-emerald-950">
+                            <span className="uppercase tracking-wider">TOTAL CASH FOR REMITTANCE:</span>
+                            <span className={`font-mono text-sm ${totalCashForRemittanceModal < 0 ? 'text-red-600' : 'text-emerald-900'}`}>
+                              {totalCashForRemittanceModal < 0 ? `-₱${Math.abs(totalCashForRemittanceModal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₱${totalCashForRemittanceModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between text-slate-700 pt-1">
+                            <span>TOTAL CHARGE SALES:</span>
+                            <span className="font-mono font-bold">₱{modalChargeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+
+                          <div className="pt-1.5 border-t border-slate-300 flex justify-between items-center text-xs font-black text-slate-900">
+                            <span className="uppercase tracking-wider">OVERALL TOTAL SALES:</span>
+                            <span className="font-mono text-sm text-slate-900">
+                              ₱{overallTotalSalesModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Dynamic Lists for Commissions, Cash Advance, Expenses */}
+                    <div className="md:col-span-7 space-y-4 md:border-l md:border-slate-100 md:pl-6">
+                      {/* Commissions Section */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Commissions
+                            </label>
+                            <span className="text-[10px] text-slate-400 ml-2">({agoraCommissions.length} {agoraCommissions.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = agoraCommissions.length;
+                              setAgoraCommissions([...agoraCommissions, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`agora-comm-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                          {agoraCommissions.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`agora-comm-${idx}`}
+                                type="text"
+                                placeholder="Agent / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...agoraCommissions];
+                                  next[idx].particular = e.target.value;
+                                  setAgoraCommissions(next);
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...agoraCommissions];
+                                    next[idx].amount = formatted;
+                                    setAgoraCommissions(next);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {agoraCommissions.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAgoraCommissions(agoraCommissions.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Cash Advance Section */}
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Cash Advance
+                            </label>
+                            <span className="text-[10px] text-slate-400 ml-2">({agoraCashAdvances.length} {agoraCashAdvances.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = agoraCashAdvances.length;
+                              setAgoraCashAdvances([...agoraCashAdvances, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`agora-ca-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                          {agoraCashAdvances.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`agora-ca-${idx}`}
+                                type="text"
+                                placeholder="Staff / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...agoraCashAdvances];
+                                  next[idx].particular = e.target.value;
+                                  setAgoraCashAdvances(next);
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...agoraCashAdvances];
+                                    next[idx].amount = formatted;
+                                    setAgoraCashAdvances(next);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {agoraCashAdvances.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAgoraCashAdvances(agoraCashAdvances.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Expenses Section */}
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Expenses
+                            </label>
+                            <span className="text-[10px] text-slate-400 ml-2">({agoraExpensesList.length} {agoraExpensesList.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = agoraExpensesList.length;
+                              setAgoraExpensesList([...agoraExpensesList, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`agora-exp-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                          {agoraExpensesList.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`agora-exp-${idx}`}
+                                type="text"
+                                placeholder="Particular / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...agoraExpensesList];
+                                  next[idx].particular = e.target.value;
+                                  setAgoraExpensesList(next);
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...agoraExpensesList];
+                                    next[idx].amount = formatted;
+                                    setAgoraExpensesList(next);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {agoraExpensesList.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAgoraExpensesList(agoraExpensesList.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : isValenciaColoursmile && printType === 'daily' ? (
                   /* Expanded 2-Column Layout for Valencia ColourSmile */
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     {/* Left Column: Date, Filter, Beginning Cash & Calculation Summary */}
@@ -2102,7 +2607,11 @@ export default function AdminSalesPage() {
                 pettyCashExpenses={pettyCashExpenses}
                 distributionExpenses={distributionExpenses}
                 isPreview={true}
-                branchName={branches.find(b => b.id === filterBranch)?.name || ''}
+                branchName={branches.find(b => b.id === (filterBranch || selectedBranchId))?.name || ''}
+                agoraCommissions={agoraCommissions}
+                agoraCashAdvances={agoraCashAdvances}
+                agoraExpenses={agoraExpensesList}
+                agoraRemit={agoraRemit}
               />
             </div>
           </div>
@@ -2123,7 +2632,11 @@ export default function AdminSalesPage() {
       pettyCashExpenses={pettyCashExpenses}
       distributionExpenses={distributionExpenses}
       isPreview={false}
-      branchName={branches.find(b => b.id === filterBranch)?.name || ''}
+      branchName={branches.find(b => b.id === (filterBranch || selectedBranchId))?.name || ''}
+      agoraCommissions={agoraCommissions}
+      agoraCashAdvances={agoraCashAdvances}
+      agoraExpenses={agoraExpensesList}
+      agoraRemit={agoraRemit}
     />
     <EditSaleModal
       isOpen={isEditModalOpen}
@@ -2137,6 +2650,11 @@ export default function AdminSalesPage() {
         fetchInventory();
       }}
       session={session}
+    />
+    <AutoSaveToast 
+      show={autoSaveToast.show} 
+      message={autoSaveToast.message} 
+      onClose={() => setAutoSaveToast(prev => ({ ...prev, show: false }))} 
     />
     </>
   );
