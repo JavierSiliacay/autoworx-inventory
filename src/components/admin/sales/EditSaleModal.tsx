@@ -309,7 +309,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
               </div>
             </div>
 
-            {salesAgents && salesAgents.length > 0 && (
+            {Boolean(invoiceData?.branch_name?.toLowerCase().includes('main') || invoiceData?.items?.[0]?.branches?.name?.toLowerCase().includes('main')) && salesAgents && salesAgents.length > 0 && (
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
                   Sales Agent (Quota Tracking)

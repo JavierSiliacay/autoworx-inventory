@@ -1466,71 +1466,85 @@ export default function AdminSalesPage() {
               className="p-4 md:p-8 space-y-8 max-h-[80vh] overflow-y-auto"
             >
               {/* Form Content */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sale Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="date" 
-                      required
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
-                      value={currentSale.date}
-                      onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
-                    />
+              {(() => {
+                const activeBranchId = currentSale.branch_id || filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null);
+                const activeBranchName = branches.find(b => b.id === activeBranchId)?.name || '';
+                const isMainDistributionBranch = Boolean(activeBranchName && activeBranchName.toLowerCase().includes('main'));
+
+                return (
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 ${isMainDistributionBranch ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sale Date</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="date" 
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
+                          value={currentSale.date}
+                          onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Invoice No.</label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text" 
+                          required
+                          placeholder="e.g. 00123"
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
+                          value={currentSale.invoice_no}
+                          onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Customer</label>
+                      <SearchableSelect
+                        options={customers.map(c => ({ value: c.name, label: c.name }))}
+                        value={currentSale.customer_name}
+                        onChange={(val: string) => setCurrentSale({...currentSale, customer_name: val, invoice_no: val === 'CASH SALES - NO RECEIPT' ? 'CASH SALES - NO RECEIPT' : (currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? '' : currentSale.invoice_no)})}
+                        placeholder="Select a customer..."
+                      />
+                    </div>
+
+                    {/* Sales Agent: STRICTLY & ONLY for Main Distribution */}
+                    {isMainDistributionBranch && (
+                      <div className="space-y-2 animate-in fade-in duration-200">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#f59e0b] flex items-center gap-1">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          Sales Agent
+                        </label>
+                        <SearchableSelect
+                          options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
+                          value={currentSale.sales_agent}
+                          onChange={(val: string) => setCurrentSale({...currentSale, sales_agent: val})}
+                          placeholder="Select an agent..."
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Payment Type</label>
+                      <select 
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
+                        value={currentSale.payment_type}
+                        onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="GCash">GCash</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Charge">Charge (Receivable)</option>
+                        <option value="Delivery">Delivery (Receivable)</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Invoice No.</label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="e.g. 00123"
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
-                      value={currentSale.invoice_no}
-                      onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Customer</label>
-                  <SearchableSelect
-                    options={customers.map(c => ({ value: c.name, label: c.name }))}
-                    value={currentSale.customer_name}
-                    onChange={(val: string) => setCurrentSale({...currentSale, customer_name: val, invoice_no: val === 'CASH SALES - NO RECEIPT' ? 'CASH SALES - NO RECEIPT' : (currentSale.invoice_no === 'CASH SALES - NO RECEIPT' ? '' : currentSale.invoice_no)})}
-                    placeholder="Select a customer..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sales Agent</label>
-                  <SearchableSelect
-                    options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
-                    value={currentSale.sales_agent}
-                    onChange={(val: string) => setCurrentSale({...currentSale, sales_agent: val})}
-                    placeholder="Select an agent..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Payment Type</label>
-                  <select 
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
-                    value={currentSale.payment_type}
-                    onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
-                  >
-                    <option value="Cash">Cash</option>
-                    <option value="GCash">GCash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Charge">Charge</option>
-                    <option value="Delivery">Delivery</option>
-                  </select>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Items Section */}
               <div className="space-y-4">
