@@ -48,7 +48,7 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
   const emptyRows = Array.from({ length: emptyRowsCount });
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-slate-900/80 backdrop-blur-md p-4 pt-12 print:p-0 print:bg-white print:block">
+    <div className="fixed inset-0 z-[400] flex items-start justify-center overflow-y-auto bg-slate-900/80 backdrop-blur-md p-4 pt-12 print:p-0 print:bg-white print:block">
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4 portrait; margin: 0; }

@@ -88,6 +88,14 @@ export default function PrimerAiChatWidget() {
     ]);
 
     try {
+      const recentHistory = messages
+        .filter((m) => m.id !== "welcome" && m.content)
+        .slice(-8)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
       const res = await fetch("/api/primerai", {
         method: "POST",
         headers: {
@@ -95,6 +103,7 @@ export default function PrimerAiChatWidget() {
         },
         body: JSON.stringify({
           prompt: userMessage.content,
+          history: recentHistory,
           currentPath: pathname,
           stream: true,
         }),

@@ -28,46 +28,13 @@ export async function POST(request: Request) {
         // ---------------------------
 
         const body = await request.json();
-        const { prompt, mediaData, model, stream, currentPath } = body;
+        const { prompt, history, mediaData, model, stream, currentPath } = body;
 
-        if (!prompt && !mediaData) {
+        if (!prompt && !mediaData && (!history || history.length === 0)) {
             return NextResponse.json({ error: "Prompt or media is required" }, { status: 400 });
         }
 
-        const requestedModel = model || "google/gemma-4-31B-it:fastest";
-        const HF_TOKEN = process.env.HF_TOKEN;
-
-        if (!HF_TOKEN) {
-            return NextResponse.json({ error: "HF_TOKEN is not configured in the environment" }, { status: 500 });
-        }
-
-        const contentPayload: any[] = [];
-        if (prompt) {
-            contentPayload.push({ type: "text", text: prompt });
-        }
-        
-        if (mediaData) {
-            contentPayload.push({
-                type: "image_url",
-                image_url: {
-                    url: mediaData
-                }
-            });
-        }
-
-        const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${HF_TOKEN}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                "model": requestedModel,
-                "stream": stream ?? false,
-                "messages": [
-                    {
-                        role: "system",
-                        content: `You are Primer AI, the official AI assistant for the Autoworx Paint Center inventory & management system. Your primary role is to assist admins, managers, sales agents, and branch staff in understanding how the entire system works, answering questions, and guiding them through workflows. You operate strictly in READ-ONLY mode and cannot modify, delete, or touch anything in the database. Always provide clear, friendly, accurate, and supportive guidance.
+        const systemPrompt = `You are Primer AI, the official AI assistant for the Autoworx Paint Center inventory & management system. Your primary role is to assist admins, managers, sales agents, and branch staff in understanding how the entire system works, answering questions, and guiding them through workflows. You operate strictly in READ-ONLY mode and cannot modify, delete, or touch anything in the database. Always provide clear, friendly, accurate, and supportive guidance.
 
 Language Requirement:
 You MUST respond predominantly in Bisaya (Cebuano). Since Autoworx Paint Center staff and management are Bisaya, use warm, natural, and conversational Bisaya for almost all of your response, blending in English only for technical terms, buttons, or system feature names where necessary.
@@ -149,17 +116,124 @@ Key System Features & Workflows:
 Communication Tone:
 - Always be encouraging, respectful, and helpful.
 - Answer in conversational Bisaya with clear bullet points.
-- If a user asks how to do something, guide them step-by-step with direct links to the exact page.`,
-                    },
-                    { role: "user", content: contentPayload }
-                ]
-            })
-        });
+- If a user asks how to do something, guide them step-by-step with direct links to the exact page.`;
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("HuggingFace Router API error:", errorData);
-            return NextResponse.json({ error: "HuggingFace Error: " + JSON.stringify(errorData) }, { status: response.status });
+        const messagesPayload: any[] = [
+            { role: "system", content: systemPrompt }
+        ];
+
+        // Append conversation history for multi-turn follow-up question context
+        if (Array.isArray(history)) {
+            for (const msg of history) {
+                if (msg && msg.role && msg.content) {
+                    messagesPayload.push({
+                        role: msg.role === "assistant" ? "assistant" : "user",
+                        content: msg.content
+                    });
+                }
+            }
+        }
+
+        // Append current message
+        const currentContent: any[] = [];
+        if (prompt) {
+            currentContent.push({ type: "text", text: prompt });
+        }
+        if (mediaData) {
+            currentContent.push({
+                type: "image_url",
+                image_url: { url: mediaData }
+            });
+        }
+
+        if (currentContent.length > 0) {
+            messagesPayload.push({
+                role: "user",
+                content: currentContent.length === 1 && currentContent[0].type === "text" 
+                    ? currentContent[0].text 
+                    : currentContent
+            });
+        }
+
+        const requestedModel = model || "google/gemma-4-31B-it:fastest";
+        const HF_TOKEN = process.env.HF_TOKEN;
+        const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+        let response: Response | null = null;
+        let isSuccess = false;
+
+        // 1. Primary Provider: Hugging Face Router
+        if (HF_TOKEN) {
+            try {
+                const hfRes = await fetch("https://router.huggingface.co/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${HF_TOKEN}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": requestedModel,
+                        "stream": stream ?? false,
+                        "messages": messagesPayload
+                    })
+                });
+
+                if (hfRes.ok) {
+                    response = hfRes;
+                    isSuccess = true;
+                } else {
+                    const errText = await hfRes.text();
+                    console.warn(`[Primer AI] Hugging Face failed (${hfRes.status}): ${errText}. Attempting OpenRouter fallback...`);
+                }
+            } catch (hfErr) {
+                console.warn("[Primer AI] Hugging Face network error. Attempting OpenRouter fallback...", hfErr);
+            }
+        }
+
+        // 2. Automatic Fallback Provider: OpenRouter Free Models
+        if (!isSuccess && OPENROUTER_API_KEY) {
+            const fallbackModels = [
+                "nvidia/nemotron-3.5-lightning:free",
+                "inclusionai/ling-3.0-flash-fin:free",
+                "minimax/minimax-m2.7:free",
+                "google/gemma-4-31b-it:free"
+            ];
+
+            for (const fbModel of fallbackModels) {
+                try {
+                    const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://autoworx.ph",
+                            "X-Title": "Autoworx Inventory System"
+                        },
+                        body: JSON.stringify({
+                            "model": fbModel,
+                            "stream": stream ?? false,
+                            "messages": messagesPayload
+                        })
+                    });
+
+                    if (openRouterRes.ok) {
+                        response = openRouterRes;
+                        isSuccess = true;
+                        break;
+                    } else {
+                        console.warn(`[Primer AI] OpenRouter fallback ${fbModel} returned ${openRouterRes.status}`);
+                    }
+                } catch (orErr) {
+                    console.warn(`[Primer AI] OpenRouter ${fbModel} connection error:`, orErr);
+                }
+            }
+        }
+
+        if (!response || !isSuccess) {
+            return NextResponse.json(
+                { error: "AI service is currently busy. Please try again in a moment." },
+                { status: 503 }
+            );
         }
 
         if (stream && response.body) {

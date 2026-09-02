@@ -1540,6 +1540,7 @@ export default function AdminSalesPage() {
                         <option value="Bank Transfer">Bank Transfer</option>
                         <option value="Charge">Charge (Receivable)</option>
                         <option value="Delivery">Delivery (Receivable)</option>
+                        <option value="Cancelled">Cancelled</option>
                       </select>
                     </div>
                   </div>

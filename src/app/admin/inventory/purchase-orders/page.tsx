@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Plus, Printer, Loader2,
   FileText, Clock, CheckCircle2, AlertCircle, Building2,
-  ArrowRight, Pencil, Trash2, X, AlertTriangle, Save, PackagePlus, Minus
+  ArrowRight, Pencil, Trash2, X, AlertTriangle, Save, PackagePlus, Minus, ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -74,6 +74,11 @@ export default function PurchaseOrdersPage() {
   const [editDate, setEditDate] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Detail Modal
+  const [detailModalPo, setDetailModalPo] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
   // Edit items
   const [editItems, setEditItems] = useState<POItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -91,6 +96,70 @@ export default function PurchaseOrdersPage() {
       if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
       const { data, error } = await query;
       if (error) throw error;
+
+      // Auto-sync Draft (pending) POs with latest master inventory costs
+      try {
+        const draftOrders = ((data as any[]) || []).filter(o => o.status === "pending");
+        if (draftOrders.length > 0) {
+          const branchIds = Array.from(new Set(draftOrders.map(o => o.branch_id).filter(Boolean)));
+          let invQ = supabase.from("inventory").select("product_name, cost, branch_id");
+          if (branchIds.length > 0) invQ = invQ.in("branch_id", branchIds);
+          const { data: invItems } = await invQ;
+
+          if (invItems && invItems.length > 0) {
+            const costMap = new Map<string, number>();
+            invItems.forEach(it => {
+              if (it.product_name && it.cost !== null && it.cost !== undefined) {
+                costMap.set(`${it.branch_id || ''}_${it.product_name.toLowerCase().trim()}`, Number(it.cost));
+                if (!costMap.has(it.product_name.toLowerCase().trim())) {
+                  costMap.set(it.product_name.toLowerCase().trim(), Number(it.cost));
+                }
+              }
+            });
+
+            // Check draft items in background
+            const draftIds = draftOrders.map(o => o.id);
+            const { data: poItems } = await supabase
+              .from("purchase_order_items")
+              .select("id, po_id, product_name, quantity, unit_price")
+              .in("po_id", draftIds);
+
+            if (poItems && poItems.length > 0) {
+              const poMap = new Map(draftOrders.map(o => [o.id, o]));
+              const totalsByPo = new Map<string, number>();
+              
+              for (const pItem of poItems) {
+                const poObj = poMap.get(pItem.po_id);
+                const bKey = `${poObj?.branch_id || ''}_${pItem.product_name.toLowerCase().trim()}`;
+                const nKey = pItem.product_name.toLowerCase().trim();
+                const mCost = costMap.has(bKey) ? costMap.get(bKey)! : costMap.get(nKey);
+
+                const currentP = Number(pItem.unit_price) || 0;
+                const finalCost = mCost !== undefined && mCost >= 0 ? mCost : currentP;
+
+                if (mCost !== undefined && Math.abs(currentP - mCost) > 0.001) {
+                  // Update item cost in DB
+                  await supabase.from("purchase_order_items").update({ unit_price: mCost }).eq("id", pItem.id);
+                }
+
+                const lineTotal = (Number(pItem.quantity) || 0) * finalCost;
+                totalsByPo.set(pItem.po_id, (totalsByPo.get(pItem.po_id) || 0) + lineTotal);
+              }
+
+              for (const [pId, calcTot] of totalsByPo.entries()) {
+                const poObj = poMap.get(pId);
+                if (poObj && Math.abs((Number(poObj.total_amount) || 0) - calcTot) > 0.01) {
+                  await supabase.from("purchase_orders").update({ total_amount: calcTot }).eq("id", pId);
+                  poObj.total_amount = calcTot;
+                }
+              }
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.error("Auto-sync draft PO error:", syncErr);
+      }
+
       return (data as PurchaseOrder[]) || [];
     },
     staleTime: 0,
@@ -115,6 +184,111 @@ export default function PurchaseOrdersPage() {
     };
   }, [selectedBranchId, queryClient, refetch]);
 
+  // ─── PO Detail Modal ───────────────────────────────────────────────────────
+  const openPoDetail = async (po: PurchaseOrder) => {
+    try {
+      setLoadingDetail(true);
+      setDetailModalPo(po);
+
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("*, supplier:suppliers(name, tin, address, contact_person, contact_number), branch:branches(name, address), items:purchase_order_items(*)")
+        .eq("id", po.id)
+        .single();
+
+      let poData = data;
+      if (error) {
+        console.error("PO details fetch error:", error);
+        const { data: directPo } = await supabase
+          .from("purchase_orders")
+          .select("*, supplier:suppliers(name), branch:branches(name)")
+          .eq("id", po.id)
+          .single();
+        const { data: directItems } = await supabase
+          .from("purchase_order_items")
+          .select("*")
+          .eq("po_id", po.id);
+        poData = { ...(directPo || po), items: directItems || [] };
+      }
+
+      // Ensure items array is always populated
+      if (!poData.items || poData.items.length === 0) {
+        const { data: directItems } = await supabase
+          .from("purchase_order_items")
+          .select("*")
+          .eq("po_id", po.id);
+        if (directItems && directItems.length > 0) {
+          poData.items = directItems;
+        }
+      }
+
+      // If status is Draft (pending), dynamically ensure items reflect latest master inventory cost
+      if (poData && poData.status === "pending" && poData.items && poData.items.length > 0) {
+        const { data: invData } = await supabase
+          .from("inventory")
+          .select("product_name, cost")
+          .eq("branch_id", poData.branch_id || "");
+
+        if (invData && invData.length > 0) {
+          const cMap = new Map(invData.map(i => [i.product_name.toLowerCase().trim(), Number(i.cost)]));
+          let dynTotal = 0;
+          poData.items = poData.items.map((item: any) => {
+            const mCost = cMap.get(item.product_name.toLowerCase().trim());
+            const unitPrice = mCost !== undefined && mCost >= 0 ? mCost : Number(item.unit_price || 0);
+            dynTotal += (Number(item.quantity) || 0) * unitPrice;
+            return { ...item, unit_price: unitPrice };
+          });
+          poData.total_amount = dynTotal;
+        }
+      }
+
+      setDetailModalPo(poData);
+    } catch (err) {
+      console.error("Error opening PO details:", err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleQuickStatusChange = async (newStatus: PurchaseOrder["status"]) => {
+    if (!detailModalPo) return;
+    try {
+      setUpdatingStatus(true);
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({ status: newStatus })
+        .eq("id", detailModalPo.id);
+      if (error) throw error;
+      
+      setDetailModalPo((prev: any) => ({ ...prev, status: newStatus }));
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update status.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const [updatingPoId, setUpdatingPoId] = useState<string | null>(null);
+
+  const handleInlineStatusChange = async (poId: string, newStatus: PurchaseOrder["status"]) => {
+    try {
+      setUpdatingPoId(poId);
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({ status: newStatus })
+        .eq("id", poId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update status.");
+    } finally {
+      setUpdatingPoId(null);
+    }
+  };
+
   // ─── Print ─────────────────────────────────────────────────────────────────
   const handleViewDoc = async (id: string) => {
     try {
@@ -124,6 +298,27 @@ export default function PurchaseOrdersPage() {
         .select("*, supplier:suppliers(name, tin), branch:branches(name, address), items:purchase_order_items(*)")
         .eq("id", id).single();
       if (error) throw error;
+
+      // If status is Draft (pending), dynamically ensure items reflect latest master inventory cost
+      if (data && data.status === "pending" && data.items && data.items.length > 0) {
+        const { data: invData } = await supabase
+          .from("inventory")
+          .select("product_name, cost")
+          .eq("branch_id", data.branch_id || "");
+
+        if (invData && invData.length > 0) {
+          const cMap = new Map(invData.map(i => [i.product_name.toLowerCase().trim(), Number(i.cost)]));
+          let dynTotal = 0;
+          data.items = data.items.map((item: any) => {
+            const mCost = cMap.get(item.product_name.toLowerCase().trim());
+            const unitPrice = mCost !== undefined && mCost >= 0 ? mCost : Number(item.unit_price || 0);
+            dynTotal += (Number(item.quantity) || 0) * unitPrice;
+            return { ...item, unit_price: unitPrice };
+          });
+          data.total_amount = dynTotal;
+        }
+      }
+
       setDetailedPo(data);
       setViewingPo(true);
     } catch (e) {
@@ -157,32 +352,8 @@ export default function PurchaseOrdersPage() {
     setShowItemPicker(false);
     setItemSearch("");
 
-    // Load existing items
-    try {
-      setLoadingItems(true);
-      const { data: items, error } = await supabase
-        .from("purchase_order_items")
-        .select("*")
-        .eq("po_id", po.id);
-      
-      if (error) {
-        console.error("PO Items Fetch Error:", error);
-        alert(`Error loading items: ${error.message}`);
-        return;
-      }
-
-      setEditItems((items || []).map(i => ({
-        id: i.id,
-        product_name: i.product_name,
-        quantity: i.quantity,
-        unit: i.unit,
-        unit_price: i.unit_price,
-      })));
-    } catch (e) { 
-      console.error("Open Edit Exception (Items):", e);
-    } finally { 
-      setLoadingItems(false); 
-    }
+    let fetchedItems: any[] = [];
+    let fetchedInventory: InventoryProduct[] = [];
 
     // Load master inventory for picker (filtered by the PO's branch)
     try {
@@ -196,21 +367,54 @@ export default function PurchaseOrdersPage() {
       }
 
       const { data, error } = await query;
-      
-      if (error) {
-        console.error("Inventory Fetch Error:", error);
-      }
+      if (error) console.error("Inventory Fetch Error:", error);
 
-      // Unique product names for a clean picker
       const uniqueMap = new Map();
       (data || []).forEach(item => {
         if (!uniqueMap.has(item.product_name)) {
           uniqueMap.set(item.product_name, item);
         }
       });
-      setInventoryProducts(Array.from(uniqueMap.values()));
+      fetchedInventory = Array.from(uniqueMap.values());
+      setInventoryProducts(fetchedInventory);
     } catch (e) { 
       console.error("Open Edit Exception (Inventory):", e); 
+    }
+
+    // Load existing items
+    try {
+      setLoadingItems(true);
+      const { data: items, error } = await supabase
+        .from("purchase_order_items")
+        .select("*")
+        .eq("po_id", po.id);
+      
+      if (error) {
+        console.error("PO Items Fetch Error:", error);
+        alert(`Error loading items: ${error.message}`);
+        return;
+      }
+      fetchedItems = items || [];
+
+      // If PO is in DRAFT (pending) status, automatically sync unit_price with master inventory cost!
+      const costLookup = new Map(fetchedInventory.map(i => [i.product_name.toLowerCase().trim(), Number(i.cost)]));
+
+      setEditItems(fetchedItems.map(i => {
+        const nameKey = i.product_name.toLowerCase().trim();
+        const masterCost = po.status === "pending" && costLookup.has(nameKey) ? costLookup.get(nameKey)! : Number(i.unit_price || 0);
+
+        return {
+          id: i.id,
+          product_name: i.product_name,
+          quantity: i.quantity,
+          unit: i.unit,
+          unit_price: masterCost,
+        };
+      }));
+    } catch (e) { 
+      console.error("Open Edit Exception (Items):", e);
+    } finally { 
+      setLoadingItems(false); 
     }
   };
 
@@ -377,12 +581,20 @@ export default function PurchaseOrdersPage() {
               {filtered.map((po) => {
                 const cfg = statusConfig[po.status] || statusConfig.pending;
                 return (
-                  <tr key={po.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4"><span className="text-sm font-semibold text-slate-900 font-mono">{po.po_number}</span></td>
+                  <tr
+                    key={po.id}
+                    onClick={() => openPoDetail(po)}
+                    className="hover:bg-blue-50/40 cursor-pointer transition-colors group"
+                  >
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-slate-900 group-hover:text-[#1e40af] font-mono transition-colors">
+                        {po.po_number}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-slate-300 shrink-0" />
-                        <span className="text-sm text-slate-700 truncate max-w-[180px]">{po.supplier?.name}</span>
+                        <Building2 className="w-4 h-4 text-slate-300 group-hover:text-[#1e40af]/60 shrink-0 transition-colors" />
+                        <span className="text-sm text-slate-700 font-medium truncate max-w-[180px]">{po.supplier?.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
@@ -391,25 +603,59 @@ export default function PurchaseOrdersPage() {
                     <td className="px-6 py-4 text-sm text-slate-700 font-medium">
                       {po.terms || "—"}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${cfg.bg} ${cfg.text}`}>
-                        <cfg.icon className="w-3 h-3" />{cfg.label}
-                      </span>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative inline-flex items-center">
+                        <select
+                          value={po.status}
+                          onChange={(e) => handleInlineStatusChange(po.id, e.target.value as PurchaseOrder["status"])}
+                          disabled={updatingPoId === po.id}
+                          className={`appearance-none cursor-pointer pl-6 pr-6 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border-0 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#1e40af]/30 hover:shadow hover:opacity-90 ${cfg.bg} ${cfg.text}`}
+                          title="Click to change status"
+                        >
+                          {STATUS_OPTIONS.map(s => (
+                            <option key={s} value={s} className="bg-white text-slate-800 font-semibold normal-case">
+                              {statusConfig[s]?.label || s}
+                            </option>
+                          ))}
+                        </select>
+                        {updatingPoId === po.id ? (
+                          <Loader2 className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 animate-spin ${cfg.text}`} />
+                        ) : (
+                          <cfg.icon className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none ${cfg.text}`} />
+                        )}
+                        <ChevronDown className={`w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 ${cfg.text}`} />
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900">₱{po.total_amount.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold text-slate-900 font-mono">₱{po.total_amount.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button disabled={fetchingDoc} onClick={() => handleViewDoc(po.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50">
+                        <button
+                          disabled={fetchingDoc}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDoc(po.id);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-50"
+                        >
                           {fetchingDoc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Printer className="w-3 h-3" />}
                           Print
                         </button>
-                        <button onClick={() => openEdit(po)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-[10px] font-semibold transition-colors">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(po);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-[10px] font-semibold transition-colors"
+                        >
                           <Pencil className="w-3 h-3" />Edit
                         </button>
-                        <button onClick={() => setDeleteTarget(po)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-[10px] font-semibold transition-colors">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(po);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-[10px] font-semibold transition-colors"
+                        >
                           <Trash2 className="w-3 h-3" />Delete
                         </button>
                       </div>
@@ -429,15 +675,37 @@ export default function PurchaseOrdersPage() {
           {filtered.map((po) => {
             const cfg = statusConfig[po.status] || statusConfig.pending;
             return (
-              <div key={po.id} className="p-4 space-y-3">
+              <div
+                key={po.id}
+                onClick={() => openPoDetail(po)}
+                className="p-4 space-y-3 cursor-pointer hover:bg-blue-50/30 transition-colors"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-slate-900 font-mono">{po.po_number}</p>
                     <p className="text-xs text-slate-500 mt-0.5">{po.supplier?.name}</p>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide shrink-0 ${cfg.bg} ${cfg.text}`}>
-                    <cfg.icon className="w-3 h-3" />{cfg.label}
-                  </span>
+                  <div onClick={(e) => e.stopPropagation()} className="relative inline-flex items-center shrink-0">
+                    <select
+                      value={po.status}
+                      onChange={(e) => handleInlineStatusChange(po.id, e.target.value as PurchaseOrder["status"])}
+                      disabled={updatingPoId === po.id}
+                      className={`appearance-none cursor-pointer pl-6 pr-6 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border-0 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#1e40af]/30 hover:shadow hover:opacity-90 ${cfg.bg} ${cfg.text}`}
+                      title="Click to change status"
+                    >
+                      {STATUS_OPTIONS.map(s => (
+                        <option key={s} value={s} className="bg-white text-slate-800 font-semibold normal-case">
+                          {statusConfig[s]?.label || s}
+                        </option>
+                      ))}
+                    </select>
+                    {updatingPoId === po.id ? (
+                      <Loader2 className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 animate-spin ${cfg.text}`} />
+                    ) : (
+                      <cfg.icon className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none ${cfg.text}`} />
+                    )}
+                    <ChevronDown className={`w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 ${cfg.text}`} />
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -445,17 +713,33 @@ export default function PurchaseOrdersPage() {
                     {po.terms && <p className="text-[10px] text-slate-400 mt-0.5">{po.terms}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-slate-900">₱{po.total_amount.toLocaleString()}</p>
-                    <button disabled={fetchingDoc} onClick={() => handleViewDoc(po.id)}
-                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors disabled:opacity-50">
+                    <p className="text-sm font-bold text-slate-900 font-mono">₱{po.total_amount.toLocaleString()}</p>
+                    <button
+                      disabled={fetchingDoc}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewDoc(po.id);
+                      }}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors disabled:opacity-50"
+                    >
                       {fetchingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => openEdit(po)}
-                      className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(po);
+                      }}
+                      className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                    >
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setDeleteTarget(po)}
-                      className="p-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(po);
+                      }}
+                      className="p-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -699,6 +983,215 @@ export default function PurchaseOrdersPage() {
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white bg-[#1e40af] hover:bg-[#1e3a8a] transition-colors disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ─── PO Details Modal ─────────────────────────────────────────────────── */}
+      {detailModalPo && (
+        <div className="fixed inset-0 z-[250] flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl my-8 flex flex-col border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* Modal Header Banner */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/15">
+                  <FileText className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold font-mono tracking-tight text-white">{detailModalPo.po_number}</h2>
+                    {detailModalPo.branch?.name && (
+                      <span className="px-2 py-0.5 rounded-md bg-white/10 text-white/80 text-[10px] font-semibold uppercase">
+                        {detailModalPo.branch.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{detailModalPo.supplier?.name || "No Supplier Assigned"}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleViewDoc(detailModalPo.id)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-semibold transition-all border border-white/10 active:scale-95"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print Official PO
+                </button>
+                <button
+                  onClick={() => setDetailModalPo(null)}
+                  className="p-2 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6 flex-1 overflow-y-auto max-h-[calc(85vh-160px)]">
+              
+              {/* Metadata Cards & Status Switcher */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                {/* Date & Terms Card */}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Order Details</span>
+                  <div className="text-xs text-slate-700 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Date:</span>
+                      <span className="font-semibold text-slate-900">
+                        {detailModalPo.order_date ? new Date(detailModalPo.order_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Terms:</span>
+                      <span className="font-semibold text-slate-900">{detailModalPo.terms || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Supplier Info Card */}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Supplier</span>
+                  <p className="text-xs font-bold text-slate-900 truncate">{detailModalPo.supplier?.name || "—"}</p>
+                  {detailModalPo.supplier?.tin && (
+                    <p className="text-[10px] text-slate-500 mt-0.5 font-mono">TIN: {detailModalPo.supplier.tin}</p>
+                  )}
+                </div>
+
+                {/* Status Switcher Card */}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3.5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
+                    {updatingStatus && <Loader2 className="w-3 h-3 text-[#1e40af] animate-spin" />}
+                  </div>
+                  <select
+                    value={detailModalPo.status}
+                    onChange={(e) => handleQuickStatusChange(e.target.value as any)}
+                    disabled={updatingStatus}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1e40af]/30"
+                  >
+                    {STATUS_OPTIONS.map(s => (
+                      <option key={s} value={s}>{statusConfig[s]?.label || s}</option>
+                    ))}
+                  </select>
+                </div>
+
+              </div>
+
+              {/* Items Section */}
+              <div>
+                <div className="flex items-center justify-between mb-2.5">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <PackagePlus className="w-3.5 h-3.5 text-[#1e40af]" />
+                    Order Line Items ({detailModalPo.items?.length || 0})
+                  </h3>
+                  {detailModalPo.status === "pending" && (
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                      ✓ Auto-synced with Master Inventory Cost
+                    </span>
+                  )}
+                </div>
+
+                {loadingDetail ? (
+                  <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
+                    <Loader2 className="w-6 h-6 text-[#1e40af] animate-spin" />
+                    <span className="text-xs">Loading items...</span>
+                  </div>
+                ) : !detailModalPo.items || detailModalPo.items.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                    No items in this purchase order.
+                  </div>
+                ) : (
+                  <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-4 py-2.5 w-10">#</th>
+                          <th className="px-4 py-2.5">Product Description</th>
+                          <th className="px-3 py-2.5 text-center w-28">Qty & Unit</th>
+                          <th className="px-4 py-2.5 text-right w-28">Unit Cost</th>
+                          <th className="px-4 py-2.5 text-right w-32">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {detailModalPo.items.map((item: any, idx: number) => {
+                          const lineTotal = (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+                          return (
+                            <tr key={item.id || idx} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="px-4 py-3 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{item.product_name}</td>
+                              <td className="px-3 py-3 text-center">
+                                <span className="inline-flex items-center gap-1 font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md text-[11px]">
+                                  {item.quantity} {item.unit || "pc"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right text-slate-600 font-mono">
+                                ₱{Number(item.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-slate-900 font-mono">
+                                ₱{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Financial Summary Card */}
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-6 text-xs text-slate-500">
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-slate-400">Total Items</span>
+                    <span className="text-sm font-bold text-slate-800">{detailModalPo.items?.length || 0} Products</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold text-slate-400">Total Quantity</span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {(detailModalPo.items || []).reduce((s: number, i: any) => s + (Number(i.quantity) || 0), 0)} Units
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="block text-[10px] uppercase font-bold text-slate-400">Grand Total Amount</span>
+                  <span className="text-2xl font-black text-emerald-600 font-manrope tracking-tight">
+                    ₱{Number(detailModalPo.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
+              <button
+                onClick={() => {
+                  const target = detailModalPo;
+                  setDetailModalPo(null);
+                  openEdit(target);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-semibold transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Full Order & Line Items
+              </button>
+
+              <button
+                onClick={() => setDetailModalPo(null)}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+              >
+                Close
               </button>
             </div>
 
