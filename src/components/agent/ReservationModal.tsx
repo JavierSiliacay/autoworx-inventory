@@ -26,7 +26,7 @@ interface ReservationModalProps {
 export default function ReservationModal({ item, isOpen, onClose }: ReservationModalProps) {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [requestedQty, setRequestedQty] = useState(1);
+  const [requestedQty, setRequestedQty] = useState<number | string>(1);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -39,6 +39,7 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
   // Reset states when modal opens/item changes
   React.useEffect(() => {
     if (item) {
+      setRequestedQty(1);
       if (Array.isArray(item.branches) && item.branches.length > 0) {
         setSelectedBranch(item.branches[0].name);
       } else if (item.branches && !Array.isArray(item.branches)) {
@@ -69,8 +70,9 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
       setErrorMsg("Philippine phone numbers must follow 09XX-XXX-XXXX format (e.g. 0926-154-6478).");
       return;
     }
-    if (requestedQty <= 0 || requestedQty > item.quantity) {
-      setErrorMsg(`Please enter a quantity between 1 and ${item.quantity}.`);
+    const numQty = Number(requestedQty) || 0;
+    if (numQty <= 0 || numQty > item.quantity) {
+      setErrorMsg(`Please enter a quantity between 1 and ${item.quantity.toLocaleString()}.`);
       return;
     }
 
@@ -78,32 +80,38 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
     setErrorMsg(null);
 
     try {
-      const newReservation = {
+      const dbReservation: Record<string, any> = {
         id: "res_" + Date.now(),
-        agent_id: session?.user?.id || undefined,
+        agent_id: (session?.user as any)?.id || undefined,
         item_id: item.id,
         product_name: item.product_name,
         branch_name: selectedBranch,
         client_name: clientName,
         client_phone: clientPhone,
-        quantity: requestedQty,
+        quantity: numQty,
         notes: notes,
         status: "pending_approval",
         created_at: new Date().toISOString()
       };
 
-      // Always save locally so it displays instantly on agent & admin UI
+      // Also keep unit in local memory for instant preview
+      const localReservation = {
+        ...dbReservation,
+        unit: item.unit || undefined
+      };
+
+      // Save locally
       try {
         const existing = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
-        localStorage.setItem("autoworx_agent_reservations", JSON.stringify([newReservation, ...existing]));
+        localStorage.setItem("autoworx_agent_reservations", JSON.stringify([localReservation, ...existing]));
       } catch (err) {
         console.warn("LocalStorage save error:", err);
       }
 
-      // Try inserting into Supabase table
-      const { error } = await supabase.from("agent_reservations").insert([newReservation]);
+      // Insert cleanly into Supabase table
+      const { error } = await supabase.from("agent_reservations").insert([dbReservation]);
       if (error && error.code !== "42P01") {
-        console.warn("Supabase reservation insert notice:", error);
+        console.error("Supabase reservation insert error:", error);
       }
 
       // Log activity event for Admin Dashboard audit
@@ -155,11 +163,11 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
         {isSuccess ? (
           <div className="py-8 flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-4 border border-emerald-200 shadow-inner">
-              <CheckCircle2 className="w-10 h-10 animate-bounce" />
+              <CheckCircle2 className="w-10 h-10" />
             </div>
             <h3 className="text-xl font-black text-slate-900 mb-2">Reservation Submitted!</h3>
             <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-              Your request for <span className="font-bold text-slate-800">{requestedQty}x {item.product_name}</span> has been sent to branch management.
+              Your request for <span className="font-bold text-slate-800">{requestedQty}{item.unit ? ` ${item.unit}` : "x"} {item.product_name}</span> has been sent to branch management.
             </p>
           </div>
         ) : (
@@ -255,13 +263,22 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
                     Quantity <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    min={1}
-                    max={item.quantity}
-                    required
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="1"
                     value={requestedQty}
-                    onChange={(e) => setRequestedQty(parseInt(e.target.value) || 1)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || /^\d*$/.test(val)) {
+                        setRequestedQty(val);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (requestedQty === "" || Number(requestedQty) < 1) {
+                        setRequestedQty(1);
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white font-mono"
                   />
                 </div>
               </div>

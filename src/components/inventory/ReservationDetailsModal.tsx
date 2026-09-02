@@ -20,12 +20,14 @@ import CancelReservationModal from "@/components/agent/CancelReservationModal";
 
 interface Reservation {
   id: string;
+  item_id?: string;
   agent_id?: string;
   product_name: string;
   branch_name: string;
   client_name: string;
   client_phone?: string;
   quantity: number;
+  unit?: string;
   notes?: string;
   status: "pending_approval" | "approved" | "cancelled" | "declined";
   created_at?: string;
@@ -57,6 +59,42 @@ export default function ReservationDetailsModal({
   const [agent, setAgent] = useState<Agent | null>(agentData || null);
   const [loadingAgent, setLoadingAgent] = useState(!agentData);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [resolvedUnit, setResolvedUnit] = useState<string | null>(reservation.unit || null);
+
+  // Fetch unit from inventory if missing on reservation record
+  useEffect(() => {
+    if (reservation.unit) {
+      setResolvedUnit(reservation.unit);
+      return;
+    }
+    async function fetchUnit() {
+      try {
+        if (reservation.item_id) {
+          const { data } = await supabase
+            .from('inventory')
+            .select('unit')
+            .eq('id', reservation.item_id)
+            .maybeSingle();
+          if (data?.unit) {
+            setResolvedUnit(data.unit);
+            return;
+          }
+        }
+        if (reservation.product_name) {
+          const { data } = await supabase
+            .from('inventory')
+            .select('unit')
+            .eq('product_name', reservation.product_name)
+            .limit(1)
+            .maybeSingle();
+          if (data?.unit) {
+            setResolvedUnit(data.unit);
+          }
+        }
+      } catch (err) {}
+    }
+    fetchUnit();
+  }, [reservation.unit, reservation.item_id, reservation.product_name]);
 
   // Fetch agent if we don't have it but we have the ID
   useEffect(() => {
@@ -220,8 +258,11 @@ export default function ReservationDetailsModal({
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">
                   Quantity Requested
                 </label>
-                <div className="text-xl font-black text-blue-600">
-                  {reservation.quantity} <span className="text-sm font-bold text-slate-500">units</span>
+                <div className="text-xl font-black text-blue-600 flex items-baseline gap-1.5">
+                  <span>{reservation.quantity.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-slate-500 uppercase">
+                    {resolvedUnit || "units"}
+                  </span>
                 </div>
               </div>
               

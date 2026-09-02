@@ -33,6 +33,7 @@ interface AgentReservation {
   client_name: string;
   client_phone: string;
   quantity: number;
+  unit?: string;
   notes?: string;
   status: "pending_approval" | "approved" | "cancelled" | "declined";
   created_at?: string;
@@ -79,19 +80,42 @@ export default function AgentReservationsPage() {
         .select("*")
         .neq('status', 'deleted');
 
-      // Filter by agent's branch assignment
-      if (userBranchIds.length > 0) {
-        query = query.in("branch_id", userBranchIds);
+      const userRole = (session?.user as any)?.role;
+      const userId = (session?.user as any)?.id;
+
+      // Filter by agent if they are a sales agent
+      if (userRole === 'sales_agent' && userId) {
+        query = query.eq('agent_id', userId);
       }
 
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (!error && data) {
-        // Completely overwrite combined with fresh data from database
-        combined = data as AgentReservation[];
-        // Save the fresh data to local storage to keep it in sync
+        const missingUnit = data.some((d: any) => !d.unit);
+        let enrichedData = data as AgentReservation[];
+
+        if (missingUnit) {
+          try {
+            const { data: invUnits } = await supabase
+              .from('inventory')
+              .select('id, product_name, unit');
+            if (invUnits) {
+              const unitMap: Record<string, string> = {};
+              invUnits.forEach((inv: any) => {
+                if (inv.id && inv.unit) unitMap[inv.id] = inv.unit;
+                if (inv.product_name && inv.unit) unitMap[inv.product_name] = inv.unit;
+              });
+              enrichedData = (data as any[]).map((d: any) => ({
+                ...d,
+                unit: d.unit || (d.item_id ? unitMap[d.item_id] : undefined) || (d.product_name ? unitMap[d.product_name] : undefined) || undefined
+              }));
+            }
+          } catch (e) {}
+        }
+
+        combined = enrichedData;
         try {
-          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(data));
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(enrichedData));
         } catch (e) {
           console.warn("Local storage write error:", e);
         }
@@ -124,19 +148,26 @@ export default function AgentReservationsPage() {
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new as AgentReservation;
             setReservations(prev => {
-              const next = prev.map(r => r.id === updated.id ? updated : r);
+              const next = prev.map(r => r.id === updated.id ? { ...r, ...updated, unit: r.unit || updated.unit } : r);
               localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
               return next;
             });
+          } else if (payload.eventType === 'INSERT') {
+            fetchReservations();
           }
         }
       )
       .subscribe();
 
+    const pollInterval = setInterval(() => {
+      fetchReservations();
+    }, 10000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
-  }, [session, userBranchIds.length]);
+  }, [session]);
 
   const handleCancelClick = (item: AgentReservation) => {
     setCancellingReservation(item);
@@ -446,8 +477,10 @@ export default function AgentReservationsPage() {
                     <div className="flex items-center gap-2 text-slate-700">
                       <Package className="w-4 h-4 text-slate-400 shrink-0" />
                       <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Quantity</span>
-                        <span className="font-extrabold text-blue-600">{item.quantity} units</span>
+                        <span className="font-extrabold text-blue-600 flex items-baseline gap-1">
+                          <span>{item.quantity?.toLocaleString?.() ?? item.quantity}</span>
+                          <span className="text-xs uppercase font-bold text-slate-500">{item.unit || "units"}</span>
+                        </span>
                       </div>
                     </div>
                   </div>

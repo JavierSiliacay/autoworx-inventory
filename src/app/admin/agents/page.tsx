@@ -30,6 +30,26 @@ export default function AgentsPage() {
   useEffect(() => {
     fetchAgents();
     fetchReservations();
+
+    const channel = supabase
+      .channel('admin-reservations-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'agent_reservations' },
+        () => {
+          fetchReservations();
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(() => {
+      fetchReservations();
+    }, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   async function fetchReservations() {
@@ -51,11 +71,32 @@ export default function AgentsPage() {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        // Completely overwrite combined with fresh data from database
-        combined = data;
-        // Save the fresh data to local storage to keep it in sync
+        // Enrich any reservations missing unit
+        const missingUnit = data.some((d: any) => !d.unit);
+        let enrichedData = data;
+
+        if (missingUnit) {
+          try {
+            const { data: invUnits } = await supabase
+              .from('inventory')
+              .select('id, product_name, unit');
+            if (invUnits) {
+              const unitMap: Record<string, string> = {};
+              invUnits.forEach((inv: any) => {
+                if (inv.id && inv.unit) unitMap[inv.id] = inv.unit;
+                if (inv.product_name && inv.unit) unitMap[inv.product_name] = inv.unit;
+              });
+              enrichedData = data.map((d: any) => ({
+                ...d,
+                unit: d.unit || (d.item_id ? unitMap[d.item_id] : undefined) || (d.product_name ? unitMap[d.product_name] : undefined) || undefined
+              }));
+            }
+          } catch (e) {}
+        }
+
+        combined = enrichedData;
         try {
-          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(data));
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(enrichedData));
         } catch (e) {
           console.warn("Local storage write error:", e);
         }
@@ -161,8 +202,7 @@ export default function AgentsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('users')
-        .select('*')
-        .in('role', ['sales_agent', 'pending_agent']);
+        .select('*');
 
       if (error) throw error;
       setAgents(data || []);
@@ -281,8 +321,8 @@ export default function AgentsPage() {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  {["Product & Branch", "Client Details", "Qty & Notes", "Status", "Actions"].map((h, i) => (
-                    <th key={h} className={`px-6 py-5 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${i === 3 ? "text-center" : i === 4 ? "text-right" : ""}`}>
+                  {["Product & Branch", "Client Details", "Qty & Notes", "Submitted By", "Status", "Actions"].map((h, i) => (
+                    <th key={h} className={`px-6 py-5 text-[10px] font-manrope font-bold uppercase tracking-widest text-slate-400 ${i === 4 ? "text-center" : i === 5 ? "text-right" : ""}`}>
                       {h}
                     </th>
                   ))}
@@ -291,7 +331,7 @@ export default function AgentsPage() {
               <tbody className="divide-y divide-slate-50 text-xs font-medium text-slate-700">
                 {reservations.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400 font-medium text-sm">
+                    <td colSpan={6} className="py-12 text-center text-slate-400 font-medium text-sm">
                       No stock reservation requests submitted yet.
                     </td>
                   </tr>
@@ -312,6 +352,12 @@ export default function AgentsPage() {
                     <td className="px-6 py-4">
                       <div className="h-4 bg-slate-200 rounded w-12 mb-2"></div>
                       <div className="h-8 bg-slate-200 rounded w-full max-w-[150px]"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-slate-200"></div>
+                        <div className="h-4 bg-slate-200 rounded w-20"></div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="h-6 bg-slate-200 rounded-full w-24 mx-auto"></div>
@@ -335,8 +381,37 @@ export default function AgentsPage() {
                       <div className="text-[11px] text-slate-400">{r.client_phone || "No phone provided"}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-extrabold text-slate-900">{r.quantity} unit(s)</div>
+                      <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                        <span>{r.quantity?.toLocaleString?.() ?? r.quantity}</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase">
+                          {r.unit || "unit(s)"}
+                        </span>
+                      </div>
                       {r.notes && <div className="text-[11px] text-slate-500 italic max-w-[200px] truncate">{r.notes}</div>}
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const agent = agents.find(a => a.id === r.agent_id);
+                        const agentName = agent?.name || r.agent_name || (r.agent_id ? "Sales Agent" : "Direct / Walk-in");
+                        const agentEmail = agent?.email || "";
+                        const agentImage = agent?.image;
+
+                        return (
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-xs shrink-0 overflow-hidden border border-slate-200">
+                              {agentImage ? (
+                                <img src={agentImage} alt={agentName} className="w-full h-full object-cover" />
+                              ) : (
+                                agentName.charAt(0).toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0 max-w-[150px]">
+                              <div className="font-bold text-slate-900 text-xs truncate">{agentName}</div>
+                              {agentEmail && <div className="text-[10px] text-slate-400 truncate">{agentEmail}</div>}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${

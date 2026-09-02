@@ -12,6 +12,7 @@ export interface AgentReservation {
   client_name: string;
   client_phone: string;
   quantity: number;
+  unit?: string;
   notes?: string;
   status: "pending_approval" | "approved" | "cancelled" | "declined";
   created_at?: string;
@@ -32,7 +33,7 @@ export default function EditReservationModal({
 }: EditReservationModalProps) {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [requestedQty, setRequestedQty] = useState(1);
+  const [requestedQty, setRequestedQty] = useState<number | string>(1);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,7 +70,8 @@ export default function EditReservationModal({
       return;
     }
 
-    if (requestedQty <= 0) {
+    const numQty = Number(requestedQty) || 0;
+    if (numQty <= 0) {
       setErrorMsg("Please enter a valid quantity of 1 or more.");
       return;
     }
@@ -81,7 +83,7 @@ export default function EditReservationModal({
       ...reservation,
       client_name: clientName.trim(),
       client_phone: clientPhone,
-      quantity: requestedQty,
+      quantity: numQty,
       notes: notes.trim()
     };
 
@@ -203,15 +205,25 @@ export default function EditReservationModal({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                Quantity <span className="text-red-500">*</span>
+                Quantity {reservation.unit ? `(${reservation.unit})` : ""} <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min={1}
-                required
+                type="text"
+                inputMode="numeric"
+                placeholder="1"
                 value={requestedQty}
-                onChange={(e) => setRequestedQty(parseInt(e.target.value) || 1)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^\d*$/.test(val)) {
+                    setRequestedQty(val);
+                  }
+                }}
+                onBlur={() => {
+                  if (requestedQty === "" || Number(requestedQty) < 1) {
+                    setRequestedQty(1);
+                  }
+                }}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-mono"
               />
             </div>
           </div>
