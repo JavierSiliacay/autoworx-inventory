@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788327751471",
+    version: "v1.9.2",
+    date: "2026-09-02",
+    type: "feature",
+    title: "Smarter Search & Real‑Time Updates",
+    description: "Staff can now find receivables faster with tokenized search and a highlighted search bar, undo recent syncs, see who submitted reservations, work with flexible unit quantities, and enjoy instant two‑way updates across the app."
+  },
+
+  {
     id: "update-1788319565066",
     version: "v1.9.2",
     date: "2026-09-02",
