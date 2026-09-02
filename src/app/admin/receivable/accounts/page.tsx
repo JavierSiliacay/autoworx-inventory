@@ -1,14 +1,13 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, CheckCircle2, History, Loader2, AlertCircle, CreditCard, Building2, Trash2 } from "lucide-react";
+import { Search, CheckCircle2, History, Loader2, AlertCircle, CreditCard, Building2, Trash2, Edit2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import SettleAccountModal from "@/components/admin/receivable/SettleAccountModal";
 import EditReceivableModal from "@/components/admin/receivable/EditReceivableModal";
-import { Edit2 } from "lucide-react";
 
 interface ReceivableRecord {
   id: string;
@@ -22,6 +21,28 @@ interface ReceivableRecord {
   date_collected: string | null;
   remarks: string | null;
 }
+
+const HighlightText = ({ text, tokens }: { text: string; tokens: string[] }) => {
+  if (!tokens || tokens.length === 0 || !text) return <>{text || ""}</>;
+  
+  const safeTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${safeTokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        tokens.some(t => t.toLowerCase() === part.toLowerCase()) ? (
+          <span key={i} className="text-[#16a34a] outline outline-[1.5px] outline-[#16a34a]/60 bg-emerald-50 rounded-[3px] px-[1px] shadow-sm font-bold">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
 
 export default function AccountReceivablesPage() {
   const { data: session } = useSession();
@@ -69,10 +90,21 @@ export default function AccountReceivablesPage() {
   const formatNum = (num: any) => Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatDate = (d: any) => d ? new Date(d).toLocaleDateString() : '—';
 
-  const filteredRecords = records.filter(r => 
-    (r.customer_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (r.invoice_no?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
+  const searchTokens = useMemo(() => {
+    return searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  }, [searchTerm]);
+
+  const filteredRecords = useMemo(() => {
+    if (searchTokens.length === 0) return records;
+    return records.filter(r => {
+      const customer = r.customer_name || '';
+      const invoice = r.invoice_no || '';
+      const date = r.date ? new Date(r.date).toLocaleDateString() : '';
+      const status = r.payment_status || (r.remaining_balance <= 0 ? 'cleared' : 'unpaid');
+      const searchableText = `${customer} ${invoice} ${date} ${status}`.toLowerCase();
+      return searchTokens.every(token => searchableText.includes(token));
+    });
+  }, [records, searchTokens]);
 
   const totalOutstanding = records.reduce((acc, r) => acc + Number(r.remaining_balance || 0), 0);
   const totalCollected = records.reduce((acc, r) => acc + Number(r.amount_collected || 0), 0);
@@ -133,16 +165,30 @@ export default function AccountReceivablesPage() {
           </div>
         )}
 
-        <div className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center bg-slate-50/10">
-          <h3 className="text-lg font-manrope font-bold text-[#1e40af] uppercase tracking-tight">Active Receivables</h3>
-          <div className="w-full md:w-auto flex items-center bg-white px-5 py-3 rounded-2xl border border-slate-100 focus-within:ring-4 focus-within:ring-[#1e40af]/5 transition-all shadow-sm">
-              <Search className="w-4 h-4 text-slate-300 mr-3" />
+        <div className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50/10">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-manrope font-bold text-[#1e40af] uppercase tracking-tight">Active Receivables</h3>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e40af] text-xs font-bold font-mono">
+              {filteredRecords.length} of {records.length}
+            </span>
+          </div>
+          <div className="w-full md:w-auto flex items-center bg-white px-4 py-2 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-[#16a34a] focus-within:border-[#16a34a] transition-all shadow-sm">
+              <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
               <input
-                className="bg-transparent border-none outline-none text-sm w-full md:w-64 font-medium"
-                placeholder="Search customer or invoice..."
+                type="text"
+                className="bg-transparent border-none outline-none text-xs w-full md:w-64 font-medium placeholder:text-slate-400"
+                placeholder="Search customer, invoice, date..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors ml-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
           </div>
         </div>
 
@@ -162,7 +208,7 @@ export default function AccountReceivablesPage() {
             <tbody className="divide-y divide-slate-50">
               {filteredRecords.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-10 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
+                  <td colSpan={7} className="px-10 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
                     No records found
                   </td>
                 </tr>
@@ -178,7 +224,12 @@ export default function AccountReceivablesPage() {
                 >
                   <td className="px-10 py-6">
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-[#1e40af] uppercase tracking-widest">{record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (record.invoice_no || 'NO INV')}</span>
+                      <span className="text-xs font-black text-[#1e40af] uppercase tracking-widest">
+                        <HighlightText 
+                          text={record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (record.invoice_no || 'NO INV')} 
+                          tokens={searchTokens} 
+                        />
+                      </span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{formatDate(record.date)}</span>
                     </div>
                   </td>
@@ -187,7 +238,9 @@ export default function AccountReceivablesPage() {
                       <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
                           <Building2 className="w-5 h-5"/>
                       </div>
-                      <span className="text-sm font-extrabold text-[#111827]">{record.customer_name || 'UNKNOWN'}</span>
+                      <span className="text-sm font-extrabold text-[#111827]">
+                        <HighlightText text={record.customer_name || 'UNKNOWN'} tokens={searchTokens} />
+                      </span>
                     </div>
                   </td>
                   <td className="px-10 py-6 text-right">

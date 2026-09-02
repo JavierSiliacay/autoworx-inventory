@@ -34,14 +34,42 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
   const fetchPayments = async () => {
     try {
       setPaymentsLoading(true);
-      const { data, error } = await supabase
+      const { data: payData, error } = await supabase
         .from('receivable_payments')
         .select('*')
         .eq('ar_id', record.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setPayments(data || []);
+
+      // Fetch linked check logs for this AR record to obtain bank, check_no, and check_date
+      let checkMap: Record<string, any> = {};
+      try {
+        const { data: checkData } = await supabase
+          .from('check_logs')
+          .select('id, bank, check_no, check_date, status, check_amount')
+          .eq('ar_id', record.id);
+
+        if (checkData) {
+          checkData.forEach((c: any) => {
+            checkMap[c.id] = c;
+          });
+        }
+      } catch (err) {
+        console.warn("Notice fetching check details:", err);
+      }
+
+      const enriched = (payData || []).map((p: any) => {
+        const linkedCheck = p.check_log_id 
+          ? checkMap[p.check_log_id] 
+          : Object.values(checkMap).find((c: any) => Number(c.check_amount) === Number(p.amount));
+        return {
+          ...p,
+          check_details: linkedCheck || null
+        };
+      });
+
+      setPayments(enriched);
     } catch (e) {
       console.error(e);
     } finally {
@@ -86,17 +114,32 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
     }
   };
 
-  const handleUndoPayment = async (paymentId: string) => {
-    if (!window.confirm("Are you sure you want to undo this payment? This will update the remaining balance.")) return;
+  const handleUndoPayment = async (payment: any) => {
+    if (!window.confirm("Are you sure you want to undo this payment? This will update the remaining balance and delete the linked cheque.")) return;
     
     try {
       setLoading(true);
+
+      // If this payment came from a check log, DELETE the cheque record from check_logs
+      if (payment.check_log_id) {
+        await supabase
+          .from('check_logs')
+          .delete()
+          .eq('id', payment.check_log_id);
+      } else if (payment.check_details?.id) {
+        await supabase
+          .from('check_logs')
+          .delete()
+          .eq('id', payment.check_details.id);
+      }
+
       const { error } = await supabase
         .from('receivable_payments')
         .update({ status: 'Cancelled' })
-        .eq('id', paymentId);
+        .eq('id', payment.id);
 
       if (error) throw error;
+
       fetchPayments();
       onSuccess();
     } catch (err) {
@@ -149,40 +192,71 @@ export default function SettleAccountModal({ isOpen, onClose, record, onSuccess 
                     <p className="text-xs font-medium text-slate-400">No payments found.</p>
                   </div>
                 ) : (
-                  payments.map((p: any) => (
-                    <div key={p.id} className="flex flex-col bg-slate-50 rounded-xl p-3 border border-slate-100/50">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-sm font-black text-slate-800">₱{Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${
-                          p.status === 'Completed' || p.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700' :
-                          p.status === 'Bounced' || p.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {p.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{p.payment_method}</span>
-                          {p.remarks && <span className="text-xs text-slate-500 mt-1 line-clamp-1">{p.remarks}</span>}
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="text-[9px] font-medium text-slate-400">
-                            {new Date(p.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  payments.map((p: any) => {
+                    const isCheque = p.payment_method === 'Cheque' || !!p.check_details;
+                    const checkBank = p.check_details?.bank || (isCheque ? "Cheque" : null);
+                    const checkNo = p.check_details?.check_no ? `#${p.check_details.check_no}` : null;
+                    const checkDate = p.check_details?.check_date 
+                      ? new Date(p.check_details.check_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                      : null;
+
+                    return (
+                      <div key={p.id} className="flex flex-col bg-slate-50 rounded-xl p-3 border border-slate-100/70 space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-sm font-black text-slate-800">
+                              ₱{Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{p.payment_method}</span>
+                              {checkBank && (
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
+                                  {checkBank} {checkNo && `· ${checkNo}`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                            p.status === 'Completed' || p.status === 'Cleared' ? 'bg-emerald-100 text-emerald-700' :
+                            p.status === 'Bounced' || p.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {p.status}
                           </span>
+                        </div>
+
+                        <div className="flex justify-between items-end pt-1.5 border-t border-slate-200/50 text-[10px]">
+                          <div className="flex flex-col gap-0.5">
+                            {checkDate && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-slate-400 font-semibold text-[10px] uppercase tracking-wider">Check Date:</span>
+                                <span className="text-amber-800 bg-amber-50/80 border border-amber-200/60 px-1.5 py-0.5 rounded font-bold font-mono text-[10px]">
+                                  {checkDate}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1 text-slate-400 text-[9px]">
+                              <span>Created:</span>
+                              <span>
+                                {new Date(p.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {p.remarks && <span className="text-[10px] text-slate-500 italic mt-0.5 line-clamp-1">{p.remarks}</span>}
+                          </div>
+
                           {(p.status === 'Completed' || p.status === 'Pending' || p.status === 'Cleared') && (
                             <button
-                              onClick={() => handleUndoPayment(p.id)}
+                              onClick={() => handleUndoPayment(p)}
                               disabled={loading}
-                              className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors disabled:opacity-50 uppercase tracking-widest"
+                              className="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors disabled:opacity-50 uppercase tracking-widest cursor-pointer shrink-0"
                             >
                               Undo
                             </button>
                           )}
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

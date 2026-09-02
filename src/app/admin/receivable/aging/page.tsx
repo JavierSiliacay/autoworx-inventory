@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Search, Loader2, AlertTriangle, Download, Edit2, Save, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
@@ -20,6 +20,28 @@ interface AgingRecord {
   day61_90: number;
   over90: number;
 }
+
+const HighlightText = ({ text, tokens }: { text: string; tokens: string[] }) => {
+  if (!tokens || tokens.length === 0 || !text) return <>{text || ""}</>;
+  
+  const safeTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${safeTokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        tokens.some(t => t.toLowerCase() === part.toLowerCase()) ? (
+          <span key={i} className="text-[#16a34a] outline outline-[1.5px] outline-[#16a34a]/60 bg-emerald-50 rounded-[3px] px-[1px] shadow-sm font-bold">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
 
 export default function AgingReportPage() {
   const { data: session } = useSession();
@@ -165,12 +187,17 @@ export default function AgingReportPage() {
 
   const formatNum = (num: any) => Number(num || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
-  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-  const filteredRecords = records.filter(r => {
-    if (searchTokens.length === 0) return true;
-    const searchableText = `${r.customer_name} ${r.invoice_no}`.toLowerCase();
-    return searchTokens.every(token => searchableText.includes(token));
-  });
+  const searchTokens = useMemo(() => {
+    return searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  }, [searchTerm]);
+
+  const filteredRecords = useMemo(() => {
+    if (searchTokens.length === 0) return records;
+    return records.filter(r => {
+      const searchableText = `${r.customer_name} ${r.invoice_no}`.toLowerCase();
+      return searchTokens.every(token => searchableText.includes(token));
+    });
+  }, [records, searchTokens]);
 
   const totalCurrent = records.reduce((sum, r) => sum + r.current, 0);
   const total31_60 = records.reduce((sum, r) => sum + r.day31_60, 0);
@@ -245,16 +272,29 @@ export default function AgingReportPage() {
           </div>
         )}
 
-        <div className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center bg-slate-50/10">
-          <h3 className="text-lg font-manrope font-bold text-[#1e40af] uppercase tracking-tight">Aging Breakdown</h3>
-          <div className="w-full md:w-auto flex items-center bg-white px-5 py-3 rounded-2xl border border-slate-100 focus-within:ring-4 focus-within:ring-[#1e40af]/5 transition-all shadow-sm mt-4 md:mt-0">
-              <Search className="w-4 h-4 text-slate-300 mr-3" />
+        <div className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50/10">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-manrope font-bold text-[#1e40af] uppercase tracking-tight">Aging Breakdown</h3>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e40af] text-xs font-bold font-mono">
+              {filteredRecords.length} of {records.length}
+            </span>
+          </div>
+          <div className="w-full md:w-auto flex items-center bg-white px-4 py-2 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-[#16a34a] focus-within:border-[#16a34a] transition-all shadow-sm">
+              <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
               <input
-                className="bg-transparent border-none outline-none text-sm w-full md:w-64 font-medium"
-                placeholder="Search customer or invoice..."
+                className="bg-transparent border-none outline-none text-xs w-full md:w-64 font-medium placeholder:text-slate-400"
+                placeholder="Search customer, invoice..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors ml-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
           </div>
         </div>
 
@@ -301,17 +341,23 @@ export default function AgingReportPage() {
                               setEditValues({ ...record });
                             }}
                             className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 hover:text-[#1e40af] transition-all"
+                            title="Edit Terms"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-6 py-5 font-extrabold text-[#1e40af] text-xs">
                     {isEditing ? (
                       <input className="px-2 py-1 text-xs font-bold border border-blue-200 rounded-lg w-24 bg-white text-[#1e40af] focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20" value={editValues.invoice_no || ''} onChange={e => setEditValues({...editValues, invoice_no: e.target.value})} />
                     ) : (
-                      <span className="font-bold text-[#1e40af] text-xs uppercase tracking-widest">{record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : record.invoice_no}</span>
+                      <span className="font-bold text-[#1e40af] text-xs uppercase tracking-widest">
+                        <HighlightText 
+                          text={record.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : record.invoice_no} 
+                          tokens={searchTokens} 
+                        />
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-5 text-sm">
@@ -325,7 +371,9 @@ export default function AgingReportPage() {
                     {isEditing ? (
                       <input className="px-2 py-1 text-xs font-black border border-blue-200 rounded-lg w-32 bg-white focus:outline-none focus:ring-2 focus:ring-[#1e40af]/20" value={editValues.customer_name || ''} onChange={e => setEditValues({...editValues, customer_name: e.target.value})} />
                     ) : (
-                      <span className="font-black text-slate-800 text-sm truncate max-w-[150px] inline-block">{record.customer_name}</span>
+                      <span className="font-black text-slate-800 text-sm truncate max-w-[150px] inline-block">
+                        <HighlightText text={record.customer_name} tokens={searchTokens} />
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-5 text-right font-bold text-slate-600 text-sm">₱{formatNum(record.remaining_balance)}</td>

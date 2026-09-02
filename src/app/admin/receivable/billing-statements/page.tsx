@@ -1,12 +1,34 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Printer, Search, FileText, Plus, Trash2, Edit2, X, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import Link from "next/link";
+
+const HighlightText = ({ text, tokens }: { text: string; tokens: string[] }) => {
+  if (!tokens || tokens.length === 0 || !text) return <>{text || ""}</>;
+  
+  const safeTokens = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${safeTokens.join('|')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        tokens.some(t => t.toLowerCase() === part.toLowerCase()) ? (
+          <span key={i} className="text-[#16a34a] outline outline-[1.5px] outline-[#16a34a]/60 bg-emerald-50 rounded-[3px] px-[1px] shadow-sm font-bold">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
 
 export default function BillingStatementsPage() {
   const { data: session } = useSession();
@@ -211,12 +233,17 @@ export default function BillingStatementsPage() {
     }
   }
 
-  const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
-  const filtered = statements.filter(c => {
-    if (searchTokens.length === 0) return true;
-    const searchableText = `${c.customer_name || ''} ${c.statement_number || ''}`.toLowerCase();
-    return searchTokens.every(token => searchableText.includes(token));
-  });
+  const searchTokens = useMemo(() => {
+    return searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
+  }, [searchTerm]);
+
+  const filtered = useMemo(() => {
+    if (searchTokens.length === 0) return statements;
+    return statements.filter(c => {
+      const searchableText = `${c.customer_name || ''} ${c.statement_number || ''}`.toLowerCase();
+      return searchTokens.every(token => searchableText.includes(token));
+    });
+  }, [statements, searchTokens]);
 
   return (
     <div className="pb-20 animate-in fade-in duration-500" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -244,15 +271,23 @@ export default function BillingStatementsPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2 max-w-md mb-6">
-         <Search className="w-5 h-5 text-slate-400 ml-2" />
+      <div className="flex items-center bg-white px-4 py-2.5 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-[#16a34a] focus-within:border-[#16a34a] transition-all shadow-sm max-w-md mb-6">
+         <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
          <input 
            type="text" 
            placeholder="Search customer or statement number..."
-           className="bg-transparent border-none outline-none text-sm font-medium w-full p-2"
+           className="bg-transparent border-none outline-none text-xs font-medium w-full placeholder:text-slate-400"
            value={searchTerm}
            onChange={e => setSearchTerm(e.target.value)}
          />
+         {searchTerm && (
+           <button
+             onClick={() => setSearchTerm("")}
+             className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors ml-1"
+           >
+             <X className="w-3.5 h-3.5" />
+           </button>
+         )}
       </div>
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden relative min-h-[400px]">
@@ -288,10 +323,10 @@ export default function BillingStatementsPage() {
               {filtered.map((row, idx) => (
                 <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
                   <td className="px-6 py-4 border-r border-slate-200 text-sm font-black text-[#1e40af]">
-                    {row.statement_number}
+                    <HighlightText text={row.statement_number} tokens={searchTokens} />
                   </td>
                   <td className="px-6 py-4 border-r border-slate-200 text-sm font-black text-slate-900 uppercase">
-                    {row.customer_name}
+                    <HighlightText text={row.customer_name} tokens={searchTokens} />
                   </td>
                   <td className="px-6 py-4 border-r border-slate-200 text-sm font-medium text-slate-600">
                     {new Date(row.statement_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

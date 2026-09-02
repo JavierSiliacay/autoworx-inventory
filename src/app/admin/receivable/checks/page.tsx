@@ -159,9 +159,11 @@ export default function CheckLogsPage() {
       
       const formattedDate = `${selectedYear}-${selectedMonth}-${selectedDay}`;
       const amountNum = Number(newCheck.check_amount);
-      const ar = arRecords.find(r => r.id === newCheck.ar_id);
-      const isFullyPaid = ar && amountNum >= Number(ar.remaining_balance);
-      const initialStatus = isFullyPaid ? 'Cleared' : 'Pending';
+      
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const isPastOrToday = formattedDate <= todayStr;
+      const initialStatus = isPastOrToday ? 'Cleared' : 'Pending';
       
       const { error } = await supabase.from('check_logs').insert([{
         ...newCheck,
