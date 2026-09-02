@@ -223,21 +223,43 @@ export default function CreatePurchaseOrderPage() {
       
       const finalTerms = terms === "CUSTOM" ? customTerms : terms;
       
-      const { data: po, error: poErr } = await supabase
+      const basePayload = { 
+        po_number: poNumber, 
+        supplier_id: supplierId, 
+        branch_id: selectedBranchId, 
+        order_date: orderDate, 
+        terms: finalTerms, 
+        prepared_by: "CARLA B. VARIACION", 
+        approved_by: approvedBy, 
+        total_amount: total, 
+        status: "pending",
+      };
+
+      // Try inserting with created_by (requires the column to exist in DB)
+      let po: any = null;
+      const createdByName = session?.user?.name || session?.user?.email || "Unknown";
+      const { data: poWithCreator, error: poErrWith } = await supabase
         .from("purchase_orders")
-        .insert([{ 
-          po_number: poNumber, 
-          supplier_id: supplierId, 
-          branch_id: selectedBranchId, 
-          order_date: orderDate, 
-          terms: finalTerms, 
-          prepared_by: "CARLA B. VARIACION", 
-          approved_by: approvedBy, 
-          total_amount: total, 
-          status: "pending" 
-        }])
+        .insert([{ ...basePayload, created_by: createdByName }])
         .select().single();
-      if (poErr) throw poErr;
+
+      if (poErrWith) {
+        // Column may not exist yet — fall back to saving without it
+        if (poErrWith.message?.includes("created_by") || poErrWith.code === "PGRST204") {
+          console.warn("[PO Create] created_by column not found in schema cache — saving without it. Run: ALTER TABLE public.purchase_orders ADD COLUMN IF NOT EXISTS created_by TEXT;");
+          const { data: poFallback, error: poErrFallback } = await supabase
+            .from("purchase_orders")
+            .insert([basePayload])
+            .select().single();
+          if (poErrFallback) throw poErrFallback;
+          po = poFallback;
+        } else {
+          throw poErrWith;
+        }
+      } else {
+        po = poWithCreator;
+      }
+
       const { error: itemsErr } = await supabase.from("purchase_order_items").insert(
         items.map(i => ({ po_id: po.id, product_name: i.product_name, quantity: i.quantity, unit: i.unit, unit_price: i.unit_price }))
       );

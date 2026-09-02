@@ -5,6 +5,7 @@ import { MessageSquare, X, Send, Loader2, Minimize2, Maximize2, Trash2 } from "l
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { usePathname } from "next/navigation";
+import { useNetwork } from "@/context/NetworkContext";
 
 type Message = {
   id: string;
@@ -21,6 +22,7 @@ const WELCOME_MSG: Message = {
 
 export default function PrimerAiChatWidget() {
   const pathname = usePathname();
+  const { selectedBranchId } = useNetwork();
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -105,6 +107,7 @@ export default function PrimerAiChatWidget() {
           prompt: userMessage.content,
           history: recentHistory,
           currentPath: pathname,
+          selectedBranchId: selectedBranchId,
           stream: true,
         }),
       });

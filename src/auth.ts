@@ -160,10 +160,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.sub) {
         session.user.id = token.sub;
 
-        // Fetch role, status, branches, and image from Supabase to ensure real-time access control
+        // Fetch role, status, branches, image, and operational name from Supabase to ensure real-time access control
         const { data } = await supabase
           .from('users')
-          .select('role, status, branch_ids, image')
+          .select('role, status, branch_ids, image, name')
           .eq('email', session.user.email)
           .single();
 
@@ -176,6 +176,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         (session.user as any).role = data.role;
         (session.user as any).image = data.image || session.user.image; // Use DB image if available
+        // Use DB operational name if set, fallback to OAuth name
+        if (data.name) session.user.name = data.name;
         // Managers, Owners, and Developers get empty branch_ids so they can see all
         const isGlobal = data.role === 'owner' || data.role === 'developer' || data.role === 'manager';
         (session.user as any).branch_ids = isGlobal ? [] : (data.branch_ids || []);

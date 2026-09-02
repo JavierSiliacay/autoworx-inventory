@@ -18,6 +18,8 @@ interface PurchaseOrder {
   id: string;
   po_number: string;
   order_date: string;
+  created_at?: string;
+  created_by?: string;
   status: "pending" | "sent" | "partially_received" | "received" | "cancelled";
   total_amount: number;
   terms?: string;
@@ -91,7 +93,7 @@ export default function PurchaseOrdersPage() {
     queryFn: async () => {
       let query = supabase
         .from("purchase_orders")
-        .select("*, supplier:suppliers(name), branch:branches(name)")
+        .select("*, created_by, created_at, supplier:suppliers(name), branch:branches(name)")
         .order("created_at", { ascending: false });
       if (selectedBranchId !== "all") query = query.eq("branch_id", selectedBranchId);
       const { data, error } = await query;
@@ -567,7 +569,8 @@ export default function PurchaseOrdersPage() {
               <tr className="border-b border-slate-100">
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">PO #</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supplier</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date Created</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created By</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terms</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount</th>
@@ -576,7 +579,7 @@ export default function PurchaseOrdersPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 && !loading && (
-                <tr><td colSpan={7} className="px-6 py-16 text-center text-sm text-slate-400">No purchase orders found.</td></tr>
+                <tr><td colSpan={9} className="px-6 py-16 text-center text-sm text-slate-400">No purchase orders found.</td></tr>
               )}
               {filtered.map((po) => {
                 const cfg = statusConfig[po.status] || statusConfig.pending;
@@ -598,7 +601,11 @@ export default function PurchaseOrdersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {new Date(po.order_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      <div className="text-xs font-medium text-slate-700">{po.created_at ? new Date(po.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</div>
+                      {po.created_at && <div className="text-[10px] text-slate-400">{new Date(po.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</div>}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-slate-700">{po.created_by || "—"}</span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-700 font-medium">
                       {po.terms || "—"}
@@ -709,7 +716,12 @@ export default function PurchaseOrdersPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-slate-400">{new Date(po.order_date).toLocaleDateString()}</p>
+                    {po.created_at && (
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        {new Date(po.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    )}
+                    {po.created_by && <p className="text-[10px] text-slate-400 mt-0.5">by {po.created_by}</p>}
                     {po.terms && <p className="text-[10px] text-slate-400 mt-0.5">{po.terms}</p>}
                   </div>
                   <div className="flex items-center gap-2">
@@ -1045,10 +1057,20 @@ export default function PurchaseOrdersPage() {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Order Details</span>
                   <div className="text-xs text-slate-700 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Date:</span>
+                      <span className="text-slate-400">Order Date:</span>
                       <span className="font-semibold text-slate-900">
                         {detailModalPo.order_date ? new Date(detailModalPo.order_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Date Created:</span>
+                      <span className="font-semibold text-slate-900">
+                        {detailModalPo.created_at ? new Date(detailModalPo.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Created By:</span>
+                      <span className="font-semibold text-slate-900">{detailModalPo.created_by || "—"}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400">Terms:</span>
