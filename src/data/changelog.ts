@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788319565066",
+    version: "v1.9.2",
+    date: "2026-09-02",
+    type: "feature",
+    title: "Enhanced Item Details and Pricing",
+    description: "Staff can now view unit information, see subtotals update instantly as quantities change, and adjust quantities easily using a stepper control, making order entry faster and more accurate."
+  },
+
+  {
     id: "update-1788315854628",
     version: "v1.9.2",
     date: "2026-09-02",
