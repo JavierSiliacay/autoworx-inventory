@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788315854628",
+    version: "v1.9.2",
+    date: "2026-09-02",
+    type: "improvement",
+    title: "Better Invoice Search and Sales Agent Selection",
+    description: "Staff can now group invoices and use tokenized search in check logs and purchase order details, with an improved AI fallback for faster results. Sales agent selection is limited to Main Distribution and Receivable options have been restored for smoother order processing."
+  },
+
+  {
     id: "update-1788248357565",
     version: "v1.9.1",
     date: "2026-09-01",
