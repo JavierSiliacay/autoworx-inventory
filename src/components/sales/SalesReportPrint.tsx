@@ -166,20 +166,18 @@ export default function SalesReportPrint({
         
         {/* ─── HEADER SECTION ────────────────────────────────────────── */}
         {isAgoraOrKauswagan && reportType === 'daily' ? (
-          <div className="mb-4 shrink-0 flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center text-center">
-              <img src="/logo.png" alt="Autoworx Logo" className="h-14 w-auto object-contain shrink-0 mb-1" />
-              <p className="text-[11px] text-black font-semibold tracking-tight">
-                {isKauswagan 
-                  ? "National Highway, Kauswagan, Cagayan de Oro City"
-                  : "Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City"}
-              </p>
-            </div>
-            <div className="text-center mt-3">
-              <h3 className="text-[14px] font-black uppercase tracking-widest border-y border-black py-0.5 inline-block px-12">
+          <div className="mb-2 shrink-0 flex flex-col items-center text-center">
+            <img src="/logo.png" alt="Autoworx Logo" className="h-20 w-auto max-w-[280px] object-contain shrink-0" />
+            <p className="text-[12px] text-black font-semibold tracking-tight -mt-1.5 mb-1">
+              {isKauswagan 
+                ? "National Highway, Kauswagan, Cagayan de Oro City"
+                : "Valenzuela St. Agora Rd. Lapasan, Cagayan de Oro City"}
+            </p>
+            <div className="text-center">
+              <h3 className="text-[18px] font-black uppercase tracking-widest border-y-2 border-black py-0.5 inline-block px-14">
                 SALES REPORT
               </h3>
-              <p className="text-[12px] font-bold mt-1 text-black font-mono">
+              <p className="text-[13px] font-bold mt-0.5 text-black font-mono">
                 {valenciaFormattedDate}
               </p>
             </div>
@@ -214,14 +212,14 @@ export default function SalesReportPrint({
             </div>
           </div>
         ) : (
-          <div className="mb-4 flex justify-between items-end shrink-0">
-            <div>
-              <h1 className="text-2xl font-bold uppercase tracking-wider">{headerTitle}</h1>
-              <p className="text-sm text-gray-600 font-medium">Generated on: {mounted ? generateTimestamp : ''}</p>
+          <div className="mb-3 flex justify-between items-end shrink-0 gap-4">
+            <div className="min-w-0">
+              <h1 className="text-[17px] font-bold uppercase tracking-wide whitespace-nowrap">{headerTitle}</h1>
+              <p className="text-xs text-gray-500 font-medium mt-0.5">Generated on: {mounted ? generateTimestamp : ''}</p>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <p className="text-xs font-bold text-gray-400 border-b border-gray-400 pb-1 uppercase">{branchName || 'Autoworx Inventory System'}</p>
-              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5 whitespace-nowrap">
                 {branchName?.toUpperCase().includes('KAUSWAGAN')
                   ? 'National Highway, Kauswagan, Cagayan de Oro City'
                   : isValenciaColoursmile
@@ -308,171 +306,200 @@ export default function SalesReportPrint({
           const caItems = (agoraCashAdvances || []).filter(c => c.particular || c.amount);
           const expItems = (agoraExpenses || []).filter(c => c.particular || c.amount);
 
+          const leftRowsCount = agoraCashArr.length > 0 ? agoraCashArr.length : 1;
+          const rightRowsCount = (agoraChargeArr.length > 0 ? agoraChargeArr.length : 1) + 1 + commItems.length + 1 + caItems.length + 1 + expItems.length;
+          const extraLeftRows = Math.max(0, rightRowsCount - leftRowsCount);
+          const extraRightRows = Math.max(0, leftRowsCount - rightRowsCount);
+
           return (
-            <div className="w-full flex-1 flex flex-col min-h-0">
+            <div className="w-full flex flex-col">
               {/* TWO-COLUMN BODY */}
-              <div className="grid grid-cols-2 gap-2 w-full items-start">
+              <div className="grid grid-cols-2 gap-3 w-full items-start">
 
                 {/* LEFT: CASH SALES */}
-                <table className="w-full border-collapse border border-black text-xs">
+                <table className="w-full border-collapse border border-black text-xs print-daily-table">
                   <thead>
                     <tr>
-                      <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase bg-slate-100 tracking-wider">CASH SALES</th>
+                      <th colSpan={3} className="border border-black px-2 py-1.5 text-center font-black uppercase bg-slate-100 tracking-wider text-xs">CASH SALES</th>
                     </tr>
                     <tr>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[45%]">CUSTOMER</th>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[30%]">INVOICE NO.</th>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[45%] text-[11px]">CUSTOMER</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[30%] text-[11px]">INVOICE NO.</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[25%] text-[11px]">AMOUNT</th>
                     </tr>
                   </thead>
                   <tbody>
                     {agoraCashArr.length > 0 ? (
                       agoraCashArr.map((s, i) => (
                         <tr key={`agora-cash-${i}`} className="border-b border-black">
-                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH'}</td>
-                          <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                          <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'CASH'}</td>
+                          <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(s.total_amount || 0)}</td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={3} className="border border-black px-2 py-2 text-center text-slate-300 font-medium">No Cash Sales</td></tr>
+                      <tr className="border-b border-black">
+                        <td colSpan={3} className="border border-black px-2 py-1 text-center text-slate-400 font-bold uppercase text-xs">No Cash Sales</td>
+                      </tr>
                     )}
+
+                    {/* Equalize height with right table so both boxes close evenly at the bottom */}
+                    {Array.from({ length: extraLeftRows }).map((_, i) => (
+                      <tr key={`empty-left-${i}`} className="border-b border-black h-[28px]">
+                        <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                        <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                        <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
 
                 {/* RIGHT: CHARGE SALES + COMMISSION, CASH ADVANCE, EXPENSES */}
-                <table className="w-full border-collapse border border-black text-xs">
+                <table className="w-full border-collapse border border-black text-xs print-daily-table">
                   <thead>
                     <tr>
-                      <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase bg-slate-100 tracking-wider">CHARGE SALES</th>
+                      <th colSpan={3} className="border border-black px-2 py-1.5 text-center font-black uppercase bg-slate-100 tracking-wider text-xs">CHARGE SALES</th>
                     </tr>
                     <tr>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[45%]">CUSTOMER</th>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[30%]">INVOICE NO.</th>
-                      <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[45%] text-[11px]">CUSTOMER</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[30%] text-[11px]">INVOICE NO.</th>
+                      <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[25%] text-[11px]">AMOUNT</th>
                     </tr>
                   </thead>
                   <tbody>
                     {agoraChargeArr.length > 0 ? (
                       agoraChargeArr.map((s, i) => (
                         <tr key={`agora-charge-${i}`} className="border-b border-black">
-                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
-                          <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                          <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                          <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(s.total_amount || 0)}</td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan={3} className="border border-black px-2 py-2 text-center text-slate-300 font-medium">No Charge Sales</td></tr>
+                      <tr className="border-b border-black">
+                        <td colSpan={3} className="border border-black px-2 py-1 text-center text-slate-400 font-bold uppercase text-xs">No Charge Sales</td>
+                      </tr>
                     )}
 
                     {/* COMMISSION SECTION */}
                     <tr className="border-t border-black bg-slate-50">
-                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">COMMISSION:</td>
-                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalCommission)}</td>
+                      <td colSpan={2} className="border border-black px-2 py-1 font-bold uppercase underline">COMMISSION:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">{fmt(totalCommission)}</td>
                     </tr>
                     {commItems.length > 0 ? (
                       commItems.map((c, i) => (
                         <tr key={`agora-comm-${i}`} className="border-b border-black">
-                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'COMMISSION'}</td>
-                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">COMMISSION</td>
-                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                          <td className="border border-black px-2 py-1 text-left uppercase font-medium">{c.particular || 'COMMISSION'}</td>
+                          <td className="border border-black px-2 py-1 text-center font-medium text-slate-400">COMMISSION</td>
+                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(parseInput(c.amount))}</td>
                         </tr>
                       ))
                     ) : null}
 
                     {/* CASH ADVANCE SECTION */}
                     <tr className="border-t border-black bg-slate-50">
-                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">CASH ADVANCE:</td>
-                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalCashAdvance)}</td>
+                      <td colSpan={2} className="border border-black px-2 py-1 font-bold uppercase underline">CASH ADVANCE:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">{fmt(totalCashAdvance)}</td>
                     </tr>
                     {caItems.length > 0 ? (
                       caItems.map((c, i) => (
                         <tr key={`agora-ca-${i}`} className="border-b border-black">
-                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'CASH ADVANCE'}</td>
-                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">CASH ADVANCE</td>
-                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                          <td className="border border-black px-2 py-1 text-left uppercase font-medium">{c.particular || 'CASH ADVANCE'}</td>
+                          <td className="border border-black px-2 py-1 text-center font-medium text-slate-400">CASH ADVANCE</td>
+                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(parseInput(c.amount))}</td>
                         </tr>
                       ))
                     ) : null}
 
                     {/* EXPENSES SECTION */}
                     <tr className="border-t border-black bg-slate-50">
-                      <td colSpan={2} className="border border-black px-2 py-0.5 font-bold uppercase underline">EXPENSES:</td>
-                      <td className="border border-black px-2 py-0.5 text-right font-bold">{fmt(totalExpenses)}</td>
+                      <td colSpan={2} className="border border-black px-2 py-1 font-bold uppercase underline">EXPENSES:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">{fmt(totalExpenses)}</td>
                     </tr>
                     {expItems.length > 0 ? (
                       expItems.map((c, i) => (
                         <tr key={`agora-exp-${i}`} className="border-b border-black">
-                          <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{c.particular || 'EXPENSE'}</td>
-                          <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-400">EXPENSES</td>
-                          <td className="border border-black px-2 py-0.5 text-right font-medium">{fmt(parseInput(c.amount))}</td>
+                          <td className="border border-black px-2 py-1 text-left uppercase font-medium">{c.particular || 'EXPENSE'}</td>
+                          <td className="border border-black px-2 py-1 text-center font-medium text-slate-400">EXPENSES</td>
+                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(parseInput(c.amount))}</td>
                         </tr>
                       ))
                     ) : null}
+
+                    {/* Equalize height with left table if left has more rows */}
+                    {Array.from({ length: extraRightRows }).map((_, i) => (
+                      <tr key={`empty-right-${i}`} className="border-b border-black h-[28px]">
+                        <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                        <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                        <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
 
               {/* SUMMARY SECTION */}
-              <table className="w-full border-collapse border border-black text-xs font-bold mt-2">
-                <tbody>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50 w-[60%]">CASH SALES:</td>
-                    <td className="border border-black px-2 py-1 text-right w-[40%]">{fmt(agoraCashTotal)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS GCASH PAYMENT:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(agoraGcashTotal)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS COMMISSION:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCommission)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS EXPENSES:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(totalExpenses)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS CASH ADVANCE:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCashAdvance)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">LESS REMIT:</td>
-                    <td className="border border-black px-2 py-1 text-right font-bold">{fmt(remit)}</td>
-                  </tr>
-                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
-                    <td className="border border-black px-2 py-1 uppercase">TOTAL CASH FOR REMITTANCE:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(totalCashForRemittance)}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-1 uppercase bg-slate-50">TOTAL CHARGE SALES:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(agoraChargeTotal)}</td>
-                  </tr>
-                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
-                    <td className="border border-black px-2 py-1 uppercase">OVERALL TOTAL SALES:</td>
-                    <td className="border border-black px-2 py-1 text-right">{fmt(overallTotalSales)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="mt-4 print-avoid-break">
+                <table className="w-full border-collapse border border-black text-xs font-bold print-daily-table">
+                  <tbody>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50 w-[60%]">CASH SALES:</td>
+                      <td className="border border-black px-2 py-1.5 text-right w-[40%] font-bold">{fmt(agoraCashTotal)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS GCASH PAYMENT:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(agoraGcashTotal)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS COMMISSION:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(totalCommission)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS EXPENSES:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(totalExpenses)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS CASH ADVANCE:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(totalCashAdvance)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS REMIT:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(remit)}</td>
+                    </tr>
+                    <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                      <td className="border border-black px-2 py-2 uppercase">TOTAL CASH FOR REMITTANCE:</td>
+                      <td className="border border-black px-2 py-2 text-right font-black">{fmt(totalCashForRemittance)}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">TOTAL CHARGE SALES:</td>
+                      <td className="border border-black px-2 py-1.5 text-right font-bold">{fmt(agoraChargeTotal)}</td>
+                    </tr>
+                    <tr className="bg-gray-100 text-[15px] font-black border-t-2 border-b-[3px] border-black tracking-wide">
+                      <td className="border border-black px-2 py-2 uppercase">OVERALL TOTAL SALES:</td>
+                      <td className="border border-black px-2 py-2 text-right font-black">{fmt(overallTotalSales)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           );
         })()
       ) : isValenciaColoursmile ? (
         /* ─── VALENCIA COLOURSMILE 2-COLUMN DAILY REPORT ────────────────────────── */
-        <div className="w-full flex-1 flex flex-col min-h-0">
+        <div className="w-full flex flex-col">
           <div className="grid grid-cols-12 gap-3 w-full items-start">
             
             {/* LEFT COLUMN: SALES */}
             <div className="col-span-7 flex flex-col gap-2">
-              <table className="w-full border-collapse border border-black text-xs">
+              <table className="w-full border-collapse border border-black text-xs print-daily-table">
                 <thead>
                   <tr className="bg-slate-100">
-                    <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase text-sm tracking-wider">SALES</th>
+                    <th colSpan={3} className="border border-black px-2 py-1.5 text-center font-black uppercase text-sm tracking-wider">SALES</th>
                   </tr>
                   <tr className="bg-slate-50">
-                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[50%]">CUSTOMER'S NAME</th>
-                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">INV. NO</th>
-                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">AMOUNT</th>
+                    <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[50%]">CUSTOMER'S NAME</th>
+                    <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[25%]">INV. NO</th>
+                    <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[25%]">AMOUNT</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -483,16 +510,16 @@ export default function SalesReportPrint({
                   {cashSalesWithReceipt.length > 0 ? (
                     cashSalesWithReceipt.map((s, i) => (
                       <tr key={`cash-rec-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
-                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no}</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
+                        <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no}</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <tr className="border-b border-black h-5">
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
                     </tr>
                   )}
 
@@ -503,16 +530,16 @@ export default function SalesReportPrint({
                   {cashSalesNoReceipt.length > 0 ? (
                     cashSalesNoReceipt.map((s, i) => (
                       <tr key={`cash-norec-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
-                        <td className="border border-black px-2 py-0.5 text-center font-medium text-slate-500">NO RECEIPT</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'CASH CUSTOMER'}</td>
+                        <td className="border border-black px-2 py-1 text-center font-medium text-slate-500">NO RECEIPT</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <tr className="border-b border-black h-5">
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
                     </tr>
                   )}
 
@@ -523,16 +550,16 @@ export default function SalesReportPrint({
                   {chargeSalesArr.length > 0 ? (
                     chargeSalesArr.map((s, i) => (
                       <tr key={`charge-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
-                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                        <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <tr className="border-b border-black h-5">
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
                     </tr>
                   )}
 
@@ -543,62 +570,64 @@ export default function SalesReportPrint({
                   {deliverySalesArr.length > 0 ? (
                     deliverySalesArr.map((s, i) => (
                       <tr key={`delivery-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
-                        <td className="border border-black px-2 py-0.5 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
+                        <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">{(s.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <tr className="border-b border-black h-5">
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-center text-slate-300">-</td>
-                      <td className="border border-black px-2 py-0.5 text-right text-slate-300">0.00</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-center text-slate-300">-</td>
+                      <td className="border border-black px-2 py-1 text-right text-slate-300">0.00</td>
                     </tr>
                   )}
                 </tbody>
               </table>
 
               {/* SALES SUMMARY SUB-TABLE */}
-              <table className="w-full border-collapse border border-black text-xs font-bold mt-1">
-                <tbody>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50 w-[60%]">GCASH PAYMENT:</td>
-                    <td className="border border-black px-2 py-0.5 text-right w-[40%]">₱{gcashTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CASH SALES W/RECEIPT:</td>
-                    <td className="border border-black px-2 py-0.5 text-right">₱{cashWithReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CASH SALES NO RECEIPT:</td>
-                    <td className="border border-black px-2 py-0.5 text-right">₱{cashNoReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">CHARGE SALES:</td>
-                    <td className="border border-black px-2 py-0.5 text-right">₱{chargeTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="border-b border-black">
-                    <td className="border border-black px-2 py-0.5 uppercase bg-slate-50">DELIVERY SALES RECEIPT:</td>
-                    <td className="border border-black px-2 py-0.5 text-right">₱{deliveryTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
-                    <td className="border border-black px-2 py-1 uppercase">OVERALL TOTAL SALES:</td>
-                    <td className="border border-black px-2 py-1 text-right">₱{overallTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="print-avoid-break mt-1">
+                <table className="w-full border-collapse border border-black text-xs font-bold print-daily-table">
+                  <tbody>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1 uppercase bg-slate-50 w-[60%]">GCASH PAYMENT:</td>
+                      <td className="border border-black px-2 py-1 text-right w-[40%] font-bold">₱{gcashTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1 uppercase bg-slate-50">CASH SALES W/RECEIPT:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">₱{cashWithReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1 uppercase bg-slate-50">CASH SALES NO RECEIPT:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">₱{cashNoReceiptTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1 uppercase bg-slate-50">CHARGE SALES:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">₱{chargeTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr className="border-b border-black">
+                      <td className="border border-black px-2 py-1 uppercase bg-slate-50">DELIVERY SALES RECEIPT:</td>
+                      <td className="border border-black px-2 py-1 text-right font-bold">₱{deliveryTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                    <tr className="bg-gray-100 text-[15px] font-black border-t-2 border-b-[3px] border-black tracking-wide">
+                      <td className="border border-black px-2 py-2 uppercase">OVERALL TOTAL SALES:</td>
+                      <td className="border border-black px-2 py-2 text-right font-black">₱{overallTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* RIGHT COLUMN: EXPENSES & PETTY CASH */}
             <div className="col-span-5 flex flex-col gap-2">
-              <table className="w-full border-collapse border border-black text-xs">
+              <table className="w-full border-collapse border border-black text-xs print-daily-table">
                 <thead>
                   <tr className="bg-slate-100">
-                    <th colSpan={2} className="border border-black px-2 py-1 text-center font-black uppercase text-sm tracking-wider">EXPENSES</th>
+                    <th colSpan={2} className="border border-black px-2 py-1.5 text-center font-black uppercase text-sm tracking-wider">EXPENSES</th>
                   </tr>
                   <tr className="bg-slate-50">
-                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[65%]">PARTICULAR</th>
-                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[35%]">AMOUNT</th>
+                    <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[65%]">PARTICULAR</th>
+                    <th className="border border-black px-2 py-1.5 text-center font-bold uppercase w-[35%]">AMOUNT</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -610,19 +639,19 @@ export default function SalesReportPrint({
                   {(pettyCashExpenses && pettyCashExpenses.length > 0) ? (
                     pettyCashExpenses.map((exp, i) => (
                       <tr key={`petty-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{exp.particular || 'Expense Item'}</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{exp.particular || 'Expense Item'}</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <>
                       <tr className="border-b border-black h-5">
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-right">0.00</td>
                       </tr>
                       <tr className="border-b border-black h-5">
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-right">0.00</td>
                       </tr>
                     </>
                   )}
@@ -634,19 +663,19 @@ export default function SalesReportPrint({
                   {(distributionExpenses && distributionExpenses.length > 0) ? (
                     distributionExpenses.map((exp, i) => (
                       <tr key={`dist-${i}`} className="border-b border-black">
-                        <td className="border border-black px-2 py-0.5 text-left uppercase font-medium">{exp.particular || 'Distribution Expense'}</td>
-                        <td className="border border-black px-2 py-0.5 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="border border-black px-2 py-1 text-left uppercase font-medium">{exp.particular || 'Distribution Expense'}</td>
+                        <td className="border border-black px-2 py-1 text-right font-medium">₱{Number(String(exp.amount || 0).replace(/,/g, '')).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
                     <>
                       <tr className="border-b border-black h-5">
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-right">0.00</td>
                       </tr>
                       <tr className="border-b border-black h-5">
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-center">-</td>
-                        <td className="border border-black px-2 py-0.5 text-slate-300 text-right">0.00</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-center">-</td>
+                        <td className="border border-black px-2 py-1 text-slate-300 text-right">0.00</td>
                       </tr>
                     </>
                   )}
@@ -654,16 +683,18 @@ export default function SalesReportPrint({
               </table>
 
               {/* PETTY CASH ON-HAND BOX */}
-              <table className="w-full border-collapse border border-black text-xs font-bold mt-1">
-                <tbody>
-                  <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
-                    <td className="border border-black px-2 py-1 uppercase w-[60%]">PETTY CASH ONHAND:</td>
-                    <td className="border border-black px-2 py-1 text-right w-[40%]">
-                      ₱{pettyCashOnHand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="print-avoid-break mt-1">
+                <table className="w-full border-collapse border border-black text-xs font-bold print-daily-table">
+                  <tbody>
+                    <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
+                      <td className="border border-black px-2 py-1.5 uppercase w-[60%]">PETTY CASH ONHAND:</td>
+                      <td className="border border-black px-2 py-1.5 text-right w-[40%] font-black">
+                        ₱{pettyCashOnHand.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
           </div>
@@ -904,19 +935,44 @@ export default function SalesReportPrint({
       
       {/* Print Page Styles - Portrait for Daily Reports, Landscape for Monthly/Yearly */}
       <style dangerouslySetInnerHTML={{__html: `
-        .print-daily-table {
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
+
+        .print-daily-table,
+        #sales-report-preview-container table,
+        #sales-report-print-container table {
           border-collapse: collapse !important;
           border: 1px solid #000000 !important;
+          border-right: 1px solid #000000 !important;
+          border-left: 1px solid #000000 !important;
+          border-top: 1px solid #000000 !important;
+          border-bottom: 1px solid #000000 !important;
           width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
         }
         .print-daily-table th,
-        .print-daily-table td {
+        .print-daily-table td,
+        #sales-report-preview-container th,
+        #sales-report-preview-container td,
+        #sales-report-print-container th,
+        #sales-report-print-container td {
           border: 1px solid #000000 !important;
+          border-right: 1px solid #000000 !important;
+          border-left: 1px solid #000000 !important;
+          border-top: 1px solid #000000 !important;
+          border-bottom: 1px solid #000000 !important;
+          box-sizing: border-box !important;
         }
 
         @media print {
           @page { size: A4 ${reportType === 'daily' ? 'portrait' : 'landscape'}; margin: 10mm; }
           
+          *, *::before, *::after {
+            box-sizing: border-box !important;
+          }
+
           body * {
             visibility: hidden !important;
           }
@@ -928,12 +984,43 @@ export default function SalesReportPrint({
           #sales-report-print-container {
             position: static !important;
             width: 100% !important;
+            max-width: 100% !important;
             height: auto !important;
             display: block !important;
             background: white !important;
-            padding: 0 !important;
+            padding: 0 1.5mm 0 0 !important;
             margin: 0 !important;
             overflow: visible !important;
+            box-sizing: border-box !important;
+          }
+
+          table,
+          .print-daily-table {
+            border-collapse: collapse !important;
+            border: 1px solid #000000 !important;
+            border-right: 1px solid #000000 !important;
+            border-left: 1px solid #000000 !important;
+            border-top: 1px solid #000000 !important;
+            border-bottom: 1px solid #000000 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          table th,
+          table td,
+          .print-daily-table th,
+          .print-daily-table td,
+          #sales-report-print-container th,
+          #sales-report-print-container td {
+            border: 1px solid #000000 !important;
+            border-right: 1px solid #000000 !important;
+            border-left: 1px solid #000000 !important;
+            border-top: 1px solid #000000 !important;
+            border-bottom: 1px solid #000000 !important;
+            box-sizing: border-box !important;
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
           }
 
           body { 
@@ -958,11 +1045,6 @@ export default function SalesReportPrint({
           .print-avoid-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-          }
-          
-          table td, table th {
-             padding-top: 3px !important;
-             padding-bottom: 3px !important;
           }
         }
       `}} />
