@@ -108,17 +108,21 @@ export default function StockInPage() {
 
   useEffect(() => {
     if (!session) return;
+    const channelName = `stock-in-room-${selectedBranchId || 'all'}`;
     const channel = supabase
-      .channel('stock-in-room')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_in_logs' }, () => {
-        queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
+        queryClient.invalidateQueries({ queryKey: ['stock-in-logs', selectedBranchId] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_in_items' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['stock-in-logs', selectedBranchId] });
       })
       .subscribe();
       
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, queryClient]);
+  }, [session, queryClient, selectedBranchId]);
 
   async function fetchCatalog() {
     try {
@@ -149,13 +153,12 @@ export default function StockInPage() {
       if (error) throw error;
       
       if (expandedId === log.id) setExpandedId(null);
-      alert("Stock-in deleted and inventory reversed successfully.");
-      queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-in-logs', selectedBranchId] });
     } catch (e: any) {
       console.error(e);
       alert("Error deleting record: " + e.message);
     } finally {
-      // setLoading(false);
+      setLoading(false);
     }
   }
 
@@ -822,7 +825,7 @@ export default function StockInPage() {
         inventory={globalInventory}
         suppliers={globalSuppliers}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['stock-in-logs'] });
+          queryClient.invalidateQueries({ queryKey: ['stock-in-logs', selectedBranchId] });
         }}
         session={session}
       />

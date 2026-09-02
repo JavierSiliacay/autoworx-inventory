@@ -479,7 +479,8 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          min="1"
+                          step="any"
+                          min={0.0001}
                           value={item.quantity_received}
                           onChange={(e) => handleRowChange(index, 'quantity_received', e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"

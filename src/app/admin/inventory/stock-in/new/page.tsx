@@ -637,7 +637,7 @@ export default function NewStockInPage() {
                           </select>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <input type="number" step="1" value={item.quantity_received} min={1}
+                          <input type="number" step="any" value={item.quantity_received} min={0.0001}
                             onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
@@ -732,7 +732,7 @@ export default function NewStockInPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
-                        <input type="number" step="1" min="1" value={item.quantity_received}
+                        <input type="number" step="any" min={0.0001} value={item.quantity_received}
                           onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
                       </div>
