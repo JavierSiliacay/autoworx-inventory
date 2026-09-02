@@ -55,6 +55,7 @@ export default function SalesReportPrint({
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
 
+
   const isValenciaColoursmile = Boolean(
     branchName && (
       branchName.toUpperCase().includes('COLOURSMILE') || 
@@ -70,6 +71,8 @@ export default function SalesReportPrint({
     )
   );
   const isAgoraOrKauswagan = isAgora || isKauswagan;
+
+
 
   const parseInput = (v: string | number) => parseFloat(String(v || 0).replace(/,/g, '')) || 0;
 
@@ -152,77 +155,14 @@ export default function SalesReportPrint({
     }
   })();
 
-  // Intelligent Print Scaling (Calculate Exact Logical Row Footprint to Maximize 98vh Use)
-  let scaleFactor = 1;
-  
-  if (reportType === 'daily') {
-    if (isAgora) {
-      const cashRows = Math.max(1, cashSalesWithReceipt.concat(cashSalesNoReceipt).concat(digitalSalesArr).length);
-      const chargeRows = Math.max(1, chargeSalesArr.length);
-      const maxRows = Math.max(cashRows, chargeRows) + 14;
-      scaleFactor = Math.min(1.20, Math.max(0.40, 28 / maxRows));
-    } else if (isValenciaColoursmile) {
-      const leftRows = Math.max(1, cashSalesWithReceipt.length) + Math.max(1, cashSalesNoReceipt.length) + Math.max(1, chargeSalesArr.length) + Math.max(1, deliverySalesArr.length) + 8;
-      const rightRows = Math.max(1, (pettyCashExpenses || []).length) + Math.max(1, (distributionExpenses || []).length) + 6;
-      const maxRows = Math.max(leftRows, rightRows) + 8;
-      scaleFactor = Math.min(1.20, Math.max(0.40, 26.5 / maxRows));
-    } else {
-      let logicalRows = 0;
-      logicalRows += 5; // Base layout components (Header margins + title spaces)
-      
-      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') {
-        logicalRows += 3; // Cash Sales Table Base
-        logicalRows += Math.max(1, (filteredSales.filter(s => s.payment_type === 'Cash')).length); // Cash rows
-      }
-
-      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') {
-        logicalRows += 3; // Digital Sales Table Base
-        logicalRows += Math.max(1, digitalSalesArr.length); // Digital rows
-      }
-      
-      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') {
-        logicalRows += 2; // Delivery Sales Base
-        logicalRows += Math.max(1, deliverySalesArr.length); // Delivery rows
-      }
-
-      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') {
-        logicalRows += 2; // Charge Sales Base
-        logicalRows += Math.max(1, chargeSalesArr.length); // Charge rows
-      }
-
-      if (paymentTypeFilter === 'All' || paymentTypeFilter === 'Cancelled') {
-        logicalRows += 2; // Cancelled Sales Base
-        logicalRows += Math.max(1, cancelledSalesArr.length); // Cancelled rows
-      }
-
-      logicalRows += 5; // Totals Footer block (expanded for delivery)
-
-      const hasTransmittal = transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n);
-      if (hasTransmittal) {
-        logicalRows += 3; // Section Title + Headers
-        logicalRows += transmittalChecks.filter(c => c.name || c.ref || c.amount || c.bank).length;
-        logicalRows += transmittalNotes.filter(n => n).length;
-      }
-      
-      logicalRows += 5; // Signature Block Space
-
-      const optimalPageCapacity = 26.5; 
-      scaleFactor = Math.min(1.40, Math.max(0.40, optimalPageCapacity / logicalRows));
-    }
-  }
-
   return (
     <>
       <div 
         id={isPreview ? 'sales-report-preview-container' : 'sales-report-print-container'}
-        className={`${isPreview ? (isAgoraOrKauswagan && reportType === 'daily' ? 'block w-[640px] shadow-2xl mx-auto rounded-none bg-white text-black p-6 border border-slate-300' : 'block w-[920px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300') : 'hidden fixed inset-0 z-[999999] w-full print:absolute print:inset-0 print:z-[999999] print:w-full print:block'} ${reportType === 'daily' ? 'print:flex flex-col justify-between' : 'print:block'} bg-white text-black p-8`}
-        style={!isPreview && reportType === 'daily' ? { 
-           zoom: scaleFactor, 
-           minHeight: '100%',
-           height: 'auto'
-        } : { minHeight: isPreview ? (isAgoraOrKauswagan && reportType === 'daily' ? '905px' : '650px') : '100%', height: 'auto' }}
+        className={`${isPreview ? (reportType === 'daily' ? 'block w-[760px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300' : 'block w-[1060px] shadow-2xl mx-auto rounded-none bg-white text-black p-8 border border-slate-300') : 'opacity-0 pointer-events-none select-none fixed inset-0 z-[-1] w-full print:opacity-100 print:z-[999999] print:relative print:inset-auto print:w-full print:block'} bg-white text-black p-6 sm:p-8`}
+        style={{ minHeight: isPreview ? (reportType === 'daily' ? '960px' : '650px') : 'auto', height: 'auto' }}
       >
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="w-full flex flex-col">
         
         {/* ─── HEADER SECTION ────────────────────────────────────────── */}
         {isAgoraOrKauswagan && reportType === 'daily' ? (
@@ -730,7 +670,7 @@ export default function SalesReportPrint({
         </div>
       ) : (
         /* ─── STANDARD BRANCHES DAILY SALES REPORT ────────────────────────── */
-        <div className="w-full flex-1 flex flex-col min-h-0">
+        <div className="w-full flex flex-col">
           <table className="w-full border-collapse border border-black text-sm print-daily-table shrink-0">
           <thead>
             <tr>
@@ -849,54 +789,54 @@ export default function SalesReportPrint({
           <tbody>
             {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Cash') && (
               <tr>
-                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CASH SALES:</td>
-                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                <td colSpan={2} className="border border-black bg-white px-2 py-1.5 text-right font-bold uppercase text-[13px]">TOTAL CASH SALES:</td>
+                <td className="border border-black bg-white px-2 py-1.5 text-right font-bold w-[20%] text-[13px]">
                   ₱ {cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td className="border border-black bg-white px-2 py-1"></td>
+                <td className="border border-black bg-white px-2 py-1.5"></td>
               </tr>
             )}
             {(paymentTypeFilter === 'All' || paymentTypeFilter === 'GCash' || paymentTypeFilter === 'Bank Transfer') && (
               <tr>
-                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL GCASH/BANK TRANSFER SALES:</td>
-                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                <td colSpan={2} className="border border-black bg-white px-2 py-1.5 text-right font-bold uppercase text-[13px]">TOTAL GCASH/BANK TRANSFER SALES:</td>
+                <td className="border border-black bg-white px-2 py-1.5 text-right font-bold w-[20%] text-[13px]">
                   ₱ {digitalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td className="border border-black bg-white px-2 py-1"></td>
+                <td className="border border-black bg-white px-2 py-1.5"></td>
               </tr>
             )}
             {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Delivery') && (
               <tr>
-                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL DELIVERY SALES:</td>
-                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                <td colSpan={2} className="border border-black bg-white px-2 py-1.5 text-right font-bold uppercase text-[13px]">TOTAL DELIVERY SALES:</td>
+                <td className="border border-black bg-white px-2 py-1.5 text-right font-bold w-[20%] text-[13px]">
                   ₱ {deliverySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td className="border border-black bg-white px-2 py-1"></td>
+                <td className="border border-black bg-white px-2 py-1.5"></td>
               </tr>
             )}
             {(paymentTypeFilter === 'All' || paymentTypeFilter === 'Charge') && (
               <tr>
-                <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">TOTAL CHARGE SALES:</td>
-                <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%]">
+                <td colSpan={2} className="border border-black bg-white px-2 py-1.5 text-right font-bold uppercase text-[13px]">TOTAL CHARGE SALES:</td>
+                <td className="border border-black bg-white px-2 py-1.5 text-right font-bold w-[20%] text-[13px]">
                   ₱ {chargeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td className="border border-black bg-white px-2 py-1"></td>
+                <td className="border border-black bg-white px-2 py-1.5"></td>
               </tr>
             )}
             <tr>
-              <td colSpan={2} className="border border-black bg-white px-2 py-1 text-right font-bold uppercase text-[11px]">GRAND TOTAL SALES:</td>
-              <td className="border border-black bg-white px-2 py-1 text-right font-bold w-[20%] border-b-[3px] border-b-black">
+              <td colSpan={2} className="border border-black bg-gray-100 px-2 py-2 text-right font-black uppercase text-[15px] tracking-wide">GRAND TOTAL SALES:</td>
+              <td className="border border-black bg-gray-100 px-2 py-2 text-right font-black w-[20%] text-[15px] border-b-[3px] border-b-black">
                 ₱ {totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
-              <td className="border border-black bg-white px-2 py-1"></td>
+              <td className="border border-black bg-gray-100 px-2 py-2"></td>
             </tr>
           </tbody>
         </table>
 
-         {Boolean(!branchName || branchName.toUpperCase().includes('MAIN DISTRIBUTION') || branchName.toUpperCase() === 'MAIN') && (transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n)) && (
-            <div className="mt-6">
-              <p className="font-black text-[12px] uppercase mb-1 tracking-wider mt-2">TRANSMITTAL:</p>
-              <table className="w-full border-collapse border border-black text-sm print-daily-table">
+        {Boolean(!branchName || branchName.toUpperCase().includes('MAIN DISTRIBUTION') || branchName.toUpperCase() === 'MAIN') && (transmittalChecks.some(c => c.name || c.ref || c.amount || c.bank) || transmittalNotes.some(n => n)) && (
+          <div className="mt-6 print-avoid-break">
+            <p className="font-black text-[12px] uppercase mb-1 tracking-wider mt-2">TRANSMITTAL:</p>
+            <table className="w-full border-collapse border border-black text-sm print-daily-table">
                  <thead>
                     <tr>
                        <th colSpan={4} className="border border-black px-2 py-1 text-center font-black uppercase tracking-wider bg-white">CHECK PAYMENT</th>
@@ -938,19 +878,18 @@ export default function SalesReportPrint({
       )}
       </div>
 
-      {/* Signature Section - Unscaled and Pushed to the precise bottom of the viewport bounds */}
+      {/* Signature Section */}
       {reportType === 'daily' && (
-        <div className="mt-2 flex flex-col items-start px-2 shrink-0 z-10 page-break-inside-avoid pb-2 pt-4">
-           {/* Center compose image natively intersecting the typography */}
+        <div className="mt-8 flex flex-col items-start px-2 shrink-0 print-avoid-break">
            <div className="flex flex-col items-center">
              {(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('KAUSWAGAN'))) && (
                <img 
                   src="/carla_signature.png" 
                   alt="Signature" 
-                  className="h-[5rem] w-auto object-contain translate-y-[20px] translate-x-[28px] relative z-20 pointer-events-none drop-shadow-sm" 
+                  className="h-16 w-auto object-contain mb-[-16px] ml-4 pointer-events-none drop-shadow-sm" 
                />
              )}
-             <p className={`font-bold text-[12px] uppercase tracking-wider relative z-10 ${(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('KAUSWAGAN'))) ? 'mt-[-2px]' : 'mt-[2rem]'}`}>
+             <p className={`font-bold text-[12px] uppercase tracking-wider relative z-10 ${(!branchName || (!branchName.toUpperCase().includes('ISUZU') && !branchName.toUpperCase().includes('AGORA') && !branchName.toUpperCase().includes('VALENCIA') && !branchName.toUpperCase().includes('KAUSWAGAN'))) ? 'mt-0' : 'mt-8'}`}>
                PREPARED BY: {
                  isValenciaColoursmile ? 'REZEL C. BAHIAN'
                  : (branchName?.toUpperCase().includes('KAUSWAGAN') || branchName?.toUpperCase().includes('VALENCIA DISTRIBUTION')) ? '_________________________'
@@ -963,10 +902,20 @@ export default function SalesReportPrint({
       )}
     </div>
       
-      {/* Print Page Styles - Portrait for Agora / Kauswagan, Landscape for others */}
+      {/* Print Page Styles - Portrait for Daily Reports, Landscape for Monthly/Yearly */}
       <style dangerouslySetInnerHTML={{__html: `
+        .print-daily-table {
+          border-collapse: collapse !important;
+          border: 1px solid #000000 !important;
+          width: 100% !important;
+        }
+        .print-daily-table th,
+        .print-daily-table td {
+          border: 1px solid #000000 !important;
+        }
+
         @media print {
-          @page { size: A4 ${isAgoraOrKauswagan && reportType === 'daily' ? 'portrait' : 'landscape'}; margin: 8mm; }
+          @page { size: A4 ${reportType === 'daily' ? 'portrait' : 'landscape'}; margin: 10mm; }
           
           body * {
             visibility: hidden !important;
@@ -977,31 +926,43 @@ export default function SalesReportPrint({
           }
           
           #sales-report-print-container {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: static !important;
             width: 100% !important;
             height: auto !important;
-            min-height: 100% !important;
             display: block !important;
             background: white !important;
-            z-index: 9999999 !important;
+            padding: 0 !important;
+            margin: 0 !important;
             overflow: visible !important;
           }
 
           body { 
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact; 
-            margin: 0; 
-            padding: 0; 
+            margin: 0 !important; 
+            padding: 0 !important; 
             background: white !important;
             height: auto !important;
             overflow: visible !important;
           }
+
+          thead {
+            display: table-header-group !important;
+          }
+
+          tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          .print-avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
           
           table td, table th {
-             padding-top: 2px !important;
-             padding-bottom: 2px !important;
+             padding-top: 3px !important;
+             padding-bottom: 3px !important;
           }
         }
       `}} />
