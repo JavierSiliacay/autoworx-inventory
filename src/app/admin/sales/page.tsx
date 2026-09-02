@@ -12,6 +12,7 @@ import EditSaleModal from "@/components/admin/sales/EditSaleModal";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
+import QuantityStepperInput from "@/components/ui/QuantityStepperInput";
 
 interface SaleEntry {
   id: string;
@@ -168,7 +169,7 @@ export default function AdminSalesPage() {
 
       const { data: fullData, error: fullError } = await supabase
         .from('sales')
-        .select(`*, inventory(id, product_name, sku, cost), branches(name)`)
+        .select(`*, inventory(id, product_name, sku, cost, unit), branches(name)`)
         .in('invoice_no', paginatedInvoiceNos)
         .order('created_at', { ascending: false });
 
@@ -609,10 +610,19 @@ export default function AdminSalesPage() {
       }
     }
     
-    if (field === 'quantity' || field === 'unit_price') {
-      const q = Number(field === 'quantity' ? value : item.quantity || 0);
-      const p = Number(field === 'unit_price' ? value : item.unit_price || 0);
-      item.subtotal = q * p;
+    if (field === 'subtotal') {
+      const sub = Number(value || 0);
+      const q = Number(item.quantity || 1);
+      item.subtotal = sub;
+      item.unit_price = q > 0 ? (sub / q) : sub;
+    } else if (field === 'quantity') {
+      const q = Number(value || 0);
+      item.quantity = value;
+      item.subtotal = q * Number(item.unit_price || 0);
+    } else if (field === 'unit_price') {
+      const p = Number(value || 0);
+      item.unit_price = p;
+      item.subtotal = Number(item.quantity || 0) * p;
     }
 
     newItems[index] = item;
@@ -1289,6 +1299,7 @@ export default function AdminSalesPage() {
                                   <tr className="text-slate-400 font-bold border-b border-slate-50">
                                      <th className="px-4 py-2">Item Name</th>
                                      <th className="px-4 py-2 text-center">Qty</th>
+                                     <th className="px-4 py-2 text-center">Unit</th>
                                      <th className="px-4 py-2 text-center">Color Code</th>
                                      <th className="px-4 py-2 text-right">Price</th>
                                      <th className="px-4 py-2 text-right">Subtotal</th>
@@ -1310,7 +1321,8 @@ export default function AdminSalesPage() {
                                               <span className="text-[9px] text-slate-400 font-medium font-mono">{item.inventory?.sku || 'NO-SKU'}</span>
                                            </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center font-black text-blue-600 italic">{item.quantity}L</td>
+                                        <td className="px-4 py-3 text-center font-black text-blue-600 font-mono text-sm">{item.quantity}</td>
+                                        <td className="px-4 py-3 text-center text-xs font-bold text-slate-700 uppercase">{item.inventory?.unit || "—"}</td>
                                         <td className="px-4 py-3 text-center text-xs font-medium text-slate-500">
                                           {item.color_code ? (
                                             <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-bold">{item.color_code}</span>
@@ -1318,7 +1330,7 @@ export default function AdminSalesPage() {
                                             <span className="text-slate-300">-</span>
                                           )}
                                         </td>
-                                        <td className="px-4 py-3 text-right font-medium">₱{item.unit_price.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right font-medium font-mono">₱{((item.quantity > 0 && item.total_amount !== undefined ? (Number(item.total_amount) / Number(item.quantity)) : Number(item.unit_price || 0))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-4 py-3 text-right">
                                            <div className="flex flex-col items-end">
                                               <span className="font-bold text-slate-900">₱{item.total_amount.toLocaleString()}</span>
@@ -1576,13 +1588,14 @@ export default function AdminSalesPage() {
                 </div>
 
                 <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto max-h-[350px]">
+                  <div className="overflow-x-auto overflow-y-auto max-h-[350px] ledger-scroll-container custom-scrollbar">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                         <th className="px-4 py-3 w-12 text-center">No</th>
                         <th className="px-4 py-3">Select Product Item</th>
-                        <th className="px-2 py-3 w-20 text-center">Qty</th>
+                        <th className="px-2 py-3 w-24 min-w-[5.5rem] text-center">Qty</th>
+                        <th className="px-2 py-3 w-24 min-w-[5rem] text-center">Unit</th>
                         <th className="px-2 py-3 w-28 text-center">Color Code</th>
                         <th className="px-4 py-3 w-28 text-right">Unit Price</th>
                         <th className="px-4 py-3 w-36 text-right">Subtotal</th>
@@ -1590,7 +1603,9 @@ export default function AdminSalesPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {currentSale.items.map((item, idx) => (
+                      {currentSale.items.map((item, idx) => {
+                        const selectedInv = inventory.find(i => i.id === item.item_id);
+                        return (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                           <td className="px-4 py-2 text-xs font-bold text-slate-300 text-center">{idx + 1}</td>
                           <td className="px-2 py-2">
@@ -1598,7 +1613,7 @@ export default function AdminSalesPage() {
                                 options={inventory.map(inv => ({
                                    value: inv.id,
                                    label: inv.product_name,
-                                   subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
+                                   subtitle: `Stock: ${inv.quantity} ${inv.unit || ''} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
                                    danger: inv.quantity <= 0
                                 }))}
                                 value={item.item_id}
@@ -1607,19 +1622,35 @@ export default function AdminSalesPage() {
                              />
                           </td>
                           <td className="px-2 py-2">
-                            <input
+                            <QuantityStepperInput
                               id={`qty-input-${idx}`}
-                              type="number"
-                              min="0.01" step="any"
-                              className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
-                              value={item.quantity === undefined ? "" : item.quantity}
-                              onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
+                              value={item.quantity}
+                              onChange={(val) => handleRowChange(idx, 'quantity', val)}
+                              onIncrement={() => {
+                                const next = Number((Number(item.quantity || 0) + 1).toFixed(2));
+                                handleRowChange(idx, 'quantity', next);
+                              }}
+                              onDecrement={() => {
+                                const next = Math.max(0.01, Number((Number(item.quantity || 1) - 1).toFixed(2)));
+                                handleRowChange(idx, 'quantity', next);
+                              }}
                             />
+                          </td>
+                          <td className="px-2 py-2 text-center">
+                            <span className="text-xs font-bold text-slate-600 uppercase px-2 py-1 bg-slate-100/80 rounded-md inline-block whitespace-nowrap">
+                              {selectedInv?.unit || "—"}
+                            </span>
                           </td>
                           <td className="px-2 py-2">
                             <input
                               type="text"
                               placeholder="e.g. ARC WHITE"
+                              onWheel={(e) => {
+                                const container = e.currentTarget.closest('.ledger-scroll-container') as HTMLElement;
+                                if (container) {
+                                  container.scrollTop += e.deltaY;
+                                }
+                              }}
                               className="w-full px-3 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-slate-600 placeholder:font-medium placeholder:text-slate-300"
                               value={item.color_code || ""}
                               onChange={(e) => handleRowChange(idx, 'color_code', e.target.value)}
@@ -1628,7 +1659,12 @@ export default function AdminSalesPage() {
                           <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
                             {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
                           </td>
-                          <td className="px-2 py-2 text-right">
+                          <td className="px-2 py-2 text-right" onWheel={(e) => {
+                            const container = e.currentTarget.closest('.ledger-scroll-container') as HTMLElement;
+                            if (container) {
+                              container.scrollTop += e.deltaY;
+                            }
+                          }}>
                             <FormattedNumberInput
                               autoSize
                               prefixElement={<span className="absolute left-3 text-slate-400 text-sm font-medium z-10">₱</span>}
@@ -1647,7 +1683,7 @@ export default function AdminSalesPage() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                      );})}
                     </tbody>
                   </table>
                   </div>

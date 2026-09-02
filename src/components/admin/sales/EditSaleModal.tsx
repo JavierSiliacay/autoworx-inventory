@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2, Save, Plus, Package, Calendar, FileText, User, Undo2 } from "lucide-react";
+import { X, Loader2, Save, Plus, Package, Calendar, FileText, User, Undo2, ChevronUp, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
+import QuantityStepperInput from "@/components/ui/QuantityStepperInput";
 
 interface EditSaleModalProps {
   isOpen: boolean;
@@ -82,10 +83,19 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
       }
     }
     
-    if (field === 'quantity' || field === 'unit_price') {
-      const q = Number(field === 'quantity' ? value : item.quantity || 0);
-      const p = Number(field === 'unit_price' ? value : item.unit_price || 0);
-      item.subtotal = q * p;
+    if (field === 'subtotal') {
+      const sub = Number(value || 0);
+      const q = Number(item.quantity || 1);
+      item.subtotal = sub;
+      item.unit_price = q > 0 ? (sub / q) : sub;
+    } else if (field === 'quantity') {
+      const q = Number(value || 0);
+      item.quantity = value;
+      item.subtotal = q * Number(item.unit_price || 0);
+    } else if (field === 'unit_price') {
+      const p = Number(value || 0);
+      item.unit_price = p;
+      item.subtotal = Number(item.quantity || 0) * p;
     }
 
     newItems[index] = item;
@@ -380,21 +390,24 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
             </div>
 
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
-              <div className="max-h-[300px] overflow-y-auto">
+              <div className="max-h-[300px] overflow-y-auto ledger-scroll-container custom-scrollbar">
                 <div className="overflow-x-auto w-full">
                 <table className="w-full text-left border-collapse table-fixed">
                   <thead className="sticky top-0 z-10 bg-slate-100">
                     <tr>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24">Qty</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28">Unit Price</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 min-w-[5.5rem] text-center">Qty</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 min-w-[5rem] text-center">Unit</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28 text-right">Unit Price</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
                       <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {currentSale.items.map((item, idx) => (
+                    {currentSale.items.map((item, idx) => {
+                      const selectedInv = inventory.find(i => i.id === item.item_id);
+                      return (
                       <tr key={idx} className="hover:bg-white transition-colors group">
                         <td className="px-4 py-3 text-[10px] font-bold text-slate-400">{idx + 1}</td>
                         <td className="p-2">
@@ -402,7 +415,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                               options={inventory.map(inv => ({ 
                                  value: inv.id, 
                                  label: inv.product_name,
-                                 subtitle: `Stock: ${inv.quantity} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
+                                 subtitle: `Stock: ${inv.quantity} ${inv.unit || ''} | Cost: ₱${(inv.cost || 0).toFixed(2)} | Price: ₱${(inv.price || 0).toFixed(2)} | Margin: ₱${((inv.price || 0) - (inv.cost || 0)).toFixed(2)}`,
                                  danger: inv.quantity <= 0
                               }))}
                               value={item.item_id}
@@ -411,13 +424,23 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                            />
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            min="0.01" step="any"
-                            className="w-full px-2 py-2 bg-white/50 border border-slate-200/60 shadow-sm rounded-lg text-sm text-center focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] focus:bg-white hover:border-slate-300 transition-all font-bold text-[#1a1b20]"
-                            value={item.quantity === undefined ? "" : item.quantity}
-                            onChange={(e) => handleRowChange(idx, 'quantity', e.target.value === "" ? ("" as any) : e.target.value as any)}
+                          <QuantityStepperInput
+                            value={item.quantity}
+                            onChange={(val) => handleRowChange(idx, 'quantity', val)}
+                            onIncrement={() => {
+                              const next = Number((Number(item.quantity || 0) + 1).toFixed(2));
+                              handleRowChange(idx, 'quantity', next);
+                            }}
+                            onDecrement={() => {
+                              const next = Math.max(0.01, Number((Number(item.quantity || 1) - 1).toFixed(2)));
+                              handleRowChange(idx, 'quantity', next);
+                            }}
                           />
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          <span className="text-xs font-bold text-slate-600 uppercase px-2 py-1 bg-slate-100/80 rounded-md inline-block whitespace-nowrap">
+                            {selectedInv?.unit || "—"}
+                          </span>
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
                           {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
@@ -439,9 +462,9 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );})}
                   </tbody>
                 </table>
                 </div>

@@ -396,6 +396,7 @@ export default function AdminInventoryPage() {
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Category</th>
                 <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Stock</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Unit</th>
                 {canViewCost && (
                   <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Cost</th>
                 )}
@@ -412,7 +413,7 @@ export default function AdminInventoryPage() {
             <tbody className="divide-y divide-slate-50">
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-sm text-slate-400">No products found.</td>
+                  <td colSpan={canViewCost ? (isMainDistributionView ? 9 : 8) : (isMainDistributionView ? 7 : 6)} className="px-6 py-16 text-center text-sm text-slate-400">No products found.</td>
                 </tr>
               )}
               {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
@@ -452,7 +453,11 @@ export default function AdminInventoryPage() {
                         <span className={`text-sm font-bold font-mono ${isLow ? "text-red-500" : "text-slate-900"}`}>
                           {parseFloat(product.quantity.toString()).toFixed(1)}
                         </span>
-                        {product.unit && <p className="text-center text-[10px] text-slate-400 mt-0.5">{unitAbbr[product.unit] || product.unit}</p>}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <span className="text-xs font-bold text-slate-700 uppercase">
+                          {product.unit || "—"}
+                        </span>
                       </td>
                       {canViewCost && (
                         <td className="px-4 py-4 text-right text-sm text-slate-500 font-medium">
@@ -487,7 +492,7 @@ export default function AdminInventoryPage() {
                     </tr>
                     {expandedRowId === product.id && (
                       <tr>
-                        <td colSpan={canViewCost ? (isMainDistributionView ? 8 : 7) : (isMainDistributionView ? 6 : 5)} className="p-0 border-b border-slate-100 bg-slate-50/80 shadow-inner">
+                        <td colSpan={canViewCost ? (isMainDistributionView ? 9 : 8) : (isMainDistributionView ? 7 : 6)} className="p-0 border-b border-slate-100 bg-slate-50/80 shadow-inner">
                           <div className="p-4 md:p-6 animate-in slide-in-from-top-2 duration-200">
                             <div className="flex items-center gap-2 mb-3">
                               <History className="w-4 h-4 text-indigo-500" />
