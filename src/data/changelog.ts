@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788338678704",
+    version: "v1.9.2",
+    date: "2026-09-02",
+    type: "fix",
+    title: "Improved Daily Sales Report Layout",
+    description: "Staff will now see a cleaner, correctly formatted daily sales report when printing, making it easier to read and use."
+  },
+
+  {
     id: "update-1788327751471",
     version: "v1.9.2",
     date: "2026-09-02",
