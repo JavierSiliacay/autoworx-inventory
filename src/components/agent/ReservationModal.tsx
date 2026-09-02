@@ -200,8 +200,8 @@ export default function ReservationModal({ item, isOpen, onClose }: ReservationM
                 )}
               </div>
               <div className="text-right shrink-0">
-                <span className="inline-block px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg">
-                  {item.quantity} avail.
+                <span className="inline-block px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg uppercase">
+                  {item.quantity.toLocaleString()}{item.unit ? ` ${item.unit}` : ""} avail.
                 </span>
               </div>
             </div>

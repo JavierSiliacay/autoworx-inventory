@@ -127,13 +127,13 @@ const getStockBadge = (qty: number) => {
   if (qty > 10)
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/80 text-emerald-700 text-xs font-bold rounded-lg">
-        <CheckCircle2 className="w-3.5 h-3.5" /> In Stock ({qty})
+        <CheckCircle2 className="w-3.5 h-3.5" /> In Stock ({qty.toLocaleString()})
       </span>
     );
   if (qty > 0)
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200/80 text-amber-700 text-xs font-bold rounded-lg">
-        <AlertTriangle className="w-3.5 h-3.5" /> Low Stock ({qty})
+        <AlertTriangle className="w-3.5 h-3.5" /> Low Stock ({qty.toLocaleString()})
       </span>
     );
   return (
@@ -448,7 +448,14 @@ export default function AgentCatalogPage() {
                     {/* Stock, Price & Action */}
                     <div className="pt-4 border-t border-slate-100 mt-4 space-y-4">
                       <div className="flex items-center justify-between gap-2">
-                        {getStockBadge(item.quantity)}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {getStockBadge(item.quantity)}
+                          {item.unit && (
+                            <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold rounded-lg uppercase tracking-wide">
+                              {item.unit}
+                            </span>
+                          )}
+                        </div>
                         {renderPrice(item)}
                       </div>
 
