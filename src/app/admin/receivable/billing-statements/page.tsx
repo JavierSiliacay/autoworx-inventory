@@ -47,6 +47,13 @@ export default function BillingStatementsPage() {
   const [editingStatement, setEditingStatement] = useState<any>(null);
   const [editStatus, setEditStatus] = useState("");
   const [editRemarks, setEditRemarks] = useState("");
+  const [editStatementDate, setEditStatementDate] = useState("");
+  const [editPreviousBalanceLabel, setEditPreviousBalanceLabel] = useState("");
+  const [editPreviousBalanceAmount, setEditPreviousBalanceAmount] = useState<string>("");
+  const [editLessPartialLabel, setEditLessPartialLabel] = useState("");
+  const [editLessPartialAmount, setEditLessPartialAmount] = useState<string>("");
+  const [editPreparedBy, setEditPreparedBy] = useState("");
+  const [editNotedBy, setEditNotedBy] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
@@ -209,6 +216,13 @@ export default function BillingStatementsPage() {
     setEditingStatement(statement);
     setEditStatus(statement.status || "Finalized");
     setEditRemarks(statement.remarks || "");
+    setEditStatementDate(statement.statement_date || (statement.created_at ? statement.created_at.split('T')[0] : ""));
+    setEditPreviousBalanceLabel(statement.previous_balance_label || "BAL. AS OF:");
+    setEditPreviousBalanceAmount(statement.previous_balance_amount !== undefined && statement.previous_balance_amount !== null ? String(statement.previous_balance_amount) : "");
+    setEditLessPartialLabel(statement.less_partial_label || "LESS PARTIAL:");
+    setEditLessPartialAmount(statement.less_partial_amount !== undefined && statement.less_partial_amount !== null ? String(statement.less_partial_amount) : "");
+    setEditPreparedBy(statement.prepared_by || "CARLA B. VARIACION");
+    setEditNotedBy(statement.noted_by || "LIZA V. AGBONG");
     setIsEditModalOpen(true);
   }
 
@@ -216,13 +230,26 @@ export default function BillingStatementsPage() {
     if (!editingStatement) return;
     try {
       setIsSavingEdit(true);
+      const prevBalNum = editPreviousBalanceAmount ? parseFloat(editPreviousBalanceAmount.replace(/,/g, '')) : null;
+      const lessPartNum = editLessPartialAmount ? parseFloat(editLessPartialAmount.replace(/,/g, '')) : null;
+
       const { error } = await supabase
         .from('billing_statements')
-        .update({ status: editStatus, remarks: editRemarks })
+        .update({ 
+          status: editStatus, 
+          remarks: editRemarks,
+          statement_date: editStatementDate || null,
+          previous_balance_label: editPreviousBalanceLabel || null,
+          previous_balance_amount: prevBalNum,
+          less_partial_label: editLessPartialLabel || null,
+          less_partial_amount: lessPartNum,
+          prepared_by: editPreparedBy || null,
+          noted_by: editNotedBy || null,
+        })
         .eq('id', editingStatement.id);
         
       if (error) throw error;
-      alert("Statement updated!");
+      alert("Statement updated successfully!");
       setIsEditModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
     } catch (err) {
@@ -407,46 +434,154 @@ export default function BillingStatementsPage() {
       {/* Edit Modal */}
       {isEditModalOpen && editingStatement && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-xl shadow-2xl relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setIsEditModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
             >
               <X className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Edit Statement {editingStatement.statement_number}</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Edit Statement {editingStatement.statement_number}</h2>
+            <p className="text-xs text-slate-400 mb-5 font-bold uppercase">{editingStatement.customer_name}</p>
             
-            <div className="mb-4">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Status</label>
-              <select 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-700"
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
+            <div className="space-y-4">
+              {/* Row 1: Statement Date & Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Statement Date</label>
+                  <input 
+                    type="date"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e40af]"
+                    value={editStatementDate}
+                    onChange={(e) => setEditStatementDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Status</label>
+                  <select 
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e40af]"
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                  >
+                    <option value="Draft">Draft</option>
+                    <option value="Finalized">Finalized</option>
+                    <option value="Void">Void</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Section: Manual Balance Reconciliation (Ma'am Carla's Custom Breakdown) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center justify-between">
+                  <span>Balance Breakdown Adjustments</span>
+                  <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">Optional</span>
+                </h4>
+
+                {/* Previous Balance */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                  <div className="md:col-span-6">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Previous Balance Label</label>
+                    <input 
+                      type="text"
+                      placeholder="e.g. BAL. AS OF JUNE 2026:"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1e40af]"
+                      value={editPreviousBalanceLabel}
+                      onChange={(e) => setEditPreviousBalanceLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-6">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Balance Amount (₱)</label>
+                    <input 
+                      type="text"
+                      placeholder="0.00"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 text-right focus:outline-none focus:ring-1 focus:ring-[#1e40af]"
+                      value={editPreviousBalanceAmount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        const parts = val.split('.');
+                        let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        if (parts.length > 1) formatted += '.' + parts[1];
+                        setEditPreviousBalanceAmount(formatted);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Less Partial Payment */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                  <div className="md:col-span-6">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Deduction Label</label>
+                    <input 
+                      type="text"
+                      placeholder="e.g. LESS PARTIAL:"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#1e40af]"
+                      value={editLessPartialLabel}
+                      onChange={(e) => setEditLessPartialLabel(e.target.value)}
+                    />
+                  </div>
+                  <div className="md:col-span-6">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Less Amount (₱)</label>
+                    <input 
+                      type="text"
+                      placeholder="0.00"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-700 text-right focus:outline-none focus:ring-1 focus:ring-[#1e40af]"
+                      value={editLessPartialAmount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        const parts = val.split('.');
+                        let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        if (parts.length > 1) formatted += '.' + parts[1];
+                        setEditLessPartialAmount(formatted);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Signatories */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Prepared By</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. CARLA B. VARIACION"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 uppercase focus:outline-none focus:ring-2 focus:ring-[#1e40af]"
+                    value={editPreparedBy}
+                    onChange={(e) => setEditPreparedBy(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Noted By</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. LIZA V. AGBONG"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 uppercase focus:outline-none focus:ring-2 focus:ring-[#1e40af]"
+                    value={editNotedBy}
+                    onChange={(e) => setEditNotedBy(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Internal Remarks</label>
+                <textarea 
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#1e40af] text-slate-700 resize-none h-16"
+                  placeholder="Optional internal notes..."
+                  value={editRemarks}
+                  onChange={(e) => setEditRemarks(e.target.value)}
+                ></textarea>
+              </div>
+
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit}
+                className="w-full py-3 bg-[#1e40af] text-white rounded-xl font-bold hover:bg-blue-800 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-900/10"
               >
-                <option value="Draft">Draft</option>
-                <option value="Finalized">Finalized</option>
-                <option value="Void">Void</option>
-              </select>
+                {isSavingEdit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                Save Changes
+              </button>
             </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-2">Remarks</label>
-              <textarea 
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-700 resize-none h-24"
-                placeholder="Add any internal remarks here..."
-                value={editRemarks}
-                onChange={(e) => setEditRemarks(e.target.value)}
-              ></textarea>
-            </div>
-
-            <button
-              onClick={handleSaveEdit}
-              disabled={isSavingEdit}
-              className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
-            >
-              {isSavingEdit ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              Save Changes
-            </button>
           </div>
         </div>
       )}
