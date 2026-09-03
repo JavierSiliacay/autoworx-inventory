@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X, Building2 } from "lucide-react";
+import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X, Building2, Clock, CreditCard } from "lucide-react";
 import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -117,12 +117,25 @@ export default function Header() {
     branch_id?: string;
     branches?: { id: string; name: string } | null;
   }[]>([]);
+  const [upcomingReceivables, setUpcomingReceivables] = useState<{
+    id: string;
+    customer_name: string;
+    invoice_no: string;
+    due_date: string;
+    remaining_balance: number;
+    days_left: number;
+    branch_id?: string;
+    branches?: { id: string; name: string } | null;
+  }[]>([]);
+
   const [isPayablesModalOpen, setIsPayablesModalOpen] = useState(false);
+  const [isReceivablesModalOpen, setIsReceivablesModalOpen] = useState(false);
 
   useEffect(() => {
-    let channel: any;
+    let payablesChannel: any;
+    let receivablesChannel: any;
 
-    async function checkPayables() {
+    async function checkAlerts() {
       // If staff has no branch assignments, do nothing
       if (role === 'staff' && userBranchIds.length === 0) return;
 
@@ -160,22 +173,103 @@ export default function Header() {
         }
       };
 
-      await fetchPayables();
+      const fetchReceivables = async () => {
+        // Fetch active receivables
+        let query = supabase
+          .from('accounts_receivable')
+          .select('id, customer_name, invoice_no, date, remaining_balance, branch_id, branches(id, name)')
+          .gt('remaining_balance', 0)
+          .order('date', { ascending: true });
 
-      // Listen for real-time changes to the payables table!
-      channel = supabase.channel('payables-header-sync')
+        if (role === 'staff' && userBranchIds.length > 0) {
+          query = query.in('branch_id', userBranchIds);
+        }
+
+        const { data: arData } = await query;
+        if (!arData) return;
+
+        // Fetch customer default terms
+        const { data: custData } = await supabase.from('customers').select('name, terms');
+        const termsMap: Record<string, number> = {};
+        (custData || []).forEach(c => {
+          let parsed = 0;
+          if (c.terms) {
+            const m = String(c.terms).match(/(\d+)/);
+            if (m) parsed = parseInt(m[1], 10);
+          }
+          termsMap[(c.name || '').trim().toLowerCase()] = parsed;
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const urgentList: any[] = [];
+
+        arData.forEach(ar => {
+          if (!ar.date) return;
+          const custKey = (ar.customer_name || '').trim().toLowerCase();
+          const terms = termsMap[custKey] || 0;
+
+          const invDate = new Date(ar.date);
+          invDate.setHours(0, 0, 0, 0);
+
+          const dueDate = new Date(invDate);
+          dueDate.setDate(dueDate.getDate() + terms);
+
+          const diffMs = dueDate.getTime() - today.getTime();
+          const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+          // If due in <= 14 days or overdue
+          if (daysLeft <= 14) {
+            urgentList.push({
+              id: ar.id,
+              customer_name: ar.customer_name,
+              invoice_no: ar.invoice_no,
+              due_date: dueDate.toISOString(),
+              remaining_balance: Number(ar.remaining_balance || 0),
+              days_left: daysLeft,
+              branch_id: ar.branch_id,
+              branches: ar.branches
+            });
+          }
+        });
+
+        urgentList.sort((a, b) => a.days_left - b.days_left);
+        setUpcomingReceivables(urgentList);
+
+        // Sound chime if receivables are urgent and not yet alerted
+        if (urgentList.length > 0 && !sessionStorage.getItem('autoworx_receivables_alerted') && !sessionStorage.getItem('autoworx_payables_alerted')) {
+          try {
+            const audio = new Audio('/sounds/notification.mp3');
+            audio.play().catch(() => console.log('Audio blocked by browser'));
+          } catch(e) {}
+          sessionStorage.setItem('autoworx_receivables_alerted', 'true');
+        }
+      };
+
+      await Promise.all([fetchPayables(), fetchReceivables()]);
+
+      // Listen for real-time changes to payables & receivables!
+      payablesChannel = supabase.channel('payables-header-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
           fetchPayables();
+        })
+        .subscribe();
+
+      receivablesChannel = supabase.channel('receivables-header-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts_receivable' }, () => {
+          fetchReceivables();
         })
         .subscribe();
     }
 
     if (mounted && branches.length > 0) {
-      checkPayables();
+      checkAlerts();
     }
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (payablesChannel) supabase.removeChannel(payablesChannel);
+      if (receivablesChannel) supabase.removeChannel(receivablesChannel);
     };
   }, [mounted, branches, role]);
 
@@ -239,6 +333,40 @@ export default function Header() {
     }
   };
 
+  const handleReviewReceivables = (specificBranchId?: string) => {
+    setIsReceivablesModalOpen(false);
+    setIsNotificationsOpen(false);
+    sessionStorage.setItem('autoworx_receivables_opened', 'true');
+
+    if (specificBranchId) {
+      setSelectedBranchId(specificBranchId);
+      router.push(`/admin/receivable/accounts?branch=${specificBranchId}`);
+      return;
+    }
+
+    if (upcomingReceivables.length > 0) {
+      const firstBranchId = upcomingReceivables[0].branch_id;
+      const allSameBranch = upcomingReceivables.every(p => p.branch_id === firstBranchId);
+      
+      if (allSameBranch && firstBranchId) {
+        setSelectedBranchId(firstBranchId);
+        router.push(`/admin/receivable/accounts?branch=${firstBranchId}`);
+      } else {
+        if (role !== 'staff') {
+          setSelectedBranchId("all");
+          router.push(`/admin/receivable/accounts`);
+        } else if (firstBranchId) {
+          setSelectedBranchId(firstBranchId);
+          router.push(`/admin/receivable/accounts?branch=${firstBranchId}`);
+        } else {
+          router.push(`/admin/receivable/accounts`);
+        }
+      }
+    } else {
+      router.push("/admin/receivable/accounts");
+    }
+  };
+
   // Stable fallbacks for SSR
   const displayTitle = mounted ? title : "Network Overview";
   const displayBadge = mounted ? badge : "";
@@ -248,11 +376,11 @@ export default function Header() {
   return (
     <header className="w-full flex justify-between items-center px-4 md:px-12 py-4 md:py-6 bg-transparent gap-4">
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
-        <h2 className="font-manrope font-bold text-lg md:text-2xl tracking-tight text-[#1e40af] truncate max-w-[180px] sm:max-w-xs md:max-w-none">
+        <h1 className="text-xl md:text-3xl font-extrabold text-[#1e40af] tracking-tight truncate flex items-center gap-2">
           {displayTitle}
-        </h2>
+        </h1>
         {mounted && displayBadge && (
-          <div className="px-2 md:px-3 py-1 bg-[#1e40af]/10 rounded-full shrink-0">
+          <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-blue-50 border border-blue-100/80 rounded-full flex items-center gap-1 shadow-xs shrink-0">
             <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{displayBadge}</span>
           </div>
         )}
@@ -304,7 +432,7 @@ export default function Header() {
               className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative"
             >
               <Bell className={`w-5 h-5 ${isNotificationsOpen ? 'text-[#1e40af]' : 'text-[#64748b]'}`} />
-              {mounted && (unreadUpdates.length > 0 || (upcomingPayables.length > 0 && !sessionStorage.getItem('autoworx_payables_opened'))) && (
+              {mounted && (unreadUpdates.length > 0 || ((upcomingPayables.length > 0 || upcomingReceivables.length > 0) && (!sessionStorage.getItem('autoworx_payables_opened') || !sessionStorage.getItem('autoworx_receivables_opened')))) && (
                 <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse" />
               )}
             </button>
@@ -315,6 +443,52 @@ export default function Header() {
                 <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsNotificationsOpen(false)} />
                 <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                   
+                  {/* UPCOMING RECEIVABLES DUE IN 14 DAYS */}
+                  {upcomingReceivables.length > 0 && (
+                    <>
+                      <div className="p-4 border-b border-amber-100 bg-amber-50 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-extrabold text-amber-900">Collections Due Soon</h3>
+                          <p className="text-[10px] text-amber-700 font-medium">Customer accounts reaching credit terms</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <div className="p-3 bg-white border-b border-slate-100 space-y-2.5">
+                        <p className="text-xs text-slate-700 font-semibold px-1">
+                          You have <span className="text-amber-600 font-bold">{upcomingReceivables.length}</span> customer receivables due in ≤ 14 days.
+                        </p>
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {upcomingReceivables.slice(0, 3).map(r => (
+                            <div 
+                              key={r.id} 
+                              onClick={() => handleReviewReceivables(r.branch_id)}
+                              className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl text-xs hover:bg-amber-50/60 transition-colors cursor-pointer border border-transparent hover:border-amber-100 group"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <span className="font-bold text-slate-700 block truncate group-hover:text-amber-800 transition-colors">{r.customer_name}</span>
+                                <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                                  <span>{r.invoice_no}</span> • <span>₱{r.remaining_balance.toLocaleString()}</span>
+                                </span>
+                              </div>
+                              <span className={`font-bold whitespace-nowrap text-[10px] px-2 py-0.5 rounded-md border ${r.days_left < 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                {r.days_left < 0 ? `Overdue (${Math.abs(r.days_left)}d)` : `Due in ${r.days_left}d`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => handleReviewReceivables()}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          Review Receivables
+                        </button>
+                      </div>
+                    </>
+                  )}
+
                   {upcomingPayables.length > 0 && (
                     <>
                       <div className="p-4 border-b border-red-100 bg-red-50 flex items-center justify-between">
@@ -412,76 +586,129 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Floating Alert Modal for Payables */}
-      {isPayablesModalOpen && upcomingPayables.length > 0 && mounted && typeof document !== 'undefined' && createPortal(
+      {/* Floating Alert Modal for Payables & Receivables */}
+      {isPayablesModalOpen && (upcomingPayables.length > 0 || upcomingReceivables.length > 0) && mounted && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsPayablesModalOpen(false)} />
-          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="bg-red-50 p-6 flex flex-col items-center text-center border-b border-red-100 relative">
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="bg-slate-900 p-6 flex flex-col items-center text-center relative text-white">
               <button 
                 onClick={() => setIsPayablesModalOpen(false)}
-                className="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white rounded-full text-red-400 hover:text-red-600 transition-colors"
+                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-slate-300 hover:text-white transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                <AlertTriangle className="w-8 h-8" />
+              <div className="w-14 h-14 bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                <AlertTriangle className="w-7 h-7" />
               </div>
-              <h2 className="text-xl font-extrabold text-red-950 mb-1">Action Required</h2>
-              <p className="text-sm font-medium text-red-600/80">You have upcoming supplier payables!</p>
+              <h2 className="text-xl font-black tracking-tight">Action Required</h2>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Upcoming due dates requiring attention within 14 days</p>
             </div>
             
-            <div className="p-6">
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6">
-                <p className="text-center text-slate-600 text-sm mb-4">
-                  There are <strong className="text-red-500 text-lg">{upcomingPayables.length}</strong> payables due within the next 14 days. Please review them to avoid overdue penalties.
-                </p>
-                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-                  {upcomingPayables.slice(0, 4).map(p => (
-                    <div 
-                      key={p.id} 
-                      onClick={() => handleReviewPayables(p.branch_id)}
-                      className="flex justify-between items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm hover:border-red-200 hover:bg-red-50/20 transition-all cursor-pointer group"
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* RECEIVABLES SECTION */}
+              {upcomingReceivables.length > 0 && (
+                <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-amber-950 uppercase tracking-tight">Customer Receivables</h4>
+                        <p className="text-[10px] text-amber-700 font-medium">
+                          <strong className="text-amber-900">{upcomingReceivables.length}</strong> collections due / overdue
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleReviewReceivables()}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold transition-all shadow-xs"
                     >
-                      <div className="flex flex-col min-w-0 pr-2">
-                        <span className="font-bold text-slate-800 text-xs truncate group-hover:text-red-700 transition-colors">
-                          {p.supplier_name}
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="truncate">{p.branches?.name || "Main Distribution"}</span>
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {upcomingReceivables.slice(0, 3).map(r => (
+                      <div 
+                        key={r.id} 
+                        onClick={() => handleReviewReceivables(r.branch_id)}
+                        className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-amber-100/80 shadow-xs hover:border-amber-300 hover:bg-amber-50/40 transition-all cursor-pointer group"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="font-bold text-slate-800 text-xs truncate group-hover:text-amber-900 transition-colors">
+                            {r.customer_name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {r.invoice_no} • ₱{r.remaining_balance.toLocaleString()}
+                          </span>
+                        </div>
+                        <span className={`font-bold whitespace-nowrap text-[10px] px-2 py-0.5 rounded-md border ${r.days_left < 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                          {r.days_left < 0 ? `Overdue (${Math.abs(r.days_left)}d)` : `Due in ${r.days_left}d`}
                         </span>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-red-600 font-extrabold text-xs whitespace-nowrap bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PAYABLES SECTION */}
+              {upcomingPayables.length > 0 && (
+                <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-rose-100 text-rose-800 rounded-lg">
+                        <CalendarDays className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-rose-950 uppercase tracking-tight">Supplier Payables</h4>
+                        <p className="text-[10px] text-rose-700 font-medium">
+                          <strong className="text-rose-900">{upcomingPayables.length}</strong> payments due within 14 days
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleReviewPayables()}
+                      className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-bold transition-all shadow-xs"
+                    >
+                      View All
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {upcomingPayables.slice(0, 3).map(p => (
+                      <div 
+                        key={p.id} 
+                        onClick={() => handleReviewPayables(p.branch_id)}
+                        className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-rose-100/80 shadow-xs hover:border-rose-300 hover:bg-rose-50/40 transition-all cursor-pointer group"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="font-bold text-slate-800 text-xs truncate group-hover:text-rose-900 transition-colors">
+                            {p.supplier_name}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
+                            <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{p.branches?.name || "Main Distribution"}</span>
+                          </span>
+                        </div>
+                        <span className="text-rose-600 font-extrabold text-xs whitespace-nowrap bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
                           {new Date(p.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
-                    </div>
-                  ))}
-                  {upcomingPayables.length > 4 && (
-                    <div className="text-center text-[10px] font-bold text-slate-400 mt-2">
-                      + {upcomingPayables.length - 4} more
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
 
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsPayablesModalOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors"
-                >
-                  Dismiss
-                </button>
-                <button 
-                  onClick={() => handleReviewPayables()}
-                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-red-500/25 flex items-center justify-center gap-2"
-                >
-                  <CalendarDays className="w-4 h-4" />
-                  Review Now
-                </button>
-              </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button 
+                onClick={() => setIsPayablesModalOpen(false)}
+                className="px-6 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs transition-colors shadow-xs"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         </div>,

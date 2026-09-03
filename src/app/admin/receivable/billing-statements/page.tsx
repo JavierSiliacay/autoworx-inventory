@@ -187,10 +187,21 @@ export default function BillingStatementsPage() {
       const { error: itemsError } = await supabase.from('billing_statement_items').insert(itemsToInsert);
       if (itemsError) throw itemsError;
 
-      alert("Billing statement created!");
+      // 5. Automatically mark the included accounts_receivable as BILLED
+      const arIds = ars.map(ar => ar.id);
+      if (arIds.length > 0) {
+        await supabase
+          .from('accounts_receivable')
+          .update({ payment_status: 'Billed' })
+          .in('id', arIds);
+      }
+
+      alert("Billing statement created! Invoices have been marked as BILLED.");
       setIsCreateModalOpen(false);
       setSelectedCustomerForCreate("");
       queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
     } catch (err) {
       console.error(err);
       alert("Failed to create statement");
@@ -200,12 +211,33 @@ export default function BillingStatementsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this statement?")) return;
+    if (!confirm("Are you sure you want to delete this statement? All linked invoices will be restored to UNPAID.")) return;
     try {
+      // 1. Fetch linked AR IDs to restore their status
+      const { data: linkedItems } = await supabase
+        .from('billing_statement_items')
+        .select('ar_id')
+        .eq('billing_statement_id', id);
+
+      const arIdsToRestore = (linkedItems || []).map(i => i.ar_id).filter(Boolean);
+
+      // 2. Delete statement (cascade will delete items)
       const { error } = await supabase.from('billing_statements').delete().eq('id', id);
       if (error) throw error;
-      alert("Deleted successfully");
+
+      // 3. Revert linked AR records that are not yet cleared back to 'Unpaid'
+      if (arIdsToRestore.length > 0) {
+        await supabase
+          .from('accounts_receivable')
+          .update({ payment_status: 'Unpaid' })
+          .in('id', arIdsToRestore)
+          .gt('remaining_balance', 0);
+      }
+
+      alert("Deleted successfully. Invoices restored to UNPAID.");
       queryClient.invalidateQueries({ queryKey: ['billing-statements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
     } catch (err) {
       console.error(err);
       alert("Failed to delete");

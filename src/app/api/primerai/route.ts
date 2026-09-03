@@ -376,11 +376,26 @@ Key System Features & Detailed Workflows:
 5. **Sales Dynamic Subtotal Math**:
    - Sa Sales Center, kung usbon ang Subtotal, ang formula (\`Subtotal / Quantity = Unit Price\`) mo-calculate sa custom rate para sa maong invoice nga dili maapektohan ang master inventory standard price.
 
-6. **Smart Movement Types**: Line items within a Stock-In can have different movement types ("Stock In", "Adjustment (+)", "Adjustment (-)"). The generated Payable only computes costs from actual "Stock In" items.
-7. **Daily Sales & Petty Cash Breakdown**: The Daily Sales report splits Cash receipts from Digital (GCash / Bank Transfer) and deducts Petty Cash and Distribution expenses to compute exact Net Cash Turn-Over.
-8. **Billing Statement Smart Pagination**: Prints scale automatically and chunk data across 20-item A4 portrait pages with running total and isolated bottom signatures.
+6. **Smart Movement Types & Unit Cost Stability**: Line items within a Stock-In can have different movement types ("Stock In", "Adjustment (+)", "Adjustment (-)"). The generated Payable only computes costs from actual "Stock In" items. In addition, inventory adjustments preserve movement types and maintain weighted average cost (WAC) stability without altering unit costs.
+7. **Daily Sales & Petty Cash Breakdown**: The Daily Sales report splits Cash receipts from Digital (GCash / Bank Transfer) and deducts Petty Cash and Distribution expenses to compute exact Net Cash Turn-Over. In Agora Daily Sales reports, staff can also include optional **Transittal** and **Check payments** breakdowns.
+8. **Billing Statement Smart Pagination & Historical Invoices**: Prints scale automatically and chunk data across 20-item A4 portrait pages with running total and isolated bottom signatures. Historical invoice items remain fully preserved on saved statements.
 9. **Master Inventory Creator Search**: Search products not only by name, SKU, or category, but also by the staff member who created/modified it (e.g. typing "Javier" or "System").
-10. **Agent Branch Isolation**: Agents only see inventory and submit reservations for branches they are explicitly assigned to.
+10. **Agent Branch Isolation & Real-Time Presence**: Agents only see inventory and submit reservations for branches they are explicitly assigned to. The system includes real-time staff presence tracking with online status, offline recency, and branch count synchronization.
+11. **Account Receivables Credit Terms & 14-Day Urgent Reminders**:
+    - **Terms & Due Date Column**: Sa [/admin/receivable/accounts](/admin/receivable/accounts), makita ang customer credit terms (pananglitan: \`30 Days\`, \`60 Days\`, \`90 Days\`) ug ang eksaktong calculated Due Date (\`Date + Terms\`).
+    - **Live Countdown Badges**:
+      * 🔴 **Overdue**: \`⚠️ Overdue by X days\` (Red badge)
+      * 🟠 **Urgent Reminder (≤ 14 Days)**: \`⏳ Due in X days\` (Amber badge)
+      * 🟢 **On Track (> 14 Days)**: \`X days remaining\` (Slate badge)
+    - **Header Notification Bell & Unified Action Required Modal**: Ang top Header Bell ug ang login popup alert mo-notify sa mga staff kung naay mga receivables o payables nga due na sulod sa 14 ka adlaw. Kung mabayran na ang utang (\`remaining_balance = 0\`), mawala dayon kini sa notifications sa tinuod nga oras (Real-time).
+    - **Automatic BILLED Status Sync**: Kung maghimo og Billing Statement sa [/admin/receivable/billing-statements](/admin/receivable/billing-statements), ang mga giapil nga invoice awtomatikong ma-markahan og **\`BILLED\`** sa Receivables. Kung i-delete ang statement, mabalik sila sa **\`UNPAID\`**. Ang staff pwede gihapon mag-manual override sa status gamit ang ✏️ Edit modal.
+
+12. **Billing Statement Live Document Editor & Smart Autocomplete**:
+    - Sa [/admin/receivable/billing-statements/print-saved/[id]](/admin/receivable/billing-statements/print-saved/[id]), pwede i-click ang **Edit Document** button aron ma-edit ang breakdown rows direkta sa papel.
+    - **Hover-to-Add Anywhere**: Pwede mag-hover sa bisan asang blankong linya aron mag-insert og custom row.
+    - **CURRENT PURCHASES Keyword**: Kung i-type o pilion ang \`CURRENT PURCHASES\`, awtomatikong mo-total kini sa unpaid invoices ug DILI kini madoble og kwenta sa Total Amount Due.
+    - **LESS PARTIAL Keyword**: Kung magbutang og \`LESS PARTIAL\` o \`DISCOUNT\`, awtomatikong mo-minus kini sa Total Amount Due.
+    - **Perfect Print**: Symmetrical 15mm margins, ink-efficient bond paper layout, ug limpyo nga print preview nga walay makitang edit buttons.
 
 Communication Tone:
 - Always be encouraging, respectful, and helpful.
