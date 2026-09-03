@@ -739,6 +739,63 @@ export default function SalesReportPrint({
                   </tbody>
                 </table>
               </div>
+
+              {/* TRANSMITTAL / CHECKS & NOTES (Only rendered if filled) */}
+              {(() => {
+                const validChecks = (transmittalChecks || []).filter(c => c.name || c.amount || c.ref || c.bank);
+                const validNotes = (transmittalNotes || []).filter(n => n && n.trim() !== '');
+
+                if (validChecks.length === 0 && validNotes.length === 0) return null;
+
+                const totalChecksAmount = validChecks.reduce((sum, c) => sum + (parseFloat(String(c.amount || 0).replace(/,/g, '')) || 0), 0);
+
+                return (
+                  <div className="mt-4 print-avoid-break flex flex-col gap-2">
+                    {validChecks.length > 0 && (
+                      <table className="w-full border-collapse border border-black text-xs print-daily-table">
+                        <thead>
+                          <tr className="bg-slate-100">
+                            <th colSpan={4} className="border border-black px-2 py-1 text-center font-black uppercase tracking-wider text-xs">
+                              TRANSMITTAL / CHECK PAYMENTS
+                            </th>
+                          </tr>
+                          <tr className="bg-slate-50 text-[10px]">
+                            <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[35%]">CUSTOMER NAME</th>
+                            <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[25%]">CHECK / INV NO.</th>
+                            <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[20%]">BANK</th>
+                            <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[20%]">AMOUNT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {validChecks.map((check, idx) => (
+                            <tr key={`agora-check-${idx}`} className="border-b border-black">
+                              <td className="border border-black px-2 py-1 text-left uppercase font-medium">{check.name || '-'}</td>
+                              <td className="border border-black px-2 py-1 text-center font-mono font-medium">{check.ref || '-'}</td>
+                              <td className="border border-black px-2 py-1 text-center uppercase font-medium">{check.bank || '-'}</td>
+                              <td className="border border-black px-2 py-1 text-right font-bold">{fmt(parseFloat(String(check.amount || 0).replace(/,/g, '')) || 0)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-slate-100 font-bold border-t border-black">
+                            <td colSpan={3} className="border border-black px-2 py-1 text-right uppercase text-[11px]">TOTAL CHECKS:</td>
+                            <td className="border border-black px-2 py-1 text-right font-black text-xs">{fmt(totalChecksAmount)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+
+                    {validNotes.length > 0 && (
+                      <div className="border border-black p-2 bg-slate-50/60 rounded-none text-xs">
+                        <p className="font-bold uppercase text-[10px] text-slate-700 tracking-wider mb-1 underline">REMARKS / TRANSMITTAL NOTES:</p>
+                        <ul className="list-disc list-inside space-y-0.5 font-medium text-slate-900">
+                          {validNotes.map((note, idx) => (
+                            <li key={`agora-note-${idx}`}>{note}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()

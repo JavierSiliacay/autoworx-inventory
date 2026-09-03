@@ -2445,6 +2445,96 @@ export default function AdminSalesPage() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Transmittal Config for Agora Branch */}
+                      <div className="pt-3 border-t border-slate-100 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Transmittal / Check Configuration</h4>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-md">Optional</span>
+                        </div>
+                        <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
+                          {/* Checks Section */}
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between items-center">
+                              <span>Check Payments ({transmittalChecks.length})</span>
+                              <button 
+                                type="button"
+                                onClick={() => setTransmittalChecks([...transmittalChecks, { name: '', ref: '', amount: '', bank: '' }])} 
+                                className="text-indigo-600 hover:text-indigo-700 font-bold text-[10px]"
+                              >
+                                + Add Check
+                              </button>
+                            </label>
+                            {transmittalChecks.map((check, i) => (
+                              <div key={i} className="flex flex-col gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                                <div className="grid grid-cols-4 gap-1.5">
+                                  <input type="text" placeholder="Customer Name" value={check.name} onChange={e => { const n = [...transmittalChecks]; n[i].name = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs" />
+                                  <input type="text" placeholder="Check/Inv No." value={check.ref} onChange={e => { const n = [...transmittalChecks]; n[i].ref = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs" />
+                                  <input 
+                                    type="text" 
+                                    placeholder="Amount" 
+                                    value={check.amount} 
+                                    onChange={e => { 
+                                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                                      const parts = val.split('.');
+                                      let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                      if (parts.length > 1) {
+                                        formatted += '.' + parts[1];
+                                      }
+                                      const n = [...transmittalChecks]; 
+                                      n[i].amount = formatted; 
+                                      setTransmittalChecks(n); 
+                                    }} 
+                                    className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs" 
+                                  />
+                                  <input type="text" placeholder="Bank" value={check.bank} onChange={e => { const n = [...transmittalChecks]; n[i].bank = e.target.value; setTransmittalChecks(n); }} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs" />
+                                </div>
+                                <div className="text-right">
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setTransmittalChecks(transmittalChecks.filter((_, idx) => idx !== i))} 
+                                    className="text-red-500 font-bold text-[9px] hover:underline"
+                                  >
+                                    REMOVE CHECK
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Notes Section */}
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex justify-between items-center">
+                              <span>Notes ({transmittalNotes.length})</span>
+                              <button 
+                                type="button"
+                                onClick={() => setTransmittalNotes([...transmittalNotes, ''])} 
+                                className="text-indigo-600 hover:text-indigo-700 font-bold text-[10px]"
+                              >
+                                + Add Note
+                              </button>
+                            </label>
+                            {transmittalNotes.map((note, i) => (
+                              <div key={i} className="flex gap-1.5">
+                                <input 
+                                  type="text" 
+                                  placeholder="Write spanning note..." 
+                                  value={note} 
+                                  onChange={e => { const n = [...transmittalNotes]; n[i] = e.target.value; setTransmittalNotes(n); }} 
+                                  className="flex-1 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs" 
+                                />
+                                <button 
+                                  type="button"
+                                  onClick={() => setTransmittalNotes(transmittalNotes.filter((_, idx) => idx !== i))} 
+                                  className="text-red-500 font-bold text-[10px] hover:underline px-1.5"
+                                >
+                                  REM
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : isValenciaColoursmile && printType === 'daily' ? (
