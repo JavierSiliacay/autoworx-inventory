@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788419868384",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "feature",
+    title: "Interactive Billing Statement Editor",
+    description: "Edit billing statements directly with smart reconciliation rows that auto‑calculate totals, making it faster and easier to keep statements accurate without manual math."
+  },
+
+  {
     id: "update-1788416902354",
     version: "v1.9.3",
     date: "2026-09-03",
