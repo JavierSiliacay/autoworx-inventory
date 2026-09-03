@@ -451,6 +451,60 @@ export default function AdminSalesPage() {
     }
   }, [kauswaganIncentives, kauswaganExpenses, printDate, filterBranch, selectedBranchId, mounted]);
 
+  // ─── MAIN DISTRIBUTION DAILY DEDUCTIONS PERSISTENCE (BY DATE & BRANCH) ──
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `main_dist_daily_${effectiveBranchId}_${printDate}`;
+    
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.pettyCashBeginning !== undefined && parsed.pettyCashBeginning !== null) setPettyCashBeginning(parsed.pettyCashBeginning);
+        if (Array.isArray(parsed.pettyCashExpenses) && parsed.pettyCashExpenses.length > 0) setPettyCashExpenses(parsed.pettyCashExpenses);
+        if (Array.isArray(parsed.distributionExpenses) && parsed.distributionExpenses.length > 0) setDistributionExpenses(parsed.distributionExpenses);
+        if (Array.isArray(parsed.transmittalChecks) && parsed.transmittalChecks.length > 0) setTransmittalChecks(parsed.transmittalChecks);
+        if (Array.isArray(parsed.transmittalNotes) && parsed.transmittalNotes.length > 0) setTransmittalNotes(parsed.transmittalNotes);
+      } else {
+        setPettyCashBeginning(474.00);
+        setPettyCashExpenses([{ particular: '', amount: '' }]);
+        setDistributionExpenses([{ particular: '', amount: '' }]);
+        setTransmittalChecks([{ name: '', ref: '', amount: '', bank: '' }]);
+        setTransmittalNotes(['']);
+      }
+    } catch (e) {
+      console.error("Error loading Main Distribution daily deductions:", e);
+    }
+  }, [printDate, filterBranch, selectedBranchId, mounted]);
+
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `main_dist_daily_${effectiveBranchId}_${printDate}`;
+    
+    const hasContent = 
+      pettyCashExpenses.some(c => c.particular || c.amount) ||
+      distributionExpenses.some(e => e.particular || e.amount) ||
+      transmittalChecks.some(t => t.name || t.ref || t.amount || t.bank) ||
+      transmittalNotes.some(n => Boolean(n)) ||
+      (pettyCashBeginning !== 474.00 && pettyCashBeginning !== '');
+
+    try {
+      if (hasContent) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          pettyCashBeginning,
+          pettyCashExpenses,
+          distributionExpenses,
+          transmittalChecks,
+          transmittalNotes
+        }));
+      }
+    } catch (e) {
+      console.error("Error saving Main Distribution daily deductions:", e);
+    }
+  }, [pettyCashBeginning, pettyCashExpenses, distributionExpenses, transmittalChecks, transmittalNotes, printDate, filterBranch, selectedBranchId, mounted]);
+
   // ─── SALES INVOICE DRAFT PERSISTENCE (BY BRANCH) ────────────────────
   useEffect(() => {
     if (!mounted) return;
@@ -716,7 +770,12 @@ export default function AdminSalesPage() {
       agoraExpensesList.some(e => e.particular || e.amount) || 
       Boolean(agoraRemit) ||
       kauswaganIncentives.some(c => c.particular || c.amount) ||
-      kauswaganExpenses.some(e => e.particular || e.amount);
+      kauswaganExpenses.some(e => e.particular || e.amount) ||
+      pettyCashExpenses.some(c => c.particular || c.amount) ||
+      distributionExpenses.some(e => e.particular || e.amount) ||
+      transmittalChecks.some(t => t.name || t.ref || t.amount || t.bank) ||
+      transmittalNotes.some(n => Boolean(n)) ||
+      (pettyCashBeginning !== 474.00 && pettyCashBeginning !== '');
     if (hasData) {
       setAutoSaveToast({ show: true, message: "Daily report deductions saved" });
     }

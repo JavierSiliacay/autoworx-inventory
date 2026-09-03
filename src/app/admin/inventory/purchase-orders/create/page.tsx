@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
+import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; unit: string; cost: number; }
@@ -60,6 +61,74 @@ export default function CreatePurchaseOrderPage() {
   const [items, setItems] = useState<POItem[]>([]);
   const [itemSearch, setItemSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+
+  // ─── PO DRAFT PERSISTENCE (BY BRANCH) ─────────────────────────────────
+  useEffect(() => {
+    setMounted(true);
+    const branchKey = selectedBranchId || 'default';
+    const storageKey = `po_create_draft_${branchKey}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.supplierId) setSupplierId(parsed.supplierId);
+          if (parsed.supplierSearch) setSupplierSearch(parsed.supplierSearch);
+          if (parsed.orderDate) setOrderDate(parsed.orderDate);
+          if (parsed.terms) setTerms(parsed.terms);
+          if (parsed.customTerms) setCustomTerms(parsed.customTerms);
+          if (parsed.approvedBy) setApprovedBy(parsed.approvedBy);
+          if (Array.isArray(parsed.items) && parsed.items.length > 0) setItems(parsed.items);
+        }
+      }
+    } catch (e) {
+      console.error("Error loading PO draft:", e);
+    }
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const branchKey = selectedBranchId || 'default';
+    const storageKey = `po_create_draft_${branchKey}`;
+
+    const hasDraftContent = 
+      Boolean(supplierId) || 
+      Boolean(supplierSearch) || 
+      items.length > 0 || 
+      Boolean(customTerms);
+
+    try {
+      if (hasDraftContent) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          supplierId,
+          supplierSearch,
+          orderDate,
+          terms,
+          customTerms,
+          approvedBy,
+          items
+        }));
+      }
+    } catch (e) {
+      console.error("Error saving PO draft:", e);
+    }
+  }, [supplierId, supplierSearch, orderDate, terms, customTerms, approvedBy, items, selectedBranchId, mounted]);
+
+  const clearDraft = () => {
+    if (items.length > 0 || supplierId || supplierSearch) {
+      if (!confirm("Are you sure you want to clear this draft and start fresh?")) return;
+    }
+    const branchKey = selectedBranchId || 'default';
+    try { localStorage.removeItem(`po_create_draft_${branchKey}`); } catch (e) {}
+    setSupplierId("");
+    setSupplierSearch("");
+    setItems([]);
+    setCustomTerms("");
+    setTerms("PDC 60 DAYS");
+    setApprovedBy("LIZA V. AGBONG");
+  };
 
   const fetchNextPoNumber = async (dateStr: string, branchId?: string) => {
     try {
@@ -264,12 +333,26 @@ export default function CreatePurchaseOrderPage() {
         items.map(i => ({ po_id: po.id, product_name: i.product_name, quantity: i.quantity, unit: i.unit, unit_price: i.unit_price }))
       );
       if (itemsErr) throw itemsErr;
+
+      // Clear draft on successful submit
+      const branchKey = selectedBranchId || 'default';
+      try { localStorage.removeItem(`po_create_draft_${branchKey}`); } catch (e) {}
+
       router.push("/admin/inventory/purchase-orders");
     } catch (err: any) {
       console.error("Error creating purchase order:", err);
       alert(`Failed to save Purchase Order: ${err?.message || err?.error_description || JSON.stringify(err)}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    const hasData = Boolean(supplierId) || Boolean(supplierSearch) || items.length > 0 || Boolean(customTerms);
+    if (hasData) {
+      router.push("/admin/inventory/purchase-orders?saved_draft=true");
+    } else {
+      router.push("/admin/inventory/purchase-orders");
     }
   };
 
@@ -285,14 +368,26 @@ export default function CreatePurchaseOrderPage() {
   return (
     <div className="pb-24 max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">New Purchase Order</h1>
-          <p className="text-sm text-slate-500">Specify procurement requirements for a supplier.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={handleCancel} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-manrope font-bold text-slate-900 tracking-tight">New Purchase Order</h1>
+            <p className="text-sm text-slate-500">Specify procurement requirements for a supplier.</p>
+          </div>
         </div>
+
+        {(items.length > 0 || supplierId || supplierSearch) && (
+          <button
+            type="button"
+            onClick={clearDraft}
+            className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl transition-all"
+          >
+            Clear Draft
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -434,21 +529,50 @@ export default function CreatePurchaseOrderPage() {
                         <p className="text-xs text-slate-400 font-medium">No items found in this branch.</p>
                       </div>
                     )}
-                    {filteredInventory.map(item => (
-                      <button key={item.id} type="button" onClick={() => { addItem(item); setIsSearching(false); }}
-                        className="w-full px-4 py-4 text-left hover:bg-green-50 flex items-center justify-between group transition-colors border-b border-slate-50 last:border-0">
-                        <div>
-                          <p className="text-xs font-bold text-slate-800 group-hover:text-[#16a34a] transition-colors uppercase">
-                            <HighlightMatch text={item.product_name} query={itemSearch} />
-                          </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Standard Cost: ₱{item.cost?.toLocaleString()}/{item.unit}</p>
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-100 group-hover:bg-[#16a34a] text-slate-400 group-hover:text-white px-2 py-1 rounded-lg transition-all">
-                           <span className="text-[9px] font-bold uppercase">Add</span>
-                           <Plus className="w-3.5 h-3.5" />
-                        </div>
-                      </button>
-                    ))}
+                    {filteredInventory.map(item => {
+                      const isAlreadyAdded = items.some(i => i.product_name.toLowerCase().trim() === item.product_name.toLowerCase().trim());
+
+                      return (
+                        <button 
+                          key={item.id} 
+                          type="button" 
+                          onClick={() => { 
+                            if (!isAlreadyAdded) {
+                              addItem(item); 
+                            }
+                            setIsSearching(false); 
+                          }}
+                          className={`w-full px-4 py-3.5 text-left flex items-center justify-between group transition-all border-b border-slate-50 last:border-0 ${
+                            isAlreadyAdded 
+                              ? 'bg-emerald-50/80 hover:bg-emerald-100/70 border-l-4 border-l-[#16a34a]' 
+                              : 'hover:bg-green-50/50'
+                          }`}
+                        >
+                          <div>
+                            <p className={`text-xs font-bold uppercase transition-colors flex items-center gap-1.5 ${
+                              isAlreadyAdded ? 'text-[#15803d]' : 'text-slate-800 group-hover:text-[#16a34a]'
+                            }`}>
+                              <HighlightMatch text={item.product_name} query={itemSearch} />
+                            </p>
+                            <p className={`text-[10px] mt-0.5 font-medium ${isAlreadyAdded ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              Standard Cost: ₱{item.cost?.toLocaleString()}/{item.unit}
+                            </p>
+                          </div>
+                          
+                          {isAlreadyAdded ? (
+                            <div className="flex items-center gap-1.5 bg-[#16a34a] text-white px-2.5 py-1 rounded-lg shadow-xs">
+                              <span className="text-[9px] font-black tracking-wider uppercase">ADDED</span>
+                              <span className="text-xs font-black">✓</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 bg-slate-100 group-hover:bg-[#16a34a] text-slate-400 group-hover:text-white px-2.5 py-1 rounded-lg transition-all shadow-xs">
+                              <span className="text-[9px] font-bold uppercase">Add</span>
+                              <Plus className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -555,7 +679,7 @@ export default function CreatePurchaseOrderPage() {
 
         {/* Sticky Footer Actions */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex justify-end gap-3 z-40 sm:static sm:bg-transparent sm:border-none sm:p-0">
-          <button type="button" onClick={() => router.back()}
+          <button type="button" onClick={handleCancel}
             className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
             Cancel
           </button>
@@ -566,6 +690,12 @@ export default function CreatePurchaseOrderPage() {
           </button>
         </div>
       </form>
+
+      <AutoSaveToast 
+        show={autoSaveToast.show} 
+        message={autoSaveToast.message} 
+        onClose={() => setAutoSaveToast(prev => ({ ...prev, show: false }))} 
+      />
     </div>
   );
 }

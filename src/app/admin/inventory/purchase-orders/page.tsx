@@ -8,10 +8,12 @@ import {
   ArrowRight, Pencil, Trash2, X, AlertTriangle, Save, PackagePlus, Minus, ChevronDown
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import PORenderer from "@/components/inventory/PORenderer";
+import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 interface PurchaseOrder {
@@ -55,10 +57,20 @@ const UNITS = ["Liter", "Gallon", "Can", "Piece", "Kilogram", "Meter"];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function PurchaseOrdersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const { selectedBranchId } = useNetwork();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+
+  useEffect(() => {
+    if (searchParams.get("saved_draft") === "true") {
+      setAutoSaveToast({ show: true, message: "Purchase order draft saved" });
+      router.replace("/admin/inventory/purchase-orders");
+    }
+  }, [searchParams, router]);
 
   // Print / view
   const [viewingPo, setViewingPo] = useState(false);
@@ -881,13 +893,34 @@ export default function PurchaseOrdersPage() {
                       {filteredProducts.length === 0 ? (
                         <p className="px-4 py-3 text-sm text-slate-400 text-center">No products found.</p>
                       ) : (
-                        filteredProducts.map(p => (
-                          <button key={p.id} onClick={() => addItemFromInventory(p)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 transition-colors text-left">
-                            <span className="text-sm font-medium text-slate-800">{p.product_name}</span>
-                            <span className="text-xs text-slate-400">{p.unit} · ₱{p.cost.toLocaleString()}</span>
-                          </button>
-                        ))
+                        filteredProducts.map(p => {
+                          const isAlreadyAdded = editItems.some(i => i.product_name.toLowerCase().trim() === p.product_name.toLowerCase().trim());
+                          return (
+                            <button 
+                              key={p.id} 
+                              onClick={() => {
+                                if (!isAlreadyAdded) addItemFromInventory(p);
+                              }}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 transition-colors text-left ${
+                                isAlreadyAdded ? 'bg-emerald-50 text-emerald-800 border-l-4 border-l-[#16a34a]' : 'hover:bg-blue-50'
+                              }`}
+                            >
+                              <span className={`text-sm font-medium ${isAlreadyAdded ? 'text-emerald-800 font-bold' : 'text-slate-800'}`}>
+                                {p.product_name}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs ${isAlreadyAdded ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                  {p.unit} · ₱{p.cost.toLocaleString()}
+                                </span>
+                                {isAlreadyAdded && (
+                                  <span className="text-[9px] font-black uppercase bg-[#16a34a] text-white px-2 py-0.5 rounded">
+                                    ADDED ✓
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -1220,6 +1253,12 @@ export default function PurchaseOrdersPage() {
           </div>
         </div>
       )}
+
+      <AutoSaveToast 
+        show={autoSaveToast.show} 
+        message={autoSaveToast.message} 
+        onClose={() => setAutoSaveToast(prev => ({ ...prev, show: false }))} 
+      />
 
     </div>
   );
