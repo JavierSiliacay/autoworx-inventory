@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788416902354",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "fix",
+    title: "Invoice History Preserved on Saved Statements",
+    description: "When staff save a billing statement, previous invoice items remain intact, so you retain a complete history without risk of losing past data."
+  },
+
+  {
     id: "update-1788416109773",
     version: "v1.9.3",
     date: "2026-09-03",
