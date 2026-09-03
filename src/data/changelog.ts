@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788404292024",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "feature",
+    title: "Enhanced Kauswagan Report & Updated Pricing Margins",
+    description: "The Kauswagan report layout has been refreshed for clearer, quicker insights, and the Main Distribution APC pricing margins have been adjusted to reflect current costs, helping staff make faster, more informed decisions."
+  },
+
+  {
     id: "update-1788400739841",
     version: "v1.9.3",
     date: "2026-09-03",
