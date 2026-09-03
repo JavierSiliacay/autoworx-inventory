@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788423320400",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "improvement",
+    title: "Drafts autosave and purchase orders refined",
+    description: "Your drafts are now saved automatically as you work, so you never lose progress. Subtle animation toasts confirm actions, and a visual indicator highlights newly added items. Additionally, the purchasing order print layout no longer displays an outdated signature, giving your documents a cleaner, more professional look."
+  },
+
+  {
     id: "update-1788422091176",
     version: "v1.9.3",
     date: "2026-09-03",
