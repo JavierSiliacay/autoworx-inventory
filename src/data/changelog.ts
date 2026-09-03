@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788416109773",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "feature",
+    title: "New payment options and more reliable inventory adjustments",
+    description: "Staff can now include optional transit and check payments in the daily Agora sales report, and inventory adjustments keep movement types and unit costs accurate."
+  },
+
+  {
     id: "update-1788404292024",
     version: "v1.9.3",
     date: "2026-09-03",
