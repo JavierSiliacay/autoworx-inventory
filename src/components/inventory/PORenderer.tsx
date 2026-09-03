@@ -204,18 +204,8 @@ export default function PORenderer({ po, onClose }: PORendererProps) {
         <div className="mt-auto pt-4 flex flex-col items-start px-2 shrink-0 z-10 page-break-inside-avoid">
            <div className="flex justify-between w-full items-end pb-2">
               {/* Prepared By Block */}
-              <div className="flex flex-col items-center">
-                {(!po.branch?.name?.toUpperCase().includes('VALENCIA') && !po.branch?.name?.toUpperCase().includes('KAUSWAGAN')) ? (
-                  <img 
-                      src="/carla_signature.png" 
-                      alt="Signature" 
-                      className="h-[5rem] w-auto object-contain translate-y-[25px] translate-x-[29px] relative z-20 pointer-events-none drop-shadow-sm" 
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                  />
-                ) : (
-                  <div className="h-[5rem] translate-y-[25px] relative z-20"></div>
-                )}
-                <p className="font-bold text-[12px] uppercase tracking-wider relative z-10 mt-[-2px]">
+              <div className="flex flex-col items-center h-[5rem] justify-end">
+                <p className="font-bold text-[12px] uppercase tracking-wider relative z-10">
                   PREPARED BY: {
                     (po.branch?.name?.toUpperCase().includes('VALENCIA') || po.branch?.name?.toUpperCase().includes('KAUSWAGAN'))
                       ? '_________________________'

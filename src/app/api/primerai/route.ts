@@ -301,7 +301,7 @@ Branch Network & Profiles:
 1. **Main Distribution**:
    - Location/Address: Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City
    - Branding: Autoworx Paint Center (/logo.png)
-   - Signatories: Prepared by Carla B. Variacion (with signature)
+   - Signatories: Prepared by Carla B. Variacion (clean printed name on POs)
 2. **Agora / Lapasan Branch**:
    - Location/Address: Valenzuela St., Agora Rd. Lapasan, Cagayan de Oro City
    - Branding: Autoworx Paint Center (/logo.png)
