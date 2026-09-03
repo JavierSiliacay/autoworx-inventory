@@ -396,7 +396,7 @@ export default function StockInPage() {
                               setLoading(true);
                               const { data, error } = await supabase
                                 .from("stock_in_items")
-                                .select("id, inventory_id, quantity_received, unit_cost, total_cost, inventory:inventory(product_name)")
+                                .select("id, inventory_id, quantity_received, unit_cost, total_cost, movement_type, inventory:inventory(product_name)")
                                 .eq("stock_in_id", log.id)
                                 .order("id");
                               setLoading(false);
@@ -512,13 +512,13 @@ export default function StockInPage() {
                                             )}
                                           </td>
                                           <td className="px-4 py-2.5 text-right font-semibold text-slate-700">
-                                            {item.quantity_received.toLocaleString()}
+                                            {Math.abs(item.quantity_received).toLocaleString()}
                                           </td>
                                           <td className="px-4 py-2.5 text-right text-slate-600">
                                             {fmt(item.unit_cost)}
                                           </td>
                                           <td className="px-4 py-2.5 text-right font-semibold text-slate-900">
-                                            {fmt(lineTotal)}
+                                            {fmt(Math.abs(lineTotal))}
                                           </td>
                                         </tr>
                                       );

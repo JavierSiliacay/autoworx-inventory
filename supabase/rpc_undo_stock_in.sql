@@ -28,7 +28,8 @@ BEGIN
       si.inventory_id,
       si.quantity_received,
       si.unit_cost,
-      COALESCE(si.total_cost, si.quantity_received * si.unit_cost) AS line_total
+      COALESCE(si.total_cost, si.quantity_received * si.unit_cost) AS line_total,
+      COALESCE(si.movement_type, 'Stock In') AS movement_type
     FROM public.stock_in_items si
     WHERE si.stock_in_id = p_log_id
       AND si.inventory_id IS NOT NULL
@@ -46,9 +47,13 @@ BEGIN
     v_old_qty := COALESCE(v_curr_qty, 0) - v_qty_in;
 
     -- Reverse the WAC:
-    --   When stock-in was added:  new_cost = (old_value + line_total) / new_qty
-    --   To reverse:               old_cost = (current_value - line_total) / old_qty
-    IF v_old_qty > 0 THEN
+    -- If this was an Adjustment (-) reduction (v_qty_in <= 0 or movement_type = 'Adjustment (-)'),
+    -- the reduction never changed the unit cost, so reversing it must KEEP the current unit cost!
+    IF v_qty_in <= 0 OR v_item.movement_type = 'Adjustment (-)' THEN
+      v_restored_cost := COALESCE(v_curr_cost, v_item.unit_cost);
+    ELSIF v_old_qty > 0 THEN
+      -- Regular Stock In / Adj (+) reversal:
+      -- new_cost = (old_value + line_total) / new_qty => old_cost = (current_value - line_total) / old_qty
       v_restored_cost := ROUND(
         ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) - v_line_total )
         / v_old_qty,

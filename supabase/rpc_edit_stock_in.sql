@@ -76,12 +76,19 @@ BEGIN
       v_payable_amount := v_payable_amount + COALESCE((v_new_item->>'total_amount')::decimal, (v_new_item->>'quantity_received')::decimal * (v_new_item->>'unit_cost')::decimal);
     END IF;
 
-    -- Update inventory quantities and latest cost
-    UPDATE public.inventory
-    SET quantity = quantity + (v_new_item->>'quantity_received')::decimal,
-        cost = (v_new_item->>'unit_cost')::decimal,
-        updated_at = timezone('utc'::text, now())
-    WHERE id = v_inventory_id;
+    -- Update inventory quantities and latest cost (only update cost if adding stock, not on negative adjustments)
+    IF (v_new_item->>'quantity_received')::decimal > 0 AND COALESCE(v_new_item->>'movement_type', 'Stock In') != 'Adjustment (-)' THEN
+      UPDATE public.inventory
+      SET quantity = quantity + (v_new_item->>'quantity_received')::decimal,
+          cost = (v_new_item->>'unit_cost')::decimal,
+          updated_at = timezone('utc'::text, now())
+      WHERE id = v_inventory_id;
+    ELSE
+      UPDATE public.inventory
+      SET quantity = quantity + (v_new_item->>'quantity_received')::decimal,
+          updated_at = timezone('utc'::text, now())
+      WHERE id = v_inventory_id;
+    END IF;
 
     -- Insert stock_transactions audit log
     INSERT INTO public.stock_transactions (

@@ -59,9 +59,15 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         supplier_id: logData.supplier_id || "",
         branch_id: logData.branch_id || "",
         items: logData.items ? logData.items.map((item: any) => {
-          const qty = Math.abs(Number(item.quantity_received) || 0);
+          const rawQty = Number(item.quantity_received) || 0;
+          const qty = Math.abs(rawQty);
           const cost = Number(item.unit_cost) || 0;
           const totalAmt = item.total_amount !== undefined ? Math.abs(Number(item.total_amount)) : (qty * cost);
+          
+          // Detect movement type reliably
+          const detectedMovement = item.movement_type || 
+            (rawQty < 0 ? "Adjustment (-)" : (logData.invoice_number?.includes("[ADJ-]") ? "Adjustment (-)" : (logData.invoice_number?.includes("[ADJ+]") ? "Adjustment (+)" : "Stock In")));
+
           return {
             id: item.id,
             inventory_id: item.inventory_id,
@@ -69,9 +75,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
             quantity_received: qty,
             unit_cost: cost,
             total_amount: totalAmt,
-            old_quantity: qty,
-            movement_type: item.movement_type || "Stock In",
-            old_movement_type: item.movement_type || "Stock In"
+            old_quantity: rawQty,
+            movement_type: detectedMovement,
+            old_movement_type: detectedMovement
           };
         }) : []
       });
@@ -90,11 +96,19 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     } else if (field === 'quantity_received') {
       const qty = value === "" || value === undefined ? "" : Number(value);
       item.quantity_received = qty;
+      const cost = Number(item.unit_cost) || 0;
+      if (qty !== "") {
+        item.total_amount = Number((cost * Number(qty)).toFixed(2));
+      }
+    } else if (field === 'movement_type') {
+      item.movement_type = value;
+      const cost = Number(item.unit_cost) || 0;
+      const qty = Number(item.quantity_received) || 0;
+      item.total_amount = Number((cost * qty).toFixed(2));
     } else {
       item[field] = value;
     }
 
-    newItems[index] = item;
     newItems[index] = item;
     setCurrentLog({ ...currentLog, items: newItems });
   };
@@ -108,9 +122,14 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
         supplier_id: logData.supplier_id || "",
         branch_id: logData.branch_id || "",
         items: logData.items ? logData.items.map((item: any) => {
-          const qty = Math.abs(Number(item.quantity_received) || 0);
+          const rawQty = Number(item.quantity_received) || 0;
+          const qty = Math.abs(rawQty);
           const cost = Number(item.unit_cost) || 0;
           const totalAmt = item.total_amount !== undefined ? Math.abs(Number(item.total_amount)) : (qty * cost);
+          
+          const detectedMovement = item.movement_type || 
+            (rawQty < 0 ? "Adjustment (-)" : (logData.invoice_number?.includes("[ADJ-]") ? "Adjustment (-)" : (logData.invoice_number?.includes("[ADJ+]") ? "Adjustment (+)" : "Stock In")));
+
           return {
             id: item.id,
             inventory_id: item.inventory_id,
@@ -118,9 +137,9 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
             quantity_received: qty,
             unit_cost: cost,
             total_amount: totalAmt,
-            old_quantity: qty,
-            movement_type: item.movement_type || "Stock In",
-            old_movement_type: item.movement_type || "Stock In"
+            old_quantity: rawQty,
+            movement_type: detectedMovement,
+            old_movement_type: detectedMovement
           };
         }) : []
       });

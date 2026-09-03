@@ -215,15 +215,27 @@ export default function NewStockInPage() {
       if (field === "total_amount") {
         const totalAmt = Number(value) || 0;
         const qty = Number(updated.quantity_received) || 0;
-        updated.unit_cost = qty > 0 ? Number((totalAmt / qty).toFixed(4)) : 0;
+        // Only recompute unit_cost if total_amount was explicitly typed and it's not Adjustment (-)
+        if (updated.movement_type === "Adjustment (-)") {
+          // In Adjustment (-), unit_cost always stays master cost
+          const template = inventory.find(inv => inv.product_name === updated.product_name);
+          updated.unit_cost = template?.cost || updated.unit_cost || 0;
+        } else {
+          updated.unit_cost = qty > 0 ? Number((totalAmt / qty).toFixed(4)) : 0;
+        }
       } else if (field === "quantity_received") {
         const qty = Number(value) || 0;
-        const totalAmt = Number(updated.total_amount) || 0;
-        if (totalAmt > 0 && qty > 0) {
-          updated.unit_cost = Number((totalAmt / qty).toFixed(4));
-        } else if (qty > 0 && updated.unit_cost > 0) {
-          // If total_amount was not yet set, preserve existing unit cost and compute total
-          updated.total_amount = Number((updated.unit_cost * qty).toFixed(2));
+        const cost = Number(updated.unit_cost) || 0;
+        // When typing quantity, PRESERVE unit_cost and recalculate total_amount
+        updated.total_amount = Number((cost * qty).toFixed(2));
+      } else if (field === "movement_type") {
+        if (value === "Adjustment (-)") {
+          // Reset unit cost to master inventory cost
+          const template = inventory.find(inv => inv.product_name === updated.product_name);
+          const masterCost = template?.cost || updated.unit_cost || 0;
+          const qty = Number(updated.quantity_received) || 0;
+          updated.unit_cost = masterCost;
+          updated.total_amount = Number((masterCost * qty).toFixed(2));
         }
       }
 
@@ -311,16 +323,18 @@ export default function NewStockInPage() {
         const template = inventory.find(inv => inv.product_name === item.product_name);
         const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
         const qty = item.quantity_received * multiplier;
-        const itemTotal = item.total_amount !== undefined ? (item.total_amount * multiplier) : (item.quantity_received * item.unit_cost * multiplier);
+        const cost = item.movement_type === "Adjustment (-)" ? (template?.cost || item.unit_cost) : item.unit_cost;
+        const baseItemTotal = item.movement_type === "Adjustment (-)" ? (qty * cost) : (item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost));
+        const itemTotal = baseItemTotal * multiplier;
 
         return {
           inventory_id: item.inventory_id || null,
           product_name: item.product_name,
           category: template?.category || "Paint",
           unit: template?.unit || "Gallon",
-          price: template?.price || (item.unit_cost * 1.3),
+          price: template?.price || (cost * 1.3),
           quantity_received: qty,
-          unit_cost: item.unit_cost,
+          unit_cost: cost,
           total_amount: itemTotal,
           movement_type: item.movement_type || "Stock In"
         };
@@ -642,20 +656,39 @@ export default function NewStockInPage() {
                             className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="text-sm font-medium text-slate-500">
-                            ₱{Number(item.unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
+                          {(() => {
+                            const template = inventory.find(i => i.product_name === item.product_name);
+                            const displayCost = item.movement_type === "Adjustment (-)" ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+                            return (
+                              <span className="text-sm font-medium text-slate-500">
+                                ₱{Number(displayCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <FormattedNumberInput
-                            autoSize
-                            prefixElement={<span className="absolute left-2.5 text-slate-300 text-xs z-10">₱</span>}
-                            value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
-                            onChange={val => {
-                              updateItem(idx, "total_amount", val);
-                            }}
-                            className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" 
-                          />
+                          {item.movement_type === "Adjustment (-)" ? (
+                            (() => {
+                              const template = inventory.find(i => i.product_name === item.product_name);
+                              const cost = template?.cost || item.unit_cost || 0;
+                              const adjTotal = Number((cost * (Number(item.quantity_received) || 0)).toFixed(2));
+                              return (
+                                <span className="text-sm font-semibold text-amber-600">
+                                  ₱{adjTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              );
+                            })()
+                          ) : (
+                            <FormattedNumberInput
+                              autoSize
+                              prefixElement={<span className="absolute left-2.5 text-slate-300 text-xs z-10">₱</span>}
+                              value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
+                              onChange={val => {
+                                updateItem(idx, "total_amount", val);
+                              }}
+                              className="w-28 pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" 
+                            />
+                          )}
                         </td>
                         {!selectedPO && (
                           <td className="px-4 py-3 text-right">
@@ -738,19 +771,40 @@ export default function NewStockInPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Cost</p>
-                        <p className="py-1.5 text-sm font-medium text-slate-500">₱{Number(item.unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        {(() => {
+                          const template = inventory.find(i => i.product_name === item.product_name);
+                          const displayCost = item.movement_type === "Adjustment (-)" ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+                          return (
+                            <p className="py-1.5 text-sm font-medium text-slate-500">
+                              ₱{Number(displayCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          );
+                        })()}
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Total</p>
-                        <div className="relative inline-flex items-center w-full">
-                          <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
-                          <FormattedNumberInput
-                            value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
-                            onChange={val => {
-                              updateItem(idx, "total_amount", val);
-                            }}
-                            className="w-full pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
-                        </div>
+                        {item.movement_type === "Adjustment (-)" ? (
+                          (() => {
+                            const template = inventory.find(i => i.product_name === item.product_name);
+                            const cost = template?.cost || item.unit_cost || 0;
+                            const adjTotal = Number((cost * (Number(item.quantity_received) || 0)).toFixed(2));
+                            return (
+                              <p className="py-1.5 text-sm font-semibold text-amber-600">
+                                ₱{adjTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            );
+                          })()
+                        ) : (
+                          <div className="relative inline-flex items-center w-full">
+                            <span className="absolute left-2.5 text-slate-300 text-xs">₱</span>
+                            <FormattedNumberInput
+                              value={item.total_amount !== undefined ? item.total_amount : (item.quantity_received * item.unit_cost) || undefined}
+                              onChange={val => {
+                                updateItem(idx, "total_amount", val);
+                              }}
+                              className="w-full pl-6 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-[#16a34a] outline-none focus:border-[#16a34a]" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
