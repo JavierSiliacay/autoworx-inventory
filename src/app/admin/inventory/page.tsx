@@ -400,7 +400,9 @@ export default function AdminInventoryPage() {
                 {canViewCost && (
                   <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Cost</th>
                 )}
-                <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Price</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">
+                  {isMainDistributionView ? "APC Price" : "Price"}
+                </th>
                 {isMainDistributionView && (
                   <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Dealer's Price</th>
                 )}
@@ -417,7 +419,9 @@ export default function AdminInventoryPage() {
                 </tr>
               )}
               {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
-                const margin = (product.price || 0) - (product.cost || 0);
+                const margin = isMainDistributionView
+                  ? ((product.dealers_price || product.price || 0) - (product.cost || 0))
+                  : ((product.price || 0) - (product.cost || 0));
                 const isLow = product.quantity <= (product.low_stock_threshold ?? 5);
                 return (
                   <React.Fragment key={product.id}>
@@ -567,7 +571,9 @@ export default function AdminInventoryPage() {
             <div className="py-16 text-center text-sm text-slate-400">No products found.</div>
           )}
           {filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(product => {
-            const margin = (product.price || 0) - (product.cost || 0);
+            const margin = isMainDistributionView
+              ? ((product.dealers_price || product.price || 0) - (product.cost || 0))
+              : ((product.price || 0) - (product.cost || 0));
             const isLow = product.quantity <= (product.low_stock_threshold ?? 5);
             return (
               <div key={product.id} className={`p-4 space-y-3 ${isLow ? "bg-red-50/30" : ""}`}>
@@ -617,7 +623,7 @@ export default function AdminInventoryPage() {
                       </div>
                     )}
                     <div>
-                      <p className="text-[10px] text-slate-400">Price</p>
+                      <p className="text-[10px] text-slate-400">{isMainDistributionView ? "APC Price" : "Price"}</p>
                       <p className="text-sm font-semibold text-slate-900">₱{formatNum(product.price || 0)}</p>
                     </div>
                     {isMainDistributionView && (
@@ -805,7 +811,9 @@ export default function AdminInventoryPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Retail Price</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    {branches.find(b => b.id === currentProduct?.branch_id)?.name.toLowerCase().includes("main") ? "APC Price" : "Retail Price"}
+                  </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1e40af] text-sm font-bold">₱</span>
                     <input

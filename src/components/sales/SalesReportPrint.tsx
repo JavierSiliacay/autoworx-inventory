@@ -31,6 +31,9 @@ interface SalesReportPrintProps {
   agoraCashAdvances?: { particular: string; amount: string }[];
   agoraExpenses?: { particular: string; amount: string }[];
   agoraRemit?: string;
+  // Kauswagan-specific props
+  kauswaganIncentives?: { particular: string; amount: string }[];
+  kauswaganExpenses?: { particular: string; amount: string }[];
 }
 
 export default function SalesReportPrint({ 
@@ -51,6 +54,8 @@ export default function SalesReportPrint({
   agoraCashAdvances = [],
   agoraExpenses = [],
   agoraRemit = '',
+  kauswaganIncentives = [],
+  kauswaganExpenses = [],
 }: SalesReportPrintProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -155,6 +160,17 @@ export default function SalesReportPrint({
     }
   })();
 
+  const kauswaganFormattedDate = (() => {
+    try {
+      if (!printDate) return '';
+      const [y, m, d] = printDate.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+    } catch {
+      return printDate ? printDate.toUpperCase() : '';
+    }
+  })();
+
   return (
     <>
       <div 
@@ -178,7 +194,7 @@ export default function SalesReportPrint({
                 SALES REPORT
               </h3>
               <p className="text-[13px] font-bold mt-0.5 text-black font-mono">
-                {valenciaFormattedDate}
+                {isKauswagan ? kauswaganFormattedDate : valenciaFormattedDate}
               </p>
             </div>
           </div>
@@ -281,8 +297,250 @@ export default function SalesReportPrint({
             </tbody>
           )}
         </table>
-      ) : isAgoraOrKauswagan ? (
-        /* ─── AGORA / KAUSWAGAN BRANCH 2-COLUMN DAILY SALES REPORT ─────────────────────────── */
+      ) : isKauswagan && reportType === 'daily' ? (
+        /* ─── KAUSWAGAN BRANCH ENHANCED UNIFIED 6-COLUMN REPORT ─── */
+        (() => {
+          const kCashArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
+          const kChargeArr = filteredSales.filter(s => s.payment_type === 'Charge');
+          const kGcashTotal = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer').reduce((a, s) => a + (s.total_amount || 0), 0);
+          const kCashTotal = kCashArr.reduce((a, s) => a + (s.total_amount || 0), 0);
+          const kChargeTotal = kChargeArr.reduce((a, s) => a + (s.total_amount || 0), 0);
+
+          const totalIncentives = (kauswaganIncentives || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+          const totalExpenses = (kauswaganExpenses || []).reduce((acc, e) => acc + (parseFloat(String(e.amount || 0).replace(/,/g, '')) || 0), 0);
+
+          // Incentives deducted to sales, Expenses NOT deducted to sales
+          const totalCashForRemittance = kCashTotal - kGcashTotal - totalIncentives;
+          const overallTotalSales = (kCashTotal - totalIncentives) + kChargeTotal;
+
+          const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          const incItems = (kauswaganIncentives || []).filter(c => c.particular || c.amount);
+          const expItems = (kauswaganExpenses || []).filter(c => c.particular || c.amount);
+
+          type LeftRow = 
+            | { kind: 'item'; name: string; inv: string; amount: string }
+            | { kind: 'empty' };
+
+          type RightRow = 
+            | { kind: 'item'; name: string; inv: string; amount: string }
+            | { kind: 'section_header'; title: string }
+            | { kind: 'subtotal'; label: string; amount: string }
+            | { kind: 'summary_row'; label: string; amount: string; isBold?: boolean; isHighlight?: boolean; isTotal?: boolean; isRemittance?: boolean; isInfo?: boolean }
+            | { kind: 'empty' };
+
+          const leftRows: LeftRow[] = [];
+          kCashArr.forEach(s => {
+            leftRows.push({
+              kind: 'item',
+              name: s.customer_name || 'CASH',
+              inv: s.invoice_no || 'N/A',
+              amount: fmt(s.total_amount || 0)
+            });
+          });
+
+          const rightRows: RightRow[] = [];
+
+          // 1. Charge Sales items
+          if (kChargeArr.length > 0) {
+            kChargeArr.forEach(s => {
+              rightRows.push({
+                kind: 'item',
+                name: s.customer_name || 'UNKNOWN',
+                inv: s.invoice_no || 'N/A',
+                amount: fmt(s.total_amount || 0)
+              });
+            });
+            rightRows.push({
+              kind: 'subtotal',
+              label: 'SUBTOTAL CHARGE',
+              amount: fmt(kChargeTotal)
+            });
+          } else {
+            rightRows.push({
+              kind: 'item',
+              name: 'NO CHARGE SALES',
+              inv: '-',
+              amount: '0.00'
+            });
+          }
+
+          // 2. Expenses & Deductions Box (Always display Expenses section)
+          rightRows.push({ kind: 'empty' });
+          rightRows.push({ kind: 'section_header', title: 'EXPENSES' });
+
+          if (expItems.length > 0) {
+            expItems.forEach(e => {
+              rightRows.push({
+                kind: 'item',
+                name: (e.particular || 'EXPENSE').toUpperCase(),
+                inv: 'EXPENSE',
+                amount: fmt(parseInput(e.amount))
+              });
+            });
+          } else {
+            rightRows.push({
+              kind: 'item',
+              name: 'NO EXPENSES',
+              inv: '-',
+              amount: '0.00'
+            });
+          }
+
+          if (totalIncentives > 0) {
+            incItems.forEach(inc => {
+              rightRows.push({
+                kind: 'item',
+                name: (inc.particular ? `INCENTIVE (${inc.particular})` : 'INCENTIVE').toUpperCase(),
+                inv: 'INCENTIVE',
+                amount: fmt(parseInput(inc.amount))
+              });
+            });
+          }
+
+          const totalDeductionsList = totalExpenses + totalIncentives;
+          rightRows.push({
+            kind: 'subtotal',
+            label: 'TOTAL EXPENSES',
+            amount: fmt(totalExpenses)
+          });
+
+          // 3. Paint Center Summary Box
+          rightRows.push({ kind: 'empty' });
+          rightRows.push({ kind: 'section_header', title: 'PAINT CENTER SUMMARY' });
+          rightRows.push({ kind: 'summary_row', label: 'CASH:', amount: fmt(kCashTotal) });
+          rightRows.push({ kind: 'summary_row', label: 'GCASH:', amount: fmt(kGcashTotal) });
+          rightRows.push({ kind: 'summary_row', label: 'CHARGE:', amount: fmt(kChargeTotal) });
+          rightRows.push({ kind: 'summary_row', label: 'SUBTOTAL:', amount: fmt(kCashTotal + kGcashTotal + kChargeTotal), isBold: true });
+          rightRows.push({ kind: 'summary_row', label: 'LESS INCENTIVES:', amount: `-₱${fmt(totalIncentives)}`, isHighlight: true });
+          rightRows.push({ kind: 'summary_row', label: 'OVERALL TOTAL SALES:', amount: `₱${fmt(overallTotalSales)}`, isTotal: true });
+
+          // Synchronize total rows so both sides match and fill bond paper evenly (minimum 25 rows)
+          const maxRows = Math.max(leftRows.length, rightRows.length, 25);
+          while (leftRows.length < maxRows) {
+            leftRows.push({ kind: 'empty' });
+          }
+          while (rightRows.length < maxRows) {
+            rightRows.push({ kind: 'empty' });
+          }
+
+          return (
+            <div className="w-full flex flex-col">
+              <table className="w-full border-collapse border border-black text-xs print-daily-table">
+                <thead>
+                  {/* Master Top Bar */}
+                  <tr>
+                    <th colSpan={3} className="border border-black px-2 py-1.5 text-left font-black uppercase text-xs bg-slate-50 tracking-wider">
+                      {kauswaganFormattedDate}
+                    </th>
+                    <th colSpan={3} className="border border-black px-2 py-1.5 text-center font-black uppercase text-xs bg-slate-100 tracking-wider">
+                      CHARGE SALES
+                    </th>
+                  </tr>
+                  {/* Category Banners */}
+                  <tr>
+                    <th colSpan={3} className="border border-black px-2 py-1 text-center font-black uppercase text-[11px] bg-slate-100 tracking-wider">
+                      CASH SALES
+                    </th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[21%] text-[10px]">CUSTOMER'S NAME</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[14%] text-[10px]">INV. NO.</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[15%] text-[10px]">AMOUNT</th>
+                  </tr>
+                  {/* Subheaders for Left side */}
+                  <tr>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[21%] text-[10px]">CUSTOMER'S NAME</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[14%] text-[10px]">INV. NO.</th>
+                    <th className="border border-black px-2 py-1 text-center font-bold uppercase w-[15%] text-[10px]">AMOUNT</th>
+                    <th colSpan={3} className="border border-black px-2 py-0.5 bg-slate-50 text-[10px] text-slate-500 text-center font-bold uppercase">
+                      DETAILS & BREAKDOWN
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: maxRows }).map((_, idx) => {
+                    const l = leftRows[idx];
+                    const r = rightRows[idx];
+
+                    return (
+                      <tr key={`k-row-${idx}`} className="border-b border-black">
+                        {/* LEFT 3 COLUMNS */}
+                        {l && l.kind === 'item' ? (
+                          <>
+                            <td className="border border-black px-2 py-1 text-left uppercase font-medium">{l.name}</td>
+                            <td className="border border-black px-2 py-1 text-center font-medium">{l.inv}</td>
+                            <td className="border border-black px-2 py-1 text-right font-medium">{l.amount}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="border border-black px-2 py-1 text-center text-slate-200">-</td>
+                            <td className="border border-black px-2 py-1 text-center text-slate-200">-</td>
+                            <td className="border border-black px-2 py-1 text-right text-slate-200">0.00</td>
+                          </>
+                        )}
+
+                        {/* RIGHT 3 COLUMNS */}
+                        {r && r.kind === 'section_header' ? (
+                          <td colSpan={3} className="border border-black px-2 py-1 font-black uppercase text-center bg-slate-100 text-[11px] tracking-wider">
+                            {r.title}
+                          </td>
+                        ) : r && r.kind === 'subtotal' ? (
+                          <>
+                            <td colSpan={2} className="border border-black px-2 py-1 font-bold uppercase text-right bg-slate-50 text-[11px]">
+                              {r.label}:
+                            </td>
+                            <td className="border border-black px-2 py-1 font-bold text-right text-[11px]">
+                              {r.amount}
+                            </td>
+                          </>
+                        ) : r && r.kind === 'summary_row' ? (
+                          <>
+                            <td colSpan={2} className={`border border-black px-2 py-1 uppercase text-left text-[11px] ${r.isTotal ? 'font-black bg-slate-200 text-black' : r.isRemittance ? 'font-black bg-emerald-50 text-emerald-950' : r.isHighlight ? 'font-bold text-amber-900 bg-amber-50/50' : r.isInfo ? 'text-slate-600 font-medium' : r.isBold ? 'font-bold bg-slate-50' : 'font-medium'}`}>
+                              {r.label}:
+                            </td>
+                            <td className={`border border-black px-2 py-1 text-right text-[11px] ${r.isTotal ? 'font-black bg-slate-200 text-black underline text-xs' : r.isRemittance ? 'font-black bg-emerald-50 text-emerald-950 text-xs' : r.isHighlight ? 'font-bold text-amber-900 bg-amber-50/50' : r.isInfo ? 'font-bold text-slate-700' : r.isBold ? 'font-bold bg-slate-50' : 'font-medium'}`}>
+                              {r.amount}
+                            </td>
+                          </>
+                        ) : r && r.kind === 'item' ? (
+                          <>
+                            <td className="border border-black px-2 py-1 text-left uppercase font-medium">{r.name}</td>
+                            <td className="border border-black px-2 py-1 text-center font-medium text-slate-500">{r.inv}</td>
+                            <td className="border border-black px-2 py-1 text-right font-medium">{r.amount}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="border border-black px-2 py-1 text-center text-slate-200">-</td>
+                            <td className="border border-black px-2 py-1 text-center text-slate-200">-</td>
+                            <td className="border border-black px-2 py-1 text-right text-slate-200">0.00</td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {/* Table Footer with Cash Sales Total and Overall Sales Total */}
+                <tfoot>
+                  <tr className="border-t-2 border-black bg-slate-100 font-black">
+                    <td colSpan={2} className="border border-black px-2 py-1.5 uppercase text-right text-xs">
+                      TOTAL CASH SALES:
+                    </td>
+                    <td className="border border-black px-2 py-1.5 text-right text-xs font-black">
+                      {fmt(kCashTotal)}
+                    </td>
+                    <td colSpan={2} className="border border-black px-2 py-1.5 uppercase text-right text-xs bg-slate-200">
+                      OVERALL TOTAL SALES:
+                    </td>
+                    <td className="border border-black px-2 py-1.5 text-right text-xs font-black bg-slate-200 underline">
+                      ₱{fmt(overallTotalSales)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          );
+        })()
+      ) : isAgora && reportType === 'daily' ? (
+        /* ─── AGORA BRANCH 2-COLUMN DAILY SALES REPORT ─────────────────────────── */
         (() => {
           // Left Column: Counter transactions (Cash + GCash + Bank Transfer)
           const agoraCashArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');

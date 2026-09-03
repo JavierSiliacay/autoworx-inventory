@@ -224,6 +224,8 @@ export default function AdminSalesPage() {
   const [agoraCashAdvances, setAgoraCashAdvances] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [agoraExpensesList, setAgoraExpensesList] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [agoraRemit, setAgoraRemit] = useState('');
+  const [kauswaganIncentives, setKauswaganIncentives] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
+  const [kauswaganExpenses, setKauswaganExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [mounted, setMounted] = useState(false);
   const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
@@ -406,6 +408,48 @@ export default function AdminSalesPage() {
       console.error("Error saving Agora daily deductions:", e);
     }
   }, [agoraCommissions, agoraCashAdvances, agoraExpensesList, agoraRemit, printDate, filterBranch, selectedBranchId, mounted]);
+
+  // ─── KAUSWAGAN DAILY DEDUCTIONS PERSISTENCE (BY DATE & BRANCH) ──────
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `kauswagan_daily_${effectiveBranchId}_${printDate}`;
+    
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.incentives) && parsed.incentives.length > 0) setKauswaganIncentives(parsed.incentives);
+        if (Array.isArray(parsed.expenses) && parsed.expenses.length > 0) setKauswaganExpenses(parsed.expenses);
+      } else {
+        setKauswaganIncentives([{ particular: '', amount: '' }]);
+        setKauswaganExpenses([{ particular: '', amount: '' }]);
+      }
+    } catch (e) {
+      console.error("Error loading Kauswagan daily deductions:", e);
+    }
+  }, [printDate, filterBranch, selectedBranchId, mounted]);
+
+  useEffect(() => {
+    if (!mounted || !printDate) return;
+    const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
+    const storageKey = `kauswagan_daily_${effectiveBranchId}_${printDate}`;
+    
+    const hasContent = 
+      kauswaganIncentives.some(c => c.particular || c.amount) ||
+      kauswaganExpenses.some(e => e.particular || e.amount);
+
+    try {
+      if (hasContent) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          incentives: kauswaganIncentives,
+          expenses: kauswaganExpenses,
+        }));
+      }
+    } catch (e) {
+      console.error("Error saving Kauswagan daily deductions:", e);
+    }
+  }, [kauswaganIncentives, kauswaganExpenses, printDate, filterBranch, selectedBranchId, mounted]);
 
   // ─── SALES INVOICE DRAFT PERSISTENCE (BY BRANCH) ────────────────────
   useEffect(() => {
@@ -667,7 +711,12 @@ export default function AdminSalesPage() {
 
   const handleClosePrintModal = () => {
     setIsPrintModalOpen(false);
-    const hasData = agoraCommissions.some(c => c.particular || c.amount) || agoraExpensesList.some(e => e.particular || e.amount) || Boolean(agoraRemit);
+    const hasData = 
+      agoraCommissions.some(c => c.particular || c.amount) || 
+      agoraExpensesList.some(e => e.particular || e.amount) || 
+      Boolean(agoraRemit) ||
+      kauswaganIncentives.some(c => c.particular || c.amount) ||
+      kauswaganExpenses.some(e => e.particular || e.amount);
     if (hasData) {
       setAutoSaveToast({ show: true, message: "Daily report deductions saved" });
     }
@@ -1754,10 +1803,13 @@ export default function AdminSalesPage() {
         const totalAgoraExpenses = agoraExpensesList.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
         const agoraRemitVal = parseFloat(String(agoraRemit).replace(/,/g, '')) || 0;
 
-        // Live calculation from grouped sales for selected date
-        const selectedDateSales = (groupedSales || []).filter((s: any) => {
-          if (!s.date) return false;
-          const dStr = s.date.split('T')[0];
+        const totalKauswaganIncentives = kauswaganIncentives.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+        const totalKauswaganExpenses = kauswaganExpenses.reduce((acc, e) => acc + (parseFloat(String(e.amount).replace(/,/g, '')) || 0), 0);
+
+        // Live calculation from active modal sales (printSales or groupedSales) for selected date
+        const activeModalSales = (printSales && printSales.length > 0) ? printSales : (groupedSales || []);
+        const selectedDateSales = activeModalSales.filter((s: any) => {
+          const dStr = (s.date || s.created_at || '').split('T')[0];
           return dStr === printDate;
         });
 
@@ -1773,8 +1825,13 @@ export default function AdminSalesPage() {
           .filter((s: any) => s.payment_type === 'Charge')
           .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
 
-        const totalCashForRemittanceModal = modalCashSales - modalGcashSales - totalAgoraCommissions - totalAgoraExpenses - totalAgoraCashAdvances - agoraRemitVal;
-        const overallTotalSalesModal = modalCashSales + modalChargeSales;
+        // Kauswagan: only incentives deducted; expenses are NOT deducted
+        const totalCashForRemittanceModal = isKauswaganBranch
+          ? modalCashSales - modalGcashSales - totalKauswaganIncentives
+          : modalCashSales - modalGcashSales - totalAgoraCommissions - totalAgoraExpenses - totalAgoraCashAdvances - agoraRemitVal;
+        const overallTotalSalesModal = isKauswaganBranch
+          ? (modalCashSales - totalKauswaganIncentives) + modalChargeSales
+          : modalCashSales + modalChargeSales;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
@@ -1834,8 +1891,236 @@ export default function AdminSalesPage() {
 
               {/* Modal Scrollable Body */}
               <div className="p-6 overflow-y-auto flex-1">
-                {isAgoraOrKauswagan && printType === 'daily' ? (
-                  /* Expanded 2-Column Layout for Agora / Kauswagan Branch */
+                {isKauswaganBranch && printType === 'daily' ? (
+                  /* ── KAUSWAGAN BRANCH MODAL: Incentives (deducted) + Expenses (not deducted) ── */
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    {/* Left Column: Date, Filter & Calculation Summary */}
+                    <div className="md:col-span-5 space-y-4">
+                      {/* Period Switcher */}
+                      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button onClick={() => setPrintType('yearly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'yearly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Yearly</button>
+                        <button onClick={() => setPrintType('monthly')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Monthly</button>
+                        <button onClick={() => setPrintType('daily')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${(printType as string) === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Daily</button>
+                      </div>
+
+                      {/* Select Date */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Date</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-bold"
+                          value={printDate}
+                          onChange={(e) => setPrintDate(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Payment Filter */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter by Payment Type</label>
+                        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                          {['All', 'Cash', 'GCash', 'Bank Transfer', 'Charge', 'Delivery'].map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => setPrintPaymentType(type as any)}
+                              className={`py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate px-1 ${printPaymentType === type ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Summary - Kauswagan: matches print layout sequence */}
+                      <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800">
+                          Kauswagan Paint Center Summary
+                        </p>
+                        <div className="space-y-1 text-xs text-slate-700 font-medium">
+                          <div className="flex justify-between">
+                            <span className="font-bold text-slate-800">CASH:</span>
+                            <span className="font-mono font-bold text-slate-900">₱{modalCashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-bold text-slate-800">GCASH:</span>
+                            <span className="font-mono font-bold text-slate-900">₱{modalGcashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-bold text-slate-800">CHARGE:</span>
+                            <span className="font-mono font-bold text-slate-900">₱{modalChargeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+
+                          <div className="pt-1.5 border-t border-slate-200 flex justify-between font-bold text-slate-800">
+                            <span>SUBTOTAL:</span>
+                            <span className="font-mono">₱{(modalCashSales + modalGcashSales + modalChargeSales).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+
+                          <div className="flex justify-between text-amber-700 font-bold">
+                            <span>LESS INCENTIVES:</span>
+                            <span className="font-mono">-₱{totalKauswaganIncentives.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+
+                          <div className="pt-1.5 border-t border-slate-300 flex justify-between items-center text-xs font-black text-slate-900">
+                            <span className="uppercase tracking-wider">OVERALL TOTAL SALES:</span>
+                            <span className="font-mono text-sm text-slate-900">
+                              ₱{overallTotalSalesModal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 pt-2 border-t border-slate-200 flex justify-between text-slate-600">
+                            <span className="text-[10px] uppercase font-bold">TOTAL EXPENSES:</span>
+                            <span className="font-mono text-xs font-bold text-slate-800">₱{totalKauswaganExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Incentives (deducted) & Expenses (informational) */}
+                    <div className="md:col-span-7 space-y-4 md:border-l md:border-slate-100 md:pl-6">
+                      {/* Incentives Section (DEDUCTED) */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Incentives
+                            </label>
+                            <span className="text-[10px] text-amber-600 ml-2 font-bold">(deducted from sales)</span>
+                            <span className="text-[10px] text-slate-400 ml-1">({kauswaganIncentives.length} {kauswaganIncentives.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = kauswaganIncentives.length;
+                              setKauswaganIncentives([...kauswaganIncentives, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`k-inc-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                          {kauswaganIncentives.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-amber-50/60 p-2 rounded-xl border border-amber-200/70">
+                              <input
+                                id={`k-inc-${idx}`}
+                                type="text"
+                                placeholder="Staff / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...kauswaganIncentives];
+                                  next[idx].particular = e.target.value;
+                                  setKauswaganIncentives(next);
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...kauswaganIncentives];
+                                    next[idx].amount = formatted;
+                                    setKauswaganIncentives(next);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {kauswaganIncentives.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setKauswaganIncentives(kauswaganIncentives.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Expenses Section (NOT DEDUCTED) */}
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">
+                              Expenses
+                            </label>
+                            <span className="text-[10px] text-slate-500 ml-2 font-bold">(listed — not deducted)</span>
+                            <span className="text-[10px] text-slate-400 ml-1">({kauswaganExpenses.length} {kauswaganExpenses.length === 1 ? 'item' : 'items'})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLen = kauswaganExpenses.length;
+                              setKauswaganExpenses([...kauswaganExpenses, { particular: '', amount: '' }]);
+                              setTimeout(() => {
+                                document.getElementById(`k-exp-modal-${newLen}`)?.focus();
+                              }, 50);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition-colors"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                          {kauswaganExpenses.map((item, idx) => (
+                            <div key={idx} className="flex gap-2 items-center bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                              <input
+                                id={`k-exp-modal-${idx}`}
+                                type="text"
+                                placeholder="Particular / Description"
+                                value={item.particular}
+                                onChange={e => {
+                                  const next = [...kauswaganExpenses];
+                                  next[idx].particular = e.target.value;
+                                  setKauswaganExpenses(next);
+                                }}
+                                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium outline-none focus:border-indigo-500"
+                              />
+                              <div className="relative w-32">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₱</span>
+                                <input
+                                  type="text"
+                                  placeholder="Amount"
+                                  value={item.amount}
+                                  onChange={e => {
+                                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                                    const parts = val.split('.');
+                                    let formatted = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                    if (parts.length > 1) formatted += '.' + parts[1];
+                                    const next = [...kauswaganExpenses];
+                                    next[idx].amount = formatted;
+                                    setKauswaganExpenses(next);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-right outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                              {kauswaganExpenses.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setKauswaganExpenses(kauswaganExpenses.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-600 p-1"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : isAgoraBranch && printType === 'daily' ? (
+                  /* Expanded 2-Column Layout for Agora Branch */
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     {/* Left Column: Date, Filter, Less Remit & Calculation Summary */}
                     <div className="md:col-span-5 space-y-4">
@@ -1896,7 +2181,7 @@ export default function AdminSalesPage() {
                         </div>
                       </div>
 
-                      {/* Live Calculation Summary Breakdown Card - Exactly Matching Print View */}
+                      {/* Live Calculation Summary Breakdown Card */}
                       <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50/40 border border-emerald-200/80 rounded-2xl space-y-2">
                         <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800">
                           Sales & Remittance Summary
@@ -2663,6 +2948,8 @@ export default function AdminSalesPage() {
                 agoraCashAdvances={agoraCashAdvances}
                 agoraExpenses={agoraExpensesList}
                 agoraRemit={agoraRemit}
+                kauswaganIncentives={kauswaganIncentives}
+                kauswaganExpenses={kauswaganExpenses}
               />
             </div>
           </div>
@@ -2688,6 +2975,8 @@ export default function AdminSalesPage() {
       agoraCashAdvances={agoraCashAdvances}
       agoraExpenses={agoraExpensesList}
       agoraRemit={agoraRemit}
+      kauswaganIncentives={kauswaganIncentives}
+      kauswaganExpenses={kauswaganExpenses}
     />
     <EditSaleModal
       isOpen={isEditModalOpen}
