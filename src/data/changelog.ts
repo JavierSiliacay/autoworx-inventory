@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788400739841",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "feature",
+    title: "Better staff presence tracking",
+    description: "Staff now see accurate online status, how recently teammates were offline, and up-to-date branch counts, making it easier to know who’s available and what’s happening across locations."
+  },
+
+  {
     id: "update-1788338678704",
     version: "v1.9.2",
     date: "2026-09-02",
