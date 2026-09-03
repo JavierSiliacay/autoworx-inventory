@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788422091176",
+    version: "v1.9.3",
+    date: "2026-09-03",
+    type: "feature",
+    title: "Credit term alerts and due‑date countdowns",
+    description: "Staff now receive notifications when invoices are 14 days from their due date, see live countdowns to payment deadlines, and statement statuses stay automatically synchronized for up‑to‑date visibility."
+  },
+
+  {
     id: "update-1788419868384",
     version: "v1.9.3",
     date: "2026-09-03",
