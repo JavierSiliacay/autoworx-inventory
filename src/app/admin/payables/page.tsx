@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -157,7 +157,50 @@ export default function PayablesPage() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data as SupplierPayable[]) || [];
+      
+      const rawRecords = (data as SupplierPayable[]) || [];
+      const outOfSyncUpdates: { id: string; status: PayableStatus; balance: number }[] = [];
+
+      const processedRecords = rawRecords.map(r => {
+        const amtDue = Number(r.amount_due || 0);
+        const paidAmt = Number(r.paid_amount || 0);
+        // Correctly calculate remaining balance
+        const balance = Math.max(0, amtDue - paidAmt);
+        
+        // Derive correct business status
+        let correctStatus: PayableStatus = "Pending";
+        if (balance <= 0) {
+          correctStatus = "Paid";
+        } else if (paidAmt > 0) {
+          correctStatus = "Partially Paid";
+        } else {
+          correctStatus = "Pending";
+        }
+
+        // Check if database record had out-of-sync status or balance
+        if (r.status !== correctStatus || Number(r.balance) !== balance) {
+          outOfSyncUpdates.push({ id: r.id, status: correctStatus, balance });
+        }
+
+        return { ...r, status: correctStatus, balance };
+      });
+
+      // Persist corrected statuses & balances to database in background
+      if (outOfSyncUpdates.length > 0) {
+        Promise.all(
+          outOfSyncUpdates.map(u =>
+            supabase
+              .from("supplier_payables")
+              .update({ status: u.status, balance: u.balance, updated_at: new Date().toISOString() })
+              .eq("id", u.id)
+          )
+        ).then(results => {
+          const hasErr = results.some(res => res.error);
+          if (hasErr) console.error("Error auto-syncing payable statuses");
+        });
+      }
+
+      return processedRecords;
     },
     enabled: !!session
   });
@@ -205,7 +248,7 @@ export default function PayablesPage() {
       
       let matchUrgent = true;
       if (showUrgentOnly) {
-        if (r.status === 'Paid') return false;
+        if (r.status === 'Paid' || Number(r.balance) <= 0) return false;
         const today = new Date();
         const due = new Date(r.due_date);
         const fourteenDays = new Date(today);
@@ -239,7 +282,7 @@ export default function PayablesPage() {
   // ── Summary Stats ──────────────────────────────────────────────────────────
   const totalOutstanding = records.reduce((s, r) => s + Number(r.balance), 0);
   const totalPaid = records.reduce((s, r) => s + Number(r.paid_amount), 0);
-  const overdueCount = records.filter(r => r.status !== "Paid" && new Date(r.due_date) < new Date()).length;
+  const overdueCount = records.filter(r => r.status !== "Paid" && Number(r.balance) > 0 && new Date(r.due_date) < new Date()).length;
 
   // ── Add / Edit ─────────────────────────────────────────────────────────────
   const openAdd = () => {
@@ -278,9 +321,10 @@ export default function PayablesPage() {
       };
 
       if (isEditNew) {
+        const creatorName = session?.user?.name || session?.user?.email || "System";
         const { error } = await supabase.from("supplier_payables").insert([{
           ...payload,
-          created_by: session?.user?.email || "System",
+          created_by: creatorName,
           created_at: new Date().toISOString(),
         }]);
         if (error) throw error;
@@ -327,11 +371,12 @@ export default function PayablesPage() {
 
     try {
       setSavingPayment(true);
+      const userName = session?.user?.name || session?.user?.email || "System";
       const { error: logErr } = await supabase.from("supplier_payable_payments").insert([{
         payable_id: selectedRecord.id,
         amount,
         notes: payNotes,
-        performed_by: session?.user?.email || "System",
+        performed_by: userName,
         payment_date: new Date().toISOString(),
       }]);
       if (logErr) throw logErr;
@@ -546,9 +591,9 @@ export default function PayablesPage() {
                 </tr>
               )}
               {filtered.map(record => {
-                const cfg = statusCfg[record.status];
+                const cfg = statusCfg[record.status] || statusCfg["Pending"];
                 const StatusIcon = cfg.icon;
-                const isOverdue = record.status !== "Paid" && new Date(record.due_date) < new Date();
+                const isOverdue = record.status !== "Paid" && Number(record.balance) > 0 && new Date(record.due_date) < new Date();
                 return (
                   <tr 
                     key={record.id} 
@@ -649,9 +694,9 @@ export default function PayablesPage() {
             <div className="py-16 text-center text-sm text-slate-400">No payables found.</div>
           )}
           {filtered.map(record => {
-            const cfg = statusCfg[record.status];
+            const cfg = statusCfg[record.status] || statusCfg["Pending"];
             const StatusIcon = cfg.icon;
-            const isOverdue = record.status !== "Paid" && new Date(record.due_date) < new Date();
+            const isOverdue = record.status !== "Paid" && Number(record.balance) > 0 && new Date(record.due_date) < new Date();
             return (
               <div 
                 key={record.id} 
@@ -933,7 +978,7 @@ export default function PayablesPage() {
                 )}
 
                 {/* Due Date Notice */}
-                {selectedRecord.status !== "Paid" && new Date(selectedRecord.due_date) < new Date() ? (
+                {selectedRecord.status !== "Paid" && Number(selectedRecord.balance) > 0 && new Date(selectedRecord.due_date) < new Date() ? (
                   <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                     <p className="text-xs font-bold text-red-700 uppercase tracking-tight leading-normal">
@@ -986,7 +1031,7 @@ export default function PayablesPage() {
                           </div>
                           <p className="text-[11px] font-medium text-slate-500 italic">"{pay.notes || "Direct payment settlement"}"</p>
                           <p className="text-[8px] font-black text-[#16a34a] uppercase tracking-tighter mt-1 opacity-70">
-                            Verified by: {pay.performed_by}
+                            Verified by: {pay.performed_by?.includes("@") ? (session?.user?.email === pay.performed_by ? (session?.user?.name || pay.performed_by.split("@")[0].replace(/\./g, " ")) : pay.performed_by.split("@")[0].replace(/\./g, " ")) : (pay.performed_by || "System")}
                           </p>
                         </div>
                       </div>

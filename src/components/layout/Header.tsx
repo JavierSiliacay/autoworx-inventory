@@ -146,8 +146,9 @@ export default function Header() {
 
         let query = supabase
           .from('supplier_payables')
-          .select('id, supplier_name, due_date, branch_id, branches(id, name)')
+          .select('id, supplier_name, due_date, branch_id, balance, branches(id, name)')
           .neq('status', 'Paid')
+          .gt('balance', 0)
           .lte('due_date', fourteenDaysFromNow.toISOString())
           .order('due_date', { ascending: true });
 
