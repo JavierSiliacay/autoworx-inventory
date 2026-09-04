@@ -143,12 +143,13 @@ export default function SearchableSelect({
             setSearchTerm("");
           }
         }}
-        className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium text-left flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+        title={selectedOption ? selectedOption.label : placeholder}
+        className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium text-left flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed min-h-[38px]"
       >
-        <span className={`block truncate ${!selectedOption ? 'text-slate-400' : 'text-slate-900'}`}>
+        <span className={`block truncate ${!selectedOption ? 'text-slate-400' : 'text-slate-900 font-semibold'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <span className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
           <ChevronDown className="w-4 h-4 text-slate-400" />
         </span>
       </button>
@@ -156,7 +157,7 @@ export default function SearchableSelect({
       {isOpen && (
         <div 
           ref={menuRef}
-          className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-80 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          className="absolute z-[100] min-w-full w-max max-w-[500px] mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-80 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
         >
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
             <div className="relative">
@@ -165,7 +166,7 @@ export default function SearchableSelect({
                 ref={inputRef}
                 type="text"
                 className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all font-medium shadow-sm"
-                placeholder="Search..."
+                placeholder="Search product name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -185,7 +186,8 @@ export default function SearchableSelect({
                   key={opt.value}
                   data-index={idx}
                   type="button"
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors ${
+                  title={opt.label}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs sm:text-sm flex items-center justify-between gap-3 transition-colors ${
                     value === opt.value
                       ? opt.danger ? "bg-red-100 text-red-800 font-bold ring-2 ring-inset ring-red-500" : "bg-emerald-50 text-emerald-700 font-bold"
                       : focusedIndex === idx
@@ -205,10 +207,14 @@ export default function SearchableSelect({
                   }}
                   onMouseEnter={() => setFocusedIndex(idx)}
                 >
-                  <div className="flex flex-col truncate pr-2">
-                    <span className="truncate">{highlightMatch(opt.label, searchTerm)}</span>
+                  <div className="flex flex-col flex-1 min-w-0 pr-2">
+                    <span className="font-semibold text-slate-800 whitespace-normal break-words leading-snug">
+                      {highlightMatch(opt.label, searchTerm)}
+                    </span>
                     {opt.subtitle && (
-                      <span className="text-[10px] text-slate-400 truncate">{highlightMatch(opt.subtitle, searchTerm)}</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                        {highlightMatch(opt.subtitle, searchTerm)}
+                      </span>
                     )}
                   </div>
                   {value === opt.value && <Check className={`w-4 h-4 shrink-0 ${opt.danger ? 'text-red-600' : 'text-emerald-600'}`} />}

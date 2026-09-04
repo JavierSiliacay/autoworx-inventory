@@ -255,7 +255,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1b20]/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-6xl overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
         <div className="px-4 md:px-8 pt-4 md:pt-8 pb-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
@@ -392,16 +392,16 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
             <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-inner bg-slate-50/30">
               <div className="max-h-[300px] overflow-y-auto ledger-scroll-container custom-scrollbar">
                 <div className="overflow-x-auto w-full">
-                <table className="w-full text-left border-collapse table-fixed">
+                <table className="w-full text-left border-collapse">
                   <thead className="sticky top-0 z-10 bg-slate-100">
                     <tr>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10">No</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Product Item</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 min-w-[5.5rem] text-center">Qty</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 min-w-[5rem] text-center">Unit</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28 text-right">Unit Price</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
-                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
+                      <th className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-10 text-center">No</th>
+                      <th className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest min-w-[340px]">Select Product Item</th>
+                      <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 min-w-[5.5rem] text-center">Qty</th>
+                      <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-20 min-w-[4.5rem] text-center">Unit</th>
+                      <th className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-28 text-right">Unit Price</th>
+                      <th className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-32 text-right">Subtotal</th>
+                      <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
