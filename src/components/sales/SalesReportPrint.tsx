@@ -130,13 +130,40 @@ export default function SalesReportPrint({
   const cancelledSales = filteredSales.reduce((acc, sale) => sale.payment_type === 'Cancelled' ? acc + sale.total_amount : acc, 0);
   const totalSales = cashSales + digitalSales + chargeSales + deliverySales;
 
-  // Valencia specific classification
-  const cashSalesWithReceipt = filteredSales.filter(s => s.payment_type === 'Cash' && s.invoice_no && !s.invoice_no.startsWith('MIG-NO-REC') && !s.invoice_no.startsWith('NO-REC'));
-  const cashSalesNoReceipt = filteredSales.filter(s => s.payment_type === 'Cash' && (!s.invoice_no || s.invoice_no.startsWith('MIG-NO-REC') || s.invoice_no.startsWith('NO-REC')));
-  const digitalSalesArr = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
-  const chargeSalesArr = filteredSales.filter(s => s.payment_type === 'Charge');
-  const deliverySalesArr = filteredSales.filter(s => s.payment_type === 'Delivery');
-  const cancelledSalesArr = filteredSales.filter(s => s.payment_type === 'Cancelled');
+  // Sort helper for natural sequence of invoice numbers (e.g. DR-1440, DR-1441, DR-1442)
+  const sortInvoices = (a: SaleEntry, b: SaleEntry) => {
+    const invA = a.invoice_no || '';
+    const invB = b.invoice_no || '';
+    if (!invA && !invB) return 0;
+    if (!invA) return 1;
+    if (!invB) return -1;
+    return invA.localeCompare(invB, undefined, { numeric: true, sensitivity: 'base' });
+  };
+
+  // Valencia & Standard specific classification (sorted sequentially by invoice number)
+  const cashSalesWithReceipt = filteredSales
+    .filter(s => s.payment_type === 'Cash' && s.invoice_no && !s.invoice_no.startsWith('MIG-NO-REC') && !s.invoice_no.startsWith('NO-REC'))
+    .sort(sortInvoices);
+
+  const cashSalesNoReceipt = filteredSales
+    .filter(s => s.payment_type === 'Cash' && (!s.invoice_no || s.invoice_no.startsWith('MIG-NO-REC') || s.invoice_no.startsWith('NO-REC')))
+    .sort(sortInvoices);
+
+  const digitalSalesArr = filteredSales
+    .filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer')
+    .sort(sortInvoices);
+
+  const chargeSalesArr = filteredSales
+    .filter(s => s.payment_type === 'Charge')
+    .sort(sortInvoices);
+
+  const deliverySalesArr = filteredSales
+    .filter(s => s.payment_type === 'Delivery')
+    .sort(sortInvoices);
+
+  const cancelledSalesArr = filteredSales
+    .filter(s => s.payment_type === 'Cancelled')
+    .sort(sortInvoices);
 
   const cashWithReceiptTotal = cashSalesWithReceipt.reduce((acc, s) => acc + (s.total_amount || 0), 0);
   const cashNoReceiptTotal = cashSalesNoReceipt.reduce((acc, s) => acc + (s.total_amount || 0), 0);
@@ -260,7 +287,11 @@ export default function SalesReportPrint({
           </thead>
           <tbody>
             {filteredSales.length > 0 ? (
-              filteredSales.map((sale, i) => {
+              [...filteredSales].sort((a, b) => {
+                const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+                if (dateDiff !== 0) return dateDiff;
+                return sortInvoices(a, b);
+              }).map((sale, i) => {
                 const d = new Date(sale.date);
                 const formattedDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
                 
@@ -300,8 +331,12 @@ export default function SalesReportPrint({
       ) : isKauswagan && reportType === 'daily' ? (
         /* ─── KAUSWAGAN BRANCH ENHANCED UNIFIED 6-COLUMN REPORT ─── */
         (() => {
-          const kCashArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
-          const kChargeArr = filteredSales.filter(s => s.payment_type === 'Charge');
+          const kCashArr = filteredSales
+            .filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer')
+            .sort(sortInvoices);
+          const kChargeArr = filteredSales
+            .filter(s => s.payment_type === 'Charge')
+            .sort(sortInvoices);
           const kGcashTotal = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer').reduce((a, s) => a + (s.total_amount || 0), 0);
           const kCashTotal = kCashArr.reduce((a, s) => a + (s.total_amount || 0), 0);
           const kChargeTotal = kChargeArr.reduce((a, s) => a + (s.total_amount || 0), 0);
@@ -543,8 +578,12 @@ export default function SalesReportPrint({
         /* ─── AGORA BRANCH 2-COLUMN DAILY SALES REPORT ─────────────────────────── */
         (() => {
           // Left Column: Counter transactions (Cash + GCash + Bank Transfer)
-          const agoraCashArr = filteredSales.filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer');
-          const agoraChargeArr = filteredSales.filter(s => s.payment_type === 'Charge');
+          const agoraCashArr = filteredSales
+            .filter(s => s.payment_type === 'Cash' || s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer')
+            .sort(sortInvoices);
+          const agoraChargeArr = filteredSales
+            .filter(s => s.payment_type === 'Charge')
+            .sort(sortInvoices);
           const agoraGcashTotal = filteredSales.filter(s => s.payment_type === 'GCash' || s.payment_type === 'Bank Transfer').reduce((a, s) => a + (s.total_amount || 0), 0);
           const agoraCashTotal = agoraCashArr.reduce((a, s) => a + (s.total_amount || 0), 0);
           const agoraChargeTotal = agoraChargeArr.reduce((a, s) => a + (s.total_amount || 0), 0);
