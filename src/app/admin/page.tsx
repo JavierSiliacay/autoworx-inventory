@@ -211,17 +211,19 @@ export default function AdminDashboardPage() {
         }
         
         if (filterMonth !== "all") {
-          const [year, month] = filterMonth.split('-');
-          const startDate = `${year}-${month}-01`;
-          const nextMonth = Number(month) === 12 ? 1 : Number(month) + 1;
-          const nextYear = Number(month) === 12 ? Number(year) + 1 : Number(year);
-          const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-          
-          // Using gte and lt for exact date range, as Postgres DATE type does not support the LIKE operator
-          salesQuery = salesQuery.gte('date', startDate).lt('date', endDate);
+          const [year, month, day] = filterMonth.split('-');
+          if (day) {
+            salesQuery = salesQuery.eq('date', `${year}-${month}-${day}`);
+          } else {
+            const startDate = `${year}-${month}-01`;
+            const nextMonth = Number(month) === 12 ? 1 : Number(month) + 1;
+            const nextYear = Number(month) === 12 ? Number(year) + 1 : Number(year);
+            const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+            salesQuery = salesQuery.gte('date', startDate).lt('date', endDate);
+          }
         }
 
-      const { data, error: sErr } = await salesQuery;
+        const { data, error: sErr } = await salesQuery;
         
         // If "sales" table is missing, use "transactions" as a fallback (SECURITY: Must exclude production internal burns)
         if (sErr && (sErr.message.includes('relation "public.sales" does not exist') || sErr.code === '42P01')) {
@@ -250,18 +252,20 @@ export default function AdminDashboardPage() {
         }
 
         if (salesDocs) {
-          const mapped = salesDocs.map((s: any) => ({
-            ...s,
-            inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
-            branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
-            total_amount: Number(s.total_amount || 0) // Explicit cast to Number
-          }));
+          const mapped = salesDocs
+            .filter((s: any) => s.payment_type !== 'Cancelled')
+            .map((s: any) => ({
+              ...s,
+              inventory: Array.isArray(s.inventory) ? s.inventory[0] : s.inventory,
+              branches: Array.isArray(s.branches) ? s.branches[0] : s.branches,
+              total_amount: Number(s.total_amount || 0) // Explicit cast to Number
+            }));
           
           setSales(mapped);
           
-          // SUM ALL matching sales for Gross Revenue (Now provided perfectly by the backend!)
-          const totalRev = statsData ? Number(statsData.totalSalesValue || statsData.totalsalesvalue || 0) : 0;
-          setRevenue(totalRev);
+          // Calculate filtered sales directly from matching rows to support daily/monthly exact filtering
+          const matchingSalesRev = mapped.reduce((sum: number, s: any) => sum + (Number(s.total_amount) || 0), 0);
+          setRevenue(matchingSalesRev);
           
           // Latest 5 Transactions for widget
           setRecentLogs(mapped.slice(0, 5));
