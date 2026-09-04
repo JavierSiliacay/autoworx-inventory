@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788501822716",
+    version: "v1.9.4",
+    date: "2026-09-04",
+    type: "improvement",
+    title: "Better Sales Modal and Supplier Payables Tracking",
+    description: "The sales record modal is now wider for easier reading, product descriptions are clearer, and supplier payables status syncs more reliably with improved overdue handling and audit trail labeling."
+  },
+
+  {
     id: "update-1788423320400",
     version: "v1.9.3",
     date: "2026-09-03",
