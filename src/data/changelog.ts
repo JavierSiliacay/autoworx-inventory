@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788505793450",
+    version: "v1.9.4",
+    date: "2026-09-04",
+    type: "fix",
+    title: "Accurate Stock Values & Daily Sales Filter",
+    description: "The dashboard now displays correct stock figures and includes a option to view sales data filtered by day, making it easier to track performance."
+  },
+
+  {
     id: "update-1788503108034",
     version: "v1.9.4",
     date: "2026-09-04",
