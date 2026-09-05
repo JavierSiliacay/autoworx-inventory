@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788604972623",
+    version: "v1.9.5",
+    date: "2026-09-05",
+    type: "fix",
+    title: "Confirm Sales Even with Low or Zero Stock",
+    description: "Staff can now proceed with sales edits when inventory shows insufficient stock or zero quantity, avoiding blocked transactions and streamlining the checkout process."
+  },
+
+  {
     id: "update-1788592990781",
     version: "v1.9.5",
     date: "2026-09-05",
