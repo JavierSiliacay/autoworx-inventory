@@ -688,7 +688,7 @@ export default function AdminSalesPage() {
           }
         }
         item.unit_price = invItem.price;
-        item.subtotal = Number(item.quantity || 0) * Number(invItem.price || 0);
+        item.subtotal = Number(item.quantity ?? 0) * Number(invItem.price || 0);
         
         // Set branch_id based on the first item selected if not already set
         if (!currentSale.branch_id) {
@@ -710,13 +710,16 @@ export default function AdminSalesPage() {
     
     if (field === 'subtotal') {
       const sub = Number(value || 0);
-      const q = Number(item.quantity || 1);
+      const q = Number(item.quantity || 0);
       item.subtotal = sub;
       item.unit_price = q > 0 ? (sub / q) : sub;
     } else if (field === 'quantity') {
-      const q = Number(value || 0);
+      const q = Math.max(0, Number(value || 0));
       item.quantity = value;
-      item.subtotal = q * Number(item.unit_price || 0);
+      // If quantity is 0, preserve any manual subtotal entered, otherwise calculate qty * unit_price
+      if (q > 0) {
+        item.subtotal = q * Number(item.unit_price || 0);
+      }
     } else if (field === 'unit_price') {
       const p = Number(value || 0);
       item.unit_price = p;
@@ -806,18 +809,23 @@ export default function AdminSalesPage() {
 
   const calculateTotal = () => {
     return currentSale.items.reduce((sum, item) => {
+      // Include items with a valid product item and either quantity > 0 OR subtotal > 0 (for non-physical charges)
+      if (!item.item_id) return sum;
       const val = typeof item.subtotal === 'string' ? (item.subtotal as string).replace(/,/g, '') : item.subtotal;
-      return sum + (Number(val) || 0);
+      const numVal = Number(val) || 0;
+      if (Number(item.quantity || 0) <= 0 && numVal <= 0) return sum;
+      return sum + numVal;
     }, 0);
   };
 
   const handleSaveSale = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Valid items: item selected AND (quantity > 0 OR subtotal > 0)
     const validItems = currentSale.items.map(item => ({
       ...item,
       subtotal: typeof item.subtotal === 'string' ? Number((item.subtotal as string).replace(/,/g, '')) : item.subtotal
-    })).filter(item => item.item_id && item.quantity > 0);
+    })).filter(item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) > 0));
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
       alert("Please add at least one valid item and an invoice number.");
@@ -834,9 +842,10 @@ export default function AdminSalesPage() {
         return;
       }
 
-      // 1. Validate Stock first for all items (unless Cancelled)
+      // 1. Validate Stock first for physical items (quantity > 0) unless Cancelled
       if (currentSale.payment_type !== 'Cancelled') {
         const outOfStockItems = validItems.filter(item => {
+          if (Number(item.quantity || 0) <= 0) return false;
           const invItem = inventory.find(i => i.id === item.item_id);
           return !invItem || invItem.quantity < item.quantity;
         });
@@ -899,27 +908,29 @@ export default function AdminSalesPage() {
         }]);
       }
 
-      // 4. Update Inventory & Log Transactions for each item (skip if Cancelled)
+      // 4. Update Inventory & Log Transactions for physical items only (quantity > 0)
       if (currentSale.payment_type !== 'Cancelled') {
+        const physicalItems = validItems.filter(item => Number(item.quantity || 0) > 0);
         // Consolidate deductions by item_id to avoid stale state issues if same product is in multiple rows
         const consolidatedDeductions: Record<string, number> = {};
-        validItems.forEach(item => {
+        physicalItems.forEach(item => {
           consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
         });
 
         for (const itemId in consolidatedDeductions) {
           const totalDeduction = consolidatedDeductions[itemId];
-          const invItem = inventory.find(i => i.id === itemId)!;
-          
-          // Deduct from Inventory
-          await supabase
-            .from('inventory')
-            .update({ quantity: invItem.quantity - totalDeduction })
-            .eq('id', itemId);
+          const invItem = inventory.find(i => i.id === itemId);
+          if (invItem) {
+            // Deduct from Inventory
+            await supabase
+              .from('inventory')
+              .update({ quantity: invItem.quantity - totalDeduction })
+              .eq('id', itemId);
+          }
         }
 
-        // Log Transactions for each row (for audit granularity)
-        for (const item of validItems) {
+        // Log Transactions for each physical row
+        for (const item of physicalItems) {
           await supabase.from('transactions').insert([{
             item_id: item.item_id,
             quantity: item.quantity,
@@ -1765,7 +1776,7 @@ export default function AdminSalesPage() {
                             />
                           </td>
                           <td className="px-4 py-2 text-right text-sm font-medium text-slate-700">
-                            {item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
+                            {item.item_id && item.unit_price !== undefined ? item.unit_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ""}
                           </td>
                           <td className="px-2 py-2 text-right" onWheel={(e) => {
                             const container = e.currentTarget.closest('.ledger-scroll-container') as HTMLElement;
