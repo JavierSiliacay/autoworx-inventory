@@ -193,14 +193,19 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
 
       // Step 1: Validate stock for edits with physical quantities (quantity > 0)
       if (currentSale.payment_type !== 'Cancelled') {
-        for (const item of validItems) {
-          if (Number(item.quantity || 0) <= 0) continue;
+        const outOfStockItems = validItems.filter(item => {
+          if (Number(item.quantity || 0) <= 0) return false;
           const invItem = inventory.find(i => i.id === item.item_id);
           const oldQty = invoiceData.items.find((old: any) => old.item_id === item.item_id)?.quantity || 0;
           const availableStock = (invItem?.quantity || 0) + oldQty;
-          
-          if (!invItem || availableStock < item.quantity) {
-            alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available (including original sale): ${availableStock}`);
+          return !invItem || availableStock < item.quantity;
+        });
+
+        if (outOfStockItems.length > 0) {
+          const proceed = window.confirm(
+            "Some items have insufficient stock and will result in negative inventory. Are you sure you want to proceed?"
+          );
+          if (!proceed) {
             setLoading(false);
             return;
           }
