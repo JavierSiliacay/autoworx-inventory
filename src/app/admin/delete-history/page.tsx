@@ -134,7 +134,7 @@ export default function DeleteHistoryPage() {
   const searchTokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
   const filteredLogs = logs.filter(log => {
     if (searchTokens.length === 0) return true;
-    const searchableText = `${formatTable(log.original_table)} ${getIdentifier(log.record_data)}`.toLowerCase();
+    const searchableText = `${formatTable(log.original_table)} ${getIdentifier(log.record_data)} ${log.deleted_by || ''}`.toLowerCase();
     return searchTokens.every(token => searchableText.includes(token));
   });
 
@@ -153,7 +153,7 @@ export default function DeleteHistoryPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search by module or record name..." 
+            placeholder="Search by module, record, or staff name..." 
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-xl outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium transition-all text-slate-700"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -168,26 +168,27 @@ export default function DeleteHistoryPage() {
       {/* Table */}
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original Module</th>
-                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Record Information</th>
-                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch</th>
-                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deleted At</th>
-                <th className="px-10 py-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original Module</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Record Information</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deleted By</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deleted At</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-10 py-32 text-center">
+                  <td colSpan={6} className="px-8 py-32 text-center">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-300 mx-auto" />
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-10 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
+                  <td colSpan={6} className="px-8 py-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs opacity-60">
                     Recycle bin is empty
                   </td>
                 </tr>
@@ -198,26 +199,33 @@ export default function DeleteHistoryPage() {
                   
                   return (
                     <tr key={log.id} className="hover:bg-slate-50/80 transition-all group">
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
                         <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-black uppercase tracking-widest">
                           {formatTable(log.original_table)}
                         </span>
                       </td>
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-extrabold text-slate-900">{getIdentifier(log.record_data)}</span>
                           {amount && <span className="text-xs font-bold text-emerald-600">{amount}</span>}
                         </div>
                       </td>
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">
                           {getBranchName(log.record_data?.branch_id)}
                         </span>
                       </td>
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            {log.deleted_by || 'System / Auto'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
                         <span className="text-xs font-bold text-slate-500">{formatDate(log.deleted_at)}</span>
                       </td>
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleRestore(log.id)}

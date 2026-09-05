@@ -228,6 +228,8 @@ export default function AdminSalesPage() {
   const [kauswaganExpenses, setKauswaganExpenses] = useState<{particular: string; amount: string}[]>([{ particular: '', amount: '' }]);
   const [mounted, setMounted] = useState(false);
   const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [deletingInvoices, setDeletingInvoices] = useState<string[]>([]);
+  const [deletingItems, setDeletingItems] = useState<string[]>([]);
 
   const toggleExpandSale = async (invoiceNo: string) => {
     if (expandedSaleId === invoiceNo) {
@@ -961,6 +963,7 @@ export default function AdminSalesPage() {
       });
       const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
       try { localStorage.removeItem(`sales_invoice_draft_${effectiveBranchId}`); } catch (e) {}
+      setAutoSaveToast({ show: true, message: `New Sales Invoice "${currentSale.invoice_no || 'Recorded'}" added` });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       fetchInventory();
     } catch (err: any) {
@@ -970,11 +973,150 @@ export default function AdminSalesPage() {
     }
   };
 
-  const handleDeleteSale = async (id: string) => {
-    if (role !== 'developer') return;
-    if (!confirm("DEVELOPER ONLY: Are you sure you want to delete this test sale record? This will also attempt to revert inventory stock.")) return;
+  const canDeleteInvoice = (invBranchId?: string) => {
+    if (role === 'developer' || role === 'owner' || role === 'admin' || role === 'manager') return true;
+    if (isStaff && invBranchId && userBranchIds.includes(invBranchId)) return true;
+    return false;
+  };
+
+  const handleDeleteInvoice = async (invoiceNo: string, invBranchId?: string) => {
+    if (!canDeleteInvoice(invBranchId)) {
+      alert("You do not have permission to delete sales from this branch.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete invoice "${invoiceNo}"? This will revert inventory stock and remove any linked accounts receivable record.`)) {
+      return;
+    }
 
     try {
+      setDeletingInvoices(prev => [...prev, invoiceNo]);
+      // Small timeout to allow the wipe-out animation to play smoothly
+      await new Promise(res => setTimeout(res, 320));
+
+      setLoading(true);
+
+      // 1. Fetch all items for this invoice
+      const { data: salesList, error: fetchErr } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('invoice_no', invoiceNo);
+
+      if (fetchErr) throw fetchErr;
+
+      if (salesList && salesList.length > 0) {
+        // 2. Revert inventory for each physical product item
+        for (const sale of salesList) {
+          if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+            const { data: item } = await supabase
+              .from('inventory')
+              .select('quantity')
+              .eq('id', sale.item_id)
+              .single();
+
+            if (item) {
+              await supabase
+                .from('inventory')
+                .update({ quantity: (item.quantity || 0) + Number(sale.quantity) })
+                .eq('id', sale.item_id);
+            }
+          }
+
+          // Delete outbound transactions
+          await supabase
+            .from('transactions')
+            .delete()
+            .eq('item_id', sale.item_id)
+            .eq('transaction_type', 'outbound')
+            .ilike('notes', `%Inv: ${sale.invoice_no}%`);
+        }
+
+        // 3. Log snapshot into delete_history_logs for developer/admin audit
+        try {
+          const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+          await supabase.from('delete_history_logs').insert(
+            salesList.map(s => ({
+              original_table: 'sales',
+              record_id: s.id,
+              record_data: s,
+              deleted_by: userIdentifier,
+              deleted_at: new Date().toISOString()
+            }))
+          );
+        } catch (logErr) {
+          console.warn("Could not write sales delete history log:", logErr);
+        }
+
+        // 4. If Charge or Delivery, delete linked accounts_receivable record
+        const paymentType = salesList[0]?.payment_type;
+        if (paymentType === 'Charge' || paymentType === 'Delivery') {
+          // Check if there is an AR record matching this invoice_no
+          const { data: arRec } = await supabase
+            .from('accounts_receivable')
+            .select('id')
+            .eq('invoice_no', invoiceNo)
+            .maybeSingle();
+
+          if (arRec) {
+            // Nullify any linked check_logs before deleting
+            await supabase
+              .from('check_logs')
+              .update({ ar_id: null })
+              .eq('ar_id', arRec.id);
+
+            // Delete receivable payments
+            await supabase
+              .from('receivable_payments')
+              .delete()
+              .eq('receivable_id', arRec.id);
+
+            // Delete billing statement items linked
+            await supabase
+              .from('billing_statement_items')
+              .delete()
+              .eq('receivable_id', arRec.id);
+
+            // Delete the AR record
+            await supabase
+              .from('accounts_receivable')
+              .delete()
+              .eq('id', arRec.id);
+          }
+        }
+
+        // 5. Delete all sales items for this invoice
+        const { error: delErr } = await supabase
+          .from('sales')
+          .delete()
+          .eq('invoice_no', invoiceNo);
+
+        if (delErr) throw delErr;
+      }
+
+      setAutoSaveToast({ show: true, message: `Invoice ${invoiceNo} deleted & stock restored.` });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
+      fetchInventory();
+    } catch (err: any) {
+      alert("Error deleting invoice: " + (err.message || "Unknown error"));
+    } finally {
+      setDeletingInvoices(prev => prev.filter(i => i !== invoiceNo));
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSale = async (id: string, invoiceNo: string, invBranchId?: string) => {
+    if (!canDeleteInvoice(invBranchId)) {
+      alert("You do not have permission to delete items from this branch.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this sale line item? This will revert inventory stock and adjust linked accounts receivable.")) return;
+
+    try {
+      setDeletingItems(prev => [...prev, id]);
+      await new Promise(res => setTimeout(res, 320));
+
       setLoading(true);
       
       // 1. Get the sale details to revert inventory
@@ -985,77 +1127,154 @@ export default function AdminSalesPage() {
         .single();
       
       if (sale) {
-        // 2. Revert Inventory
-        const { data: item } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('id', sale.item_id)
-          .single();
-        
-        if (item) {
-          await supabase
+        // 2. Revert Inventory for physical item
+        if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+          const { data: item } = await supabase
             .from('inventory')
-            .update({ quantity: item.quantity + sale.quantity })
-            .eq('id', sale.item_id);
+            .select('quantity')
+            .eq('id', sale.item_id)
+            .single();
+          
+          if (item) {
+            await supabase
+              .from('inventory')
+              .update({ quantity: (item.quantity || 0) + Number(sale.quantity) })
+              .eq('id', sale.item_id);
+          }
         }
-      }
 
-      // 3. Delete the Sale Record
-      const { error } = await supabase
-        .from('sales')
-        .delete()
-        .eq('id', id);
+        // 3. Log snapshot into delete_history_logs
+        try {
+          const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+          await supabase.from('delete_history_logs').insert([{
+            original_table: 'sales',
+            record_id: sale.id,
+            record_data: sale,
+            deleted_by: userIdentifier,
+            deleted_at: new Date().toISOString()
+          }]);
+        } catch (logErr) {
+          console.warn("Could not write sales line delete history log:", logErr);
+        }
 
-      if (error) throw error;
+        // 4. Delete the Sale Record
+        const { error } = await supabase
+          .from('sales')
+          .delete()
+          .eq('id', id);
 
-      // 4. Clean up transactions (optional but good for testing)
-      if (sale) {
+        if (error) throw error;
+
+        // 5. Clean up transactions
         await supabase
           .from('transactions')
           .delete()
           .eq('item_id', sale.item_id)
           .eq('transaction_type', 'outbound')
           .ilike('notes', `%Inv: ${sale.invoice_no}%`);
+
+        // 6. Recalculate remaining items for this invoice to update AR if Charge or Delivery
+        if (sale.payment_type === 'Charge' || sale.payment_type === 'Delivery') {
+          const { data: remainingSales } = await supabase
+            .from('sales')
+            .select('total_amount')
+            .eq('invoice_no', sale.invoice_no);
+
+          const { data: arRec } = await supabase
+            .from('accounts_receivable')
+            .select('*')
+            .eq('invoice_no', sale.invoice_no)
+            .maybeSingle();
+
+          if (arRec) {
+            if (!remainingSales || remainingSales.length === 0) {
+              // No items left in invoice -> delete AR record
+              await supabase
+                .from('check_logs')
+                .update({ ar_id: null })
+                .eq('ar_id', arRec.id);
+
+              await supabase
+                .from('receivable_payments')
+                .delete()
+                .eq('receivable_id', arRec.id);
+
+              await supabase
+                .from('billing_statement_items')
+                .delete()
+                .eq('receivable_id', arRec.id);
+
+              await supabase
+                .from('accounts_receivable')
+                .delete()
+                .eq('id', arRec.id);
+            } else {
+              // Update total amount due & remaining balance on AR
+              const newTotal = remainingSales.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0);
+              const newBalance = Math.max(0, newTotal - Number(arRec.amount_collected || 0));
+              await supabase
+                .from('accounts_receivable')
+                .update({
+                  total_amount_due: newTotal,
+                  remaining_balance: newBalance,
+                  payment_status: newBalance <= 0 ? 'Cleared' : (arRec.payment_status === 'Billed' ? 'Billed' : 'Unpaid')
+                })
+                .eq('id', arRec.id);
+            }
+          }
+        }
       }
 
-      alert("Test record deleted and inventory reverted.");
+      setAutoSaveToast({ show: true, message: "Item deleted and inventory stock restored." });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
       fetchInventory();
     } catch (err: any) {
-      alert("Error deleting record: " + err.message);
+      alert("Error deleting record: " + (err.message || "Unknown error"));
     } finally {
+      setDeletingItems(prev => prev.filter(i => i !== id));
       setLoading(false);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (role !== 'developer' || selectedSaleIds.length === 0) return;
-    if (!confirm(`DEVELOPER ONLY: Are you sure you want to delete ${selectedSaleIds.length} test invoices (all items) and revert their inventory stock?`)) return;
+    if (selectedSaleIds.length === 0) return;
+    
+    // Check permission for selected invoices
+    const unauthorized = groupedSales.filter(g => selectedSaleIds.includes(g.invoice_no) && !canDeleteInvoice(g.branch_id));
+    if (unauthorized.length > 0) {
+      alert("You do not have permission to delete some of the selected invoices (branch restriction).");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedSaleIds.length} selected invoices and revert their inventory stock?`)) return;
 
     try {
       setLoading(true);
       
       for (const invNo of selectedSaleIds) {
         // Fetch items for this invoice to revert inventory
-        const { data: sales } = await supabase
+        const { data: salesList } = await supabase
           .from('sales')
           .select('*')
           .eq('invoice_no', invNo);
         
-        if (sales && sales.length > 0) {
-          for (const sale of sales) {
+        if (salesList && salesList.length > 0) {
+          for (const sale of salesList) {
              // Revert Inventory
-             const { data: item } = await supabase
-               .from('inventory')
-               .select('quantity')
-               .eq('id', sale.item_id)
-               .single();
-             
-             if (item) {
-               await supabase
+             if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+               const { data: item } = await supabase
                  .from('inventory')
-                 .update({ quantity: item.quantity + sale.quantity })
-                 .eq('id', sale.item_id);
+                 .select('quantity')
+                 .eq('id', sale.item_id)
+                 .single();
+               
+               if (item) {
+                 await supabase
+                   .from('inventory')
+                   .update({ quantity: (item.quantity || 0) + Number(sale.quantity) })
+                   .eq('id', sale.item_id);
+               }
              }
 
              // Delete from transactions
@@ -1067,6 +1286,39 @@ export default function AdminSalesPage() {
                .ilike('remarks', `%Inv: ${sale.invoice_no}%`);
           }
 
+          // Log to delete history
+          try {
+            const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+            await supabase.from('delete_history_logs').insert(
+              salesList.map(s => ({
+                original_table: 'sales',
+                record_id: s.id,
+                record_data: s,
+                deleted_by: userIdentifier,
+                deleted_at: new Date().toISOString()
+              }))
+            );
+          } catch (logErr) {
+            console.warn("Bulk delete history log error:", logErr);
+          }
+
+          // AR Cascade cleanup if Charge or Delivery
+          const pType = salesList[0]?.payment_type;
+          if (pType === 'Charge' || pType === 'Delivery') {
+            const { data: arRec } = await supabase
+              .from('accounts_receivable')
+              .select('id')
+              .eq('invoice_no', invNo)
+              .maybeSingle();
+
+            if (arRec) {
+              await supabase.from('check_logs').update({ ar_id: null }).eq('ar_id', arRec.id);
+              await supabase.from('receivable_payments').delete().eq('receivable_id', arRec.id);
+              await supabase.from('billing_statement_items').delete().eq('receivable_id', arRec.id);
+              await supabase.from('accounts_receivable').delete().eq('id', arRec.id);
+            }
+          }
+
           // Delete all sales for this invoice
           await supabase
             .from('sales')
@@ -1075,12 +1327,13 @@ export default function AdminSalesPage() {
         }
       }
 
-      alert(`${selectedSaleIds.length} invoice(s) purged and inventory reverted.`);
+      alert(`${selectedSaleIds.length} invoice(s) deleted and inventory reverted.`);
       setSelectedSaleIds([]);
       queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
       fetchInventory();
     } catch (err: any) {
-      alert("Error during bulk delete: " + err.message);
+      alert("Error during bulk delete: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
@@ -1096,8 +1349,10 @@ export default function AdminSalesPage() {
           customer_name: sale.customer_name,
           date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
           payment_type: sale.payment_type,
+          branch_id: sale.branch_id,
           branch_name: sale.branches?.name,
           performed_by: sale.performed_by || 'Unknown Staff',
+          performed_by_name: sale.performed_by_name,
           total_amount: 0,
           items: []
         };
@@ -1274,20 +1529,20 @@ export default function AdminSalesPage() {
       </div>
 
       {/* Bulk Actions Bar */}
-      {mounted && role === 'developer' && selectedSaleIds.length > 0 && (
+      {mounted && selectedSaleIds.length > 0 && (
         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
            <div className="flex items-center gap-4 text-emerald-700">
               <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black">
                 {selectedSaleIds.length}
               </div>
-              <p className="text-sm font-bold uppercase tracking-wider">Records Selected</p>
+              <p className="text-sm font-bold uppercase tracking-wider">Invoices Selected</p>
            </div>
            <button 
              onClick={handleBulkDelete}
              className="flex items-center gap-2 bg-red-500 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-red-600 transition-all shadow-lg shadow-red-200"
            >
               <Trash2 className="w-3.5 h-3.5" />
-              Purge Selection
+              Delete Selection
            </button>
         </div>
       )}
@@ -1299,7 +1554,7 @@ export default function AdminSalesPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50">
-                {mounted && role === 'developer' && (
+                {mounted && (
                   <th className="px-6 py-4 w-10 border-b border-slate-100">
                     <input 
                       type="checkbox" 
@@ -1320,26 +1575,34 @@ export default function AdminSalesPage() {
             <tbody className="divide-y divide-slate-50">
               {isSalesLoading || loading ? (
                 <tr>
-                  <td colSpan={mounted && role === 'developer' ? 7 : 6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <Loader2 className="w-8 h-8 text-[#16a34a] animate-spin mx-auto mb-2" />
                     <span className="text-sm text-slate-400 font-medium">Loading ledger...</span>
                   </td>
                 </tr>
               ) : groupedSales.length === 0 ? (
                 <tr>
-                  <td colSpan={mounted && role === 'developer' ? 7 : 6} className="px-6 py-20 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-20 text-center text-slate-400">
                     <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-10" />
                     <p className="font-medium italic">No sales records found.</p>
                   </td>
                 </tr>
               ) : (
-                paginatedSales.map((invoice: any) => (
+                paginatedSales.map((invoice: any) => {
+                  const isDeletingThisInvoice = deletingInvoices.includes(invoice.invoice_no);
+                  const canDeleteThisInv = canDeleteInvoice(invoice.branch_id);
+
+                  return (
                   <React.Fragment key={invoice.invoice_no}>
                   <tr 
                     onClick={() => toggleExpandSale(invoice.invoice_no)}
-                    className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''} ${invoice.payment_type === 'Cancelled' ? 'bg-red-50/50' : ''}`}
+                    className={`transition-all duration-300 transform group cursor-pointer ${
+                      isDeletingThisInvoice 
+                        ? 'opacity-0 -translate-x-12 scale-95 pointer-events-none bg-red-50/80' 
+                        : 'hover:bg-slate-50/50'
+                    } ${expandedSaleId === invoice.invoice_no ? 'bg-indigo-50/30' : ''} ${selectedSaleIds.includes(invoice.invoice_no) ? 'bg-emerald-50/30' : ''} ${invoice.payment_type === 'Cancelled' ? 'bg-red-50/50' : ''}`}
                   >
-                    {mounted && role === 'developer' && (
+                    {mounted && (
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
@@ -1387,26 +1650,40 @@ export default function AdminSalesPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-3 h-full min-h-[64px]">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2 h-full min-h-[64px]" onClick={(e) => e.stopPropagation()}>
                        <button
-                          onClick={(e) => {
-                             e.stopPropagation();
+                          onClick={() => {
                              setSelectedSaleToEdit(invoice);
                              setIsEditModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors z-10"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit Sale"
                        >
                           <Edit2 className="w-4 h-4" />
                        </button>
-                       {expandedSaleId === invoice.invoice_no ? <ChevronUp className="w-4 h-4 text-slate-300"/> : <ChevronDown className="w-4 h-4 text-slate-300"/>}
+                       {canDeleteThisInv && (
+                         <button
+                            onClick={() => handleDeleteInvoice(invoice.invoice_no, invoice.branch_id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Invoice"
+                            disabled={isDeletingThisInvoice}
+                         >
+                            <Trash2 className="w-4 h-4" />
+                         </button>
+                       )}
+                       <button
+                          onClick={() => toggleExpandSale(invoice.invoice_no)}
+                          className="p-1 text-slate-300 hover:text-slate-600 transition-colors"
+                       >
+                         {expandedSaleId === invoice.invoice_no ? <ChevronUp className="w-4 h-4 text-slate-400"/> : <ChevronDown className="w-4 h-4 text-slate-400"/>}
+                       </button>
                     </td>
                   </tr>
 
                   {/* Expanded Item Details */}
                   {expandedSaleId === invoice.invoice_no && (
                     <tr className="bg-slate-50 shadow-inner border-t-0">
-                      <td colSpan={role === 'developer' ? 7 : 6} className="px-8 py-4">
+                      <td colSpan={7} className="px-8 py-4">
                          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in slide-in-from-top-2 duration-300">
                             <div className="bg-slate-50/50 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Breakdown</span>
@@ -1422,13 +1699,20 @@ export default function AdminSalesPage() {
                                      <th className="px-4 py-2 text-center">Color Code</th>
                                      <th className="px-4 py-2 text-right">Price</th>
                                      <th className="px-4 py-2 text-right">Subtotal</th>
-                                     {role === 'developer' && <th className="px-4 py-2 text-right"></th>}
+                                     {canDeleteThisInv && <th className="px-4 py-2 text-right"></th>}
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-slate-50">
-                                  {invoice.items.map((item: any) => (
+                                  {invoice.items.map((item: any) => {
+                                     const isDeletingThisItem = deletingItems.includes(item.id);
+
+                                     return (
                                      <React.Fragment key={item.id}>
-                                     <tr className="hover:bg-slate-50/50 transition-colors">
+                                     <tr className={`transition-all duration-300 transform ${
+                                       isDeletingThisItem 
+                                         ? 'opacity-0 -translate-x-8 scale-95 pointer-events-none bg-red-50/80' 
+                                         : 'hover:bg-slate-50/50'
+                                     }`}>
                                         <td className="px-4 py-3 font-bold text-slate-700">
                                            <div className="flex flex-col">
                                               <div className="flex items-center gap-2">
@@ -1463,12 +1747,13 @@ export default function AdminSalesPage() {
                                               </div>
                                            </div>
                                         </td>
-                                        {mounted && role === 'developer' && (
+                                        {canDeleteThisInv && (
                                           <td className="px-4 py-3 text-right">
                                              <button 
-                                               disabled={isSalesLoading || loading}
-                                               onClick={() => handleDeleteSale(item.id)}
+                                               disabled={isSalesLoading || loading || isDeletingThisItem}
+                                               onClick={() => handleDeleteSale(item.id, invoice.invoice_no, invoice.branch_id)}
                                                className="p-1 text-slate-300 hover:text-red-500 transition-all"
+                                               title="Delete Line Item"
                                              >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                              </button>
@@ -1478,7 +1763,7 @@ export default function AdminSalesPage() {
                                      {/* Inline Formula for Mixed Items */}
                                      {item.inventory?.product_name?.startsWith('[MIX]') && (expandedSaleId === invoice.invoice_no) && (
                                        <tr className="bg-slate-50/50">
-                                          <td colSpan={role === 'developer' ? 5 : 4} className="px-6 py-2">
+                                          <td colSpan={canDeleteThisInv ? 7 : 6} className="px-6 py-2">
                                              <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-4 animate-in fade-in duration-300">
                                                 <h5 className="text-[9px] font-black uppercase text-indigo-700 mb-2 flex items-center gap-2">
                                                    <Beaker className="w-3 h-3"/> Production Audit (Ingredient Costs & Quantities)
@@ -1501,7 +1786,8 @@ export default function AdminSalesPage() {
                                        </tr>
                                      )}
                                      </React.Fragment>
-                                  ))}
+                                     );
+                                  })}
                                </tbody>
                             </table>
                             </div>
@@ -1510,7 +1796,8 @@ export default function AdminSalesPage() {
                     </tr>
                   )}
                   </React.Fragment>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

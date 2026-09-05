@@ -24,6 +24,7 @@ import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import SettleAccountModal from "@/components/admin/receivable/SettleAccountModal";
 import EditReceivableModal from "@/components/admin/receivable/EditReceivableModal";
+import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 
 interface ReceivableRecord {
   id: string;
@@ -73,6 +74,8 @@ export default function AccountReceivablesPage() {
   const [selectedRecord, setSelectedRecord] = useState<ReceivableRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingRecords, setDeletingRecords] = useState<string[]>([]);
+  const [autoSaveToast, setAutoSaveToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   const { data: { records = [], customerTermsMap = {} } = {}, isLoading: loading } = useQuery({
     queryKey: ['receivables-with-terms', selectedBranchId],
@@ -337,10 +340,16 @@ export default function AccountReceivablesPage() {
               {filteredRecords.map((record) => {
                 const { terms, dueDate, daysLeft, isOverdue, isUrgent, isCleared } = getRecordDueDateInfo(record);
 
-                return (
+                  const isDeletingThisRecord = deletingRecords.includes(record.id);
+
+                  return (
                   <tr 
                     key={record.id} 
-                    className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                    className={`transition-all duration-300 transform group cursor-pointer ${
+                      isDeletingThisRecord
+                        ? 'opacity-0 -translate-x-12 scale-95 pointer-events-none bg-red-50/80'
+                        : 'hover:bg-slate-50/80'
+                    }`}
                     onClick={() => {
                       setSelectedRecord(record);
                       setIsModalOpen(true);
@@ -454,14 +463,48 @@ export default function AccountReceivablesPage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
+                          disabled={isDeletingThisRecord}
                           onClick={async () => {
-                            if (window.confirm("Are you sure? This action is irreversible and will wipe out all linked payments and billing statements.")) {
+                            if (!window.confirm(`Are you sure you want to delete receivable invoice "${record.invoice_no}"? This action will remove linked payments and billing statement items.`)) {
+                              return;
+                            }
+                            try {
+                              setDeletingRecords(prev => [...prev, record.id]);
+                              await new Promise(res => setTimeout(res, 320));
+
+                              // Nullify linked check logs
+                              await supabase.from('check_logs').update({ ar_id: null }).eq('ar_id', record.id);
+                              // Delete receivable payments
+                              await supabase.from('receivable_payments').delete().eq('receivable_id', record.id);
+                              // Delete billing statement items
+                              await supabase.from('billing_statement_items').delete().eq('receivable_id', record.id);
+
+                              // Log to delete history
+                              try {
+                                const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Admin User';
+                                await supabase.from('delete_history_logs').insert([{
+                                  original_table: 'accounts_receivable',
+                                  record_id: record.id,
+                                  record_data: record,
+                                  deleted_by: userIdentifier,
+                                  deleted_at: new Date().toISOString()
+                                }]);
+                              } catch (logErr) {
+                                console.warn("AR delete log error:", logErr);
+                              }
+
                               const { error } = await supabase.from('accounts_receivable').delete().eq('id', record.id);
-                              if (error) alert("Failed to delete record: " + error.message);
-                              else queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
+                              if (error) throw error;
+
+                              setAutoSaveToast({ show: true, message: `Receivable "${record.invoice_no || 'Record'}" deleted` });
+                              queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] });
+                            } catch (err: any) {
+                              alert("Failed to delete record: " + (err.message || "Unknown error"));
+                            } finally {
+                              setDeletingRecords(prev => prev.filter(i => i !== record.id));
                             }
                           }}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-40"
                           title="Delete Record"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -489,6 +532,12 @@ export default function AccountReceivablesPage() {
         onClose={() => setIsEditModalOpen(false)}
         record={selectedRecord}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['receivables-with-terms'] })}
+      />
+
+      <AutoSaveToast 
+        show={autoSaveToast.show} 
+        message={autoSaveToast.message} 
+        onClose={() => setAutoSaveToast(prev => ({ ...prev, show: false }))} 
       />
     </>
   );
