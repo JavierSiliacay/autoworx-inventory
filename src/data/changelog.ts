@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788579525282",
+    version: "v1.9.5",
+    date: "2026-09-05",
+    type: "fix",
+    title: "Allow zero‑quantity fee items and fix total receivable",
+    description: "Staff can now add fee items with a quantity of zero, and the total amount due is calculated correctly."
+  },
+
+  {
     id: "update-1788505793450",
     version: "v1.9.4",
     date: "2026-09-04",
