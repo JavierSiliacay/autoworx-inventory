@@ -1033,13 +1033,19 @@ export default function AdminSalesPage() {
 
         // 3. Log snapshot into delete_history_logs for developer/admin audit
         try {
-          const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+          const userObj = session?.user as any;
+          const userIdentifier = userObj?.email || userObj?.name || 'Staff User';
+          const validUserId = userObj?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userObj.id) ? userObj.id : null;
+          
           await supabase.from('delete_history_logs').insert(
             salesList.map(s => ({
               original_table: 'sales',
               record_id: s.id,
-              record_data: s,
-              deleted_by: userIdentifier,
+              record_data: {
+                ...s,
+                _deleted_by_name: userIdentifier
+              },
+              deleted_by: validUserId,
               deleted_at: new Date().toISOString()
             }))
           );
@@ -1145,12 +1151,18 @@ export default function AdminSalesPage() {
 
         // 3. Log snapshot into delete_history_logs
         try {
-          const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+          const userObj = session?.user as any;
+          const userIdentifier = userObj?.email || userObj?.name || 'Staff User';
+          const validUserId = userObj?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userObj.id) ? userObj.id : null;
+
           await supabase.from('delete_history_logs').insert([{
             original_table: 'sales',
             record_id: sale.id,
-            record_data: sale,
-            deleted_by: userIdentifier,
+            record_data: {
+              ...sale,
+              _deleted_by_name: userIdentifier
+            },
+            deleted_by: validUserId,
             deleted_at: new Date().toISOString()
           }]);
         } catch (logErr) {
@@ -1288,13 +1300,19 @@ export default function AdminSalesPage() {
 
           // Log to delete history
           try {
-            const userIdentifier = session?.user?.email || (session?.user as any)?.name || 'Staff User';
+            const userObj = session?.user as any;
+            const userIdentifier = userObj?.email || userObj?.name || 'Staff User';
+            const validUserId = userObj?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userObj.id) ? userObj.id : null;
+
             await supabase.from('delete_history_logs').insert(
               salesList.map(s => ({
                 original_table: 'sales',
                 record_id: s.id,
-                record_data: s,
-                deleted_by: userIdentifier,
+                record_data: {
+                  ...s,
+                  _deleted_by_name: userIdentifier
+                },
+                deleted_by: validUserId,
                 deleted_at: new Date().toISOString()
               }))
             );

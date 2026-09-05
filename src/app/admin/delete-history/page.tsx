@@ -20,6 +20,7 @@ export default function DeleteHistoryPage() {
   const { selectedBranchId } = useNetwork();
   const [logs, setLogs] = useState<DeleteLog[]>([]);
   const [branches, setBranches] = useState<{ id: string, name: string }[]>([]);
+  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -33,13 +34,23 @@ export default function DeleteHistoryPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const [{ data: logsData, error: logsError }, { data: branchData }] = await Promise.all([
+      const [{ data: logsData, error: logsError }, { data: branchData }, { data: usersData }] = await Promise.all([
         supabase.from('delete_history_logs').select('*').order('deleted_at', { ascending: false }),
-        supabase.from('branches').select('id, name')
+        supabase.from('branches').select('id, name'),
+        supabase.from('users').select('id, name, email')
       ]);
 
       if (logsError) throw logsError;
       if (branchData) setBranches(branchData);
+      
+      const uMap: Record<string, string> = {};
+      if (usersData) {
+        usersData.forEach(u => {
+          if (u.id) uMap[u.id] = u.name || u.email || 'User';
+          if (u.email) uMap[u.email.toLowerCase()] = u.name || u.email;
+        });
+        setUsersMap(uMap);
+      }
       
       let finalData = logsData || [];
       if (selectedBranchId !== 'all') {
@@ -218,7 +229,7 @@ export default function DeleteHistoryPage() {
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            {log.deleted_by || 'System / Auto'}
+                            {log.record_data?._deleted_by_name || (log.deleted_by && usersMap[log.deleted_by]) || log.deleted_by || 'System / Auto'}
                           </span>
                         </div>
                       </td>
