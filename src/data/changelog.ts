@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788581639840",
+    version: "v1.9.5",
+    date: "2026-09-05",
+    type: "feature",
+    title: "Better Staff Controls & Smoother Deletions",
+    description: "Staff can now delete branches with a clean wipe animation, see who made each deletion in the history, receive instant toast alerts, and enjoy automatic AR cascade synchronization for sales and receivables data."
+  },
+
+  {
     id: "update-1788579525282",
     version: "v1.9.5",
     date: "2026-09-05",
