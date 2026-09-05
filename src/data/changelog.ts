@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788592990781",
+    version: "v1.9.5",
+    date: "2026-09-05",
+    type: "fix",
+    title: "Edit invoices with zero‑quantity items",
+    description: "You can now modify sales invoices that contain items with zero quantity or a custom subtotal, eliminating edit errors and keeping your invoicing workflow smooth."
+  },
+
+  {
     id: "update-1788581639840",
     version: "v1.9.5",
     date: "2026-09-05",
