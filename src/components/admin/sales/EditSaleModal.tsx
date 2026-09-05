@@ -85,13 +85,15 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     
     if (field === 'subtotal') {
       const sub = Number(value || 0);
-      const q = Number(item.quantity || 1);
+      const q = Number(item.quantity || 0);
       item.subtotal = sub;
       item.unit_price = q > 0 ? (sub / q) : sub;
     } else if (field === 'quantity') {
-      const q = Number(value || 0);
+      const q = Math.max(0, Number(value || 0));
       item.quantity = value;
-      item.subtotal = q * Number(item.unit_price || 0);
+      if (q > 0) {
+        item.subtotal = q * Number(item.unit_price || 0);
+      }
     } else if (field === 'unit_price') {
       const p = Number(value || 0);
       item.unit_price = p;
@@ -159,13 +161,20 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
   };
 
   const calculateTotal = () => {
-    return currentSale.items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+    return currentSale.items.reduce((sum, item) => {
+      if (!item.item_id) return sum;
+      const numVal = Number(item.subtotal || 0);
+      if (Number(item.quantity || 0) <= 0 && numVal <= 0) return sum;
+      return sum + numVal;
+    }, 0);
   };
 
   const handleSaveSale = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validItems = currentSale.items.filter(item => item.item_id && item.quantity > 0);
+    const validItems = currentSale.items.filter(
+      item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) > 0)
+    );
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
       alert("Please add at least one valid item and an invoice number.");
@@ -182,19 +191,21 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         return;
       }
 
-      // Step 1: Validate stock for edits (current stock + old quantity - new quantity)
-      for (const item of validItems) {
-        const invItem = inventory.find(i => i.id === item.item_id);
-        const oldQty = invoiceData.items.find((old: any) => old.item_id === item.item_id)?.quantity || 0;
-        const availableStock = (invItem?.quantity || 0) + oldQty;
-        
-        if (!invItem || availableStock < item.quantity) {
-          alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available (including original sale): ${availableStock}`);
-          setLoading(false);
-          return;
+      // Step 1: Validate stock for edits with physical quantities (quantity > 0)
+      if (currentSale.payment_type !== 'Cancelled') {
+        for (const item of validItems) {
+          if (Number(item.quantity || 0) <= 0) continue;
+          const invItem = inventory.find(i => i.id === item.item_id);
+          const oldQty = invoiceData.items.find((old: any) => old.item_id === item.item_id)?.quantity || 0;
+          const availableStock = (invItem?.quantity || 0) + oldQty;
+          
+          if (!invItem || availableStock < item.quantity) {
+            alert(`Insufficient stock for ${invItem?.product_name || 'Selected Item'}. Available (including original sale): ${availableStock}`);
+            setLoading(false);
+            return;
+          }
         }
       }
-
 
       const salePayload = {
         old_invoice_no: currentSale.old_invoice_no,
@@ -432,7 +443,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                               handleRowChange(idx, 'quantity', next);
                             }}
                             onDecrement={() => {
-                              const next = Math.max(0.01, Number((Number(item.quantity || 1) - 1).toFixed(2)));
+                              const next = Math.max(0, Number((Number(item.quantity || 1) - 1).toFixed(2)));
                               handleRowChange(idx, 'quantity', next);
                             }}
                           />

@@ -35,8 +35,8 @@ BEGIN
     IF (v_old_item->>'item_id') IS NOT NULL AND (v_old_item->>'item_id') != '' THEN
       v_inventory_id := (v_old_item->>'item_id')::uuid;
 
-      -- Revert inventory only if old sale was not cancelled
-      IF (p_sale_payload->>'old_payment_type') IS DISTINCT FROM 'Cancelled' THEN
+      -- Revert inventory only if old sale was not cancelled and quantity > 0
+      IF (p_sale_payload->>'old_payment_type') IS DISTINCT FROM 'Cancelled' AND COALESCE((v_old_item->>'quantity')::decimal, 0) > 0 THEN
         UPDATE public.inventory
         SET quantity = quantity + (v_old_item->>'quantity')::decimal
         WHERE id = v_inventory_id;
@@ -122,12 +122,13 @@ BEGIN
 
     -- Insert new sale
     INSERT INTO public.sales (
-      date, invoice_no, customer_name, payment_type, branch_id,
+      date, invoice_no, customer_name, sales_agent, payment_type, branch_id,
       item_id, quantity, unit_price, unit_cost, total_amount, performed_by
     ) VALUES (
       (p_sale_payload->>'date')::date,
       p_sale_payload->>'invoice_no',
       p_sale_payload->>'customer_name',
+      p_sale_payload->>'sales_agent',
       p_sale_payload->>'payment_type',
       COALESCE((v_new_item->>'branch_id')::uuid, v_branch_id),
       v_inventory_id,
@@ -138,8 +139,8 @@ BEGIN
       p_user_email
     );
 
-    -- Deduct inventory and insert transaction log only if not Cancelled
-    IF (p_sale_payload->>'payment_type') IS DISTINCT FROM 'Cancelled' THEN
+    -- Deduct inventory and insert transaction log only if not Cancelled and quantity > 0
+    IF (p_sale_payload->>'payment_type') IS DISTINCT FROM 'Cancelled' AND COALESCE((v_new_item->>'quantity')::decimal, 0) > 0 THEN
       -- Deduct inventory
       UPDATE public.inventory
       SET quantity = quantity - (v_new_item->>'quantity')::decimal
