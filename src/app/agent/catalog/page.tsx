@@ -15,11 +15,12 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import ReservationModal, { InventoryItem } from "@/components/agent/ReservationModal";
 import { useSession } from "next-auth/react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -55,8 +56,6 @@ async function fetchCatalog({
   page,
   pageSize,
 }: FetchParams): Promise<{ items: InventoryItem[]; count: number }> {
-  if (branchIds.length === 0) return { items: [], count: 0 };
-
   let query = supabase
     .from("inventory")
     .select(
@@ -66,9 +65,9 @@ async function fetchCatalog({
 
   // Branch scope
   if (selectedBranchId !== "all") {
-    if (!branchIds.includes(selectedBranchId)) return { items: [], count: 0 };
+    if (branchIds.length > 0 && !branchIds.includes(selectedBranchId)) return { items: [], count: 0 };
     query = query.eq("branch_id", selectedBranchId);
-  } else {
+  } else if (branchIds.length > 0) {
     query = query.in("branch_id", branchIds);
   }
 
@@ -147,14 +146,19 @@ const getStockBadge = (qty: number) => {
 // Page component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AgentCatalogPage() {
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role;
+  const isGlobal = userRole === "manager" || userRole === "owner" || userRole === "developer";
   const userBranchIds: string[] = (session?.user as any)?.branch_ids ?? [];
+  const effectiveBranchIds = isGlobal ? [] : userBranchIds;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
+  const [isChangingPage, setIsChangingPage] = useState(false);
   const [selectedItemForReservation, setSelectedItemForReservation] =
     useState<InventoryItem | null>(null);
 
@@ -179,18 +183,12 @@ export default function AgentCatalogPage() {
 
   // ── Query 1: Branches (10 min cache)
   const branchesQuery = useQuery({
-    queryKey: ["agent-branches", userBranchIds],
-    queryFn: () => fetchBranches(userBranchIds),
-    enabled: userBranchIds.length > 0,
+    queryKey: ["agent-branches", effectiveBranchIds],
+    queryFn: () => fetchBranches(effectiveBranchIds),
+    enabled: isGlobal || userBranchIds.length > 0,
     staleTime: 10 * 60 * 1000,
   });
   const branches = branchesQuery.data ?? [];
-
-  // Detect Main Distribution agent — drives which price column to show
-  const isMainDistributionAgent = useMemo(
-    () => branches.some((b) => b.name.toLowerCase().includes("main distribution")),
-    [branches]
-  );
 
   // ── Query 2: Inventory — single flat list, sorted by quantity DESC then name ASC
   const catalogQuery = useQuery({
@@ -200,20 +198,71 @@ export default function AgentCatalogPage() {
       debouncedSearch,
       currentPage,
       pageSize,
-      userBranchIds,
+      effectiveBranchIds,
     ],
     queryFn: () =>
       fetchCatalog({
-        branchIds: userBranchIds,
+        branchIds: effectiveBranchIds,
         selectedBranchId,
         search: debouncedSearch,
         page: currentPage,
         pageSize,
       }),
-    enabled: userBranchIds.length > 0,
+    enabled: isGlobal || userBranchIds.length > 0,
     placeholderData: keepPreviousData,
-    staleTime: 60 * 1000,
+    staleTime: 5000,
+    refetchOnWindowFocus: true,
   });
+
+  // ── Realtime live sync: silently patch items in memory without loading screen animation
+  React.useEffect(() => {
+    const channel = supabase
+      .channel("agent-catalog-inventory-live-sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "inventory",
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            const updated = payload.new as any;
+            // In-place silent cache patch — zero loading flicker or spinners
+            queryClient.setQueriesData(
+              { queryKey: ["agent-catalog"] },
+              (oldData: any) => {
+                if (!oldData || !Array.isArray(oldData.items)) return oldData;
+                return {
+                  ...oldData,
+                  items: oldData.items.map((item: InventoryItem) =>
+                    item.id === updated.id
+                      ? {
+                          ...item,
+                          ...updated,
+                          // Preserve branches join data from existing item
+                          branches: item.branches,
+                        }
+                      : item
+                  ),
+                };
+              }
+            );
+          } else {
+            // For new insertions or deletions, silently refetch in background
+            queryClient.invalidateQueries({
+              queryKey: ["agent-catalog"],
+              refetchType: "all",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const items = catalogQuery.data?.items ?? [];
   const totalCount = catalogQuery.data?.count ?? 0;
@@ -221,10 +270,17 @@ export default function AgentCatalogPage() {
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
+      setIsChangingPage(true);
       setCurrentPage(newPage);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  React.useEffect(() => {
+    if (!catalogQuery.isFetching) {
+      setIsChangingPage(false);
+    }
+  }, [catalogQuery.isFetching]);
 
   const pageNumbers = useMemo(() => {
     const pages: (number | string)[] = [];
@@ -243,12 +299,35 @@ export default function AgentCatalogPage() {
   }, [currentPage, totalPages]);
 
   const isInitialLoading = catalogQuery.isLoading;
-  const isFetchingNewPage = catalogQuery.isFetching && !catalogQuery.isLoading;
+  const isFetchingNewPage = catalogQuery.isFetching && isChangingPage;
 
-  // Price display — Main Distribution sees dealers_price, others see price
+  // Price display — Item-aware:
+  // For Main Distribution items, prioritize dealer's price (dealers_price) with fallback to price.
+  // For other branches, display dealers_price if available, otherwise retail price.
   const renderPrice = (item: InventoryItem) => {
-    const displayPrice = isMainDistributionAgent ? item.dealers_price : item.price;
-    if (displayPrice != null) {
+    const branchName = Array.isArray(item.branches)
+      ? item.branches[0]?.name ?? ""
+      : item.branches?.name ?? "";
+    const isMainDist = branchName.toLowerCase().includes("main");
+
+    let displayPrice: number | null = null;
+    if (isMainDist) {
+      displayPrice =
+        item.dealers_price != null && Number(item.dealers_price) > 0
+          ? Number(item.dealers_price)
+          : item.price != null && Number(item.price) > 0
+          ? Number(item.price)
+          : null;
+    } else {
+      displayPrice =
+        item.dealers_price != null && Number(item.dealers_price) > 0
+          ? Number(item.dealers_price)
+          : item.price != null && Number(item.price) > 0
+          ? Number(item.price)
+          : null;
+    }
+
+    if (displayPrice != null && displayPrice > 0) {
       return (
         <span className="text-sm font-black text-slate-900">
           ₱{displayPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
@@ -459,18 +538,28 @@ export default function AgentCatalogPage() {
                         {renderPrice(item)}
                       </div>
 
-                      <button
-                        disabled={item.quantity <= 0}
-                        onClick={() => setSelectedItemForReservation(item)}
-                        className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                          item.quantity > 0
-                            ? "bg-slate-900 hover:bg-blue-600 text-white shadow-md shadow-slate-900/10 hover:shadow-blue-600/20"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        }`}
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                        {item.quantity > 0 ? "Reserve for Client" : "Stock Unavailable"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/agent/chat?inquiryItem=${encodeURIComponent(item.product_name)}&inquirySku=${encodeURIComponent(item.sku || "")}&inquiryBranchId=${item.branch_id}&inquiryPrice=${item.dealers_price || item.price || 0}`}
+                          className="p-3 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/80 hover:border-indigo-200 rounded-xl transition-colors shrink-0"
+                          title="Inquire to Branch Staff"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Link>
+
+                        <button
+                          disabled={item.quantity <= 0}
+                          onClick={() => setSelectedItemForReservation(item)}
+                          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            item.quantity > 0
+                              ? "bg-slate-900 hover:bg-blue-600 text-white shadow-md shadow-slate-900/10 hover:shadow-blue-600/20"
+                              : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                          {item.quantity > 0 ? "Reserve for Client" : "Stock Unavailable"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
