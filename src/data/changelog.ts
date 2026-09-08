@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788854614135",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "Enhanced calling experience",
+    description: "Missed audio calls now show as clear, Messenger‑style cards with quick callback options, and the in‑call floating pill can be moved and dragged with touch for easier screen control."
+  },
+
+  {
     id: "update-1788853466189",
     version: "v1.9.8",
     date: "2026-09-08",
