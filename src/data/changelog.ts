@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788855210318",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "fix",
+    title: "More Reliable Calls with Instant Audio Stop",
+    description: "Calls now ring consistently in both directions and audio stops immediately when you hang up, providing a smoother and more dependable calling experience."
+  },
+
+  {
     id: "update-1788854614135",
     version: "v1.9.8",
     date: "2026-09-08",
