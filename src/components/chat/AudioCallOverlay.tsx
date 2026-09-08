@@ -13,7 +13,8 @@ import {
   Volume2,
   Building2,
   User,
-  Radio
+  Radio,
+  GripVertical
 } from "lucide-react";
 import { useAudioCallContext } from "@/context/AudioCallContext";
 
@@ -42,14 +43,22 @@ export default function AudioCallOverlay() {
       <AnimatePresence>
         {isConnected && isMinimized && (
           <motion.div
+            drag
+            dragMomentum={false}
+            dragElastic={0.08}
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
-            className="fixed bottom-20 left-4 sm:bottom-6 sm:left-6 z-[9999] flex items-center gap-2 sm:gap-3 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 shadow-2xl rounded-full px-3.5 py-2 text-white select-none ring-1 ring-white/10"
+            className="fixed bottom-20 left-4 sm:bottom-6 sm:left-6 z-[9999] flex items-center gap-1.5 sm:gap-2.5 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 shadow-2xl rounded-full pl-2 pr-3 py-1.5 sm:py-2 text-white select-none ring-1 ring-white/10 cursor-grab active:cursor-grabbing touch-none shadow-slate-950/60 hover:border-slate-600 transition-colors"
           >
+            {/* Grip Drag Handle */}
+            <div className="text-slate-500 hover:text-slate-300 transition-colors pl-0.5 cursor-grab active:cursor-grabbing" title="Drag to move anywhere">
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+
             {/* Live Indicator & Timer */}
-            <div className="flex items-center gap-2 pr-1 border-r border-slate-700/60">
+            <div className="flex items-center gap-1.5 sm:gap-2 pr-1.5 border-r border-slate-700/60">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -60,7 +69,7 @@ export default function AudioCallOverlay() {
             </div>
 
             {/* Peer info */}
-            <div className="flex items-center gap-2 max-w-[120px] sm:max-w-[160px] truncate">
+            <div className="flex items-center gap-2 max-w-[110px] sm:max-w-[150px] truncate">
               <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-600/70 overflow-hidden flex items-center justify-center shrink-0 text-[10px] font-black text-slate-300">
                 {activePeer?.image ? (
                   <img src={activePeer.image} alt={activePeer.name} className="w-full h-full object-cover" />
@@ -75,6 +84,7 @@ export default function AudioCallOverlay() {
 
             {/* Mute Toggle */}
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={toggleMute}
               className={`p-2 rounded-full transition-all cursor-pointer ${
                 isMuted
@@ -88,6 +98,7 @@ export default function AudioCallOverlay() {
 
             {/* Expand / Maximize */}
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => setIsMinimized(false)}
               className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
               title="Expand Call Window"
@@ -97,6 +108,7 @@ export default function AudioCallOverlay() {
 
             {/* End Call Button */}
             <button
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={endCall}
               className="p-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 active:scale-95 transition-all cursor-pointer"
               title="End Call"
