@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788836286453",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "New Web Push Notifications & OS Background Delivery",
+    description: "You’ll now receive instant notifications even when the app isn’t open, thanks to web push and OS‑level background delivery. The chat interface has also been refined for a smoother, more intuitive experience."
+  },
+
+  {
     id: "update-1788834468887",
     version: "v1.9.8",
     date: "2026-09-08",
