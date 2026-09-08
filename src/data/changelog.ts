@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788851445698",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "fix",
+    title: "Cleaner Chat Experience",
+    description: "The attachment box is now hidden when sending plain text messages, and notification chimes are silenced on non‑main branches, making chats less cluttered and quieter."
+  },
+
+  {
     id: "update-1788849424808",
     version: "v1.9.8",
     date: "2026-09-08",
