@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788838470643",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "improvement",
+    title: "Simplified notifications",
+    description: "Removed the bell toggle and notification card, and now push registration works silently in the background for a cleaner, less distracting experience."
+  },
+
+  {
     id: "update-1788836286453",
     version: "v1.9.8",
     date: "2026-09-08",
