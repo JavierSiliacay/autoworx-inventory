@@ -328,10 +328,10 @@ export async function sendMessage(params: {
       .single();
 
     if (!msgErr) {
-      // Fetch current counts to increment safely
+      // Fetch current counts and agent_id to increment and notify safely
       const { data: currentConv } = await supabase
         .from("agent_admin_conversations")
-        .select("unread_admin_count, unread_agent_count")
+        .select("agent_id, unread_admin_count, unread_agent_count")
         .eq("id", params.conversationId)
         .single();
 
@@ -351,6 +351,31 @@ export async function sendMessage(params: {
         .from("agent_admin_conversations")
         .update(updateData)
         .eq("id", params.conversationId);
+
+      // Asynchronously trigger Web Push notification (non-blocking)
+      if (typeof window !== "undefined") {
+        const pushTitle = isAgent
+          ? `${params.senderName} (Sales Agent)`
+          : `${params.senderName} (Admin Reply)`;
+
+        const pushBody =
+          params.content ||
+          (params.attachment ? `Inquiry on: ${params.attachment.title}` : "New message");
+
+        fetch("/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetRole: isAgent ? "admin" : undefined,
+            targetUserId: !isAgent ? currentConv?.agent_id : undefined,
+            targetBranchId: params.branchId,
+            title: pushTitle,
+            body: pushBody,
+            url: isAgent ? `/admin` : `/agent/chat?branch=${params.branchId}`,
+            tag: `apc-chat-${params.conversationId}`,
+          }),
+        }).catch((err) => console.warn("[chat/push] Non-blocking push notification error:", err));
+      }
     }
   } catch (e) {
     console.warn("Supabase message insert failed, using fallback:", e);

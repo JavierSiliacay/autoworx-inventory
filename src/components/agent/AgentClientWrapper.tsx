@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import AgentChatWidget from "@/components/agent/AgentChatWidget";
 import AgentBottomNav from "@/components/agent/AgentBottomNav";
 import { playChatNotificationSound } from "@/lib/chat";
+import { registerPushSubscription } from "@/lib/push";
 
 export default function AgentClientWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -42,6 +43,16 @@ export default function AgentClientWrapper({ children }: { children: React.React
     }
 
     loadUnread();
+
+    // Silently keep Web Push subscription synchronized if agent already granted permission
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      registerPushSubscription({
+        id: agentId,
+        email: user?.email,
+        role: (user as any)?.role || "agent",
+        branch_id: (user as any)?.activeBranch || null,
+      }).catch(() => {});
+    }
 
     // Listen to real-time message inserts
     const channel = supabase

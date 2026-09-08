@@ -475,25 +475,10 @@ export default function AdminFloatingChatWidget() {
                     <h3 className="font-extrabold text-sm leading-tight text-white truncate">
                       {selectedConv ? selectedConv.agent_name : "Agent Inquiries"}
                     </h3>
-                    {!isMainDistribution ? (
+                    {!isMainDistribution && (
                       <span className="text-[10px] bg-amber-500/30 border border-amber-400/40 text-amber-300 font-bold px-1.5 py-0.5 rounded-md uppercase">
                         Locked
                       </span>
-                    ) : selectedConv && (
-                      isAgentOnline ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-300 bg-emerald-500/25 border border-emerald-400/40 px-2 py-0.5 rounded-full shadow-2xs">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
-                          </span>
-                          Active now
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-300 bg-white/10 px-1.5 py-0.5 rounded-full border border-white/10" title={agentLastActiveText}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          {agentLastActiveText}
-                        </span>
-                      )
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
@@ -502,11 +487,19 @@ export default function AdminFloatingChatWidget() {
                       : selectedConv 
                       ? (
                         <>
-                          <span>{selectedConv.branch_name}</span>
+                          <span className="truncate">{selectedConv.branch_name}</span>
                           <span className="text-slate-600">•</span>
-                          <span className={isAgentOnline ? "text-emerald-400 font-bold" : "text-slate-400"}>
-                            {isAgentOnline ? "Active now" : agentLastActiveText}
-                          </span>
+                          {isAgentOnline ? (
+                            <span className="text-emerald-400 font-bold flex items-center gap-1 shrink-0">
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                              </span>
+                              Active now
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 shrink-0">{agentLastActiveText}</span>
+                          )}
                         </>
                       )
                       : "Branch-scoped agent direct messages"}
@@ -702,7 +695,7 @@ export default function AdminFloatingChatWidget() {
               </div>
             ) : (
               <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
-                {/* Active Chat Branch & Agent Presence Sub-header */}
+                {/* Active Chat Branch Sub-header */}
                 <div className="bg-slate-100/90 px-3.5 py-1.5 border-b border-slate-200/80 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
                   <span className="flex items-center gap-1.5 truncate">
                     <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -712,22 +705,11 @@ export default function AdminFloatingChatWidget() {
                     <span className="text-[9px] font-black text-blue-700 bg-blue-100/90 border border-blue-200/90 px-2 py-0.5 rounded-md uppercase tracking-wider">
                       AGENT CHAT
                     </span>
-                    {isAgentOnline ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full shadow-2xs">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Active now
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                        {agentLastActiveText}
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-4 space-y-3">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -764,13 +746,13 @@ export default function AdminFloatingChatWidget() {
                               </div>
                             )}
 
-                            <div className={`max-w-[80%] flex flex-col ${!isAgent ? "items-end" : "items-start"}`}>
+                            <div className={`min-w-0 max-w-[85%] flex flex-col ${!isAgent ? "items-end" : "items-start"}`}>
                               <span className="text-[9px] font-bold text-slate-400 mb-0.5 ml-1">
                                 {msg.sender_name} ({msg.sender_role})
                               </span>
 
                               <div
-                                className={`p-3 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                                className={`w-full min-w-0 max-w-full p-3 rounded-2xl text-xs leading-relaxed shadow-xs break-words overflow-hidden ${
                                   !isAgent
                                     ? "bg-blue-600 text-white rounded-br-xs"
                                     : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs"
@@ -782,7 +764,7 @@ export default function AdminFloatingChatWidget() {
                                     href={`/admin/inventory?search=${encodeURIComponent(msg.attachment.title)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={`group relative mb-2.5 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer block overflow-hidden shadow-xs hover:shadow-md ${
+                                    className={`group relative w-full min-w-0 max-w-full mb-2.5 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer block overflow-hidden shadow-xs hover:shadow-md ${
                                       !isAgent
                                         ? "bg-white/15 hover:bg-white/25 border-white/25 text-white"
                                         : "bg-white hover:bg-blue-50/50 border-slate-200 hover:border-blue-300 text-slate-900"

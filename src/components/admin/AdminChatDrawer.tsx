@@ -674,7 +674,7 @@ export default function AdminChatDrawer({
                 </div>
 
                 {/* Message Feed */}
-                <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
+                <div className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden space-y-4">
                   {loadingMessages ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -703,7 +703,7 @@ export default function AdminChatDrawer({
                               </div>
                             )}
 
-                            <div className={`max-w-[80%] flex flex-col ${!isAgent ? "items-end" : "items-start"}`}>
+                            <div className={`min-w-0 max-w-[85%] sm:max-w-[75%] flex flex-col ${!isAgent ? "items-end" : "items-start"}`}>
                               <span className="text-[10px] font-bold text-slate-400 mb-1 ml-1 flex items-center gap-1">
                                 {msg.sender_name}
                                 <span className="px-1 py-0.2 bg-slate-100 rounded text-[8px] font-bold uppercase text-slate-600">
@@ -712,7 +712,7 @@ export default function AdminChatDrawer({
                               </span>
 
                               <div
-                                className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                                className={`w-full min-w-0 max-w-full p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs break-words overflow-hidden ${
                                   !isAgent
                                     ? "bg-blue-600 text-white rounded-br-xs"
                                     : "bg-slate-100 text-slate-800 border border-slate-200/80 rounded-bl-xs"
@@ -724,14 +724,14 @@ export default function AdminChatDrawer({
                                     href={`/admin/inventory?search=${encodeURIComponent(msg.attachment.title)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={`group relative mb-2.5 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer block overflow-hidden shadow-xs hover:shadow-md ${
+                                    className={`group relative w-full min-w-0 max-w-full mb-2.5 p-2.5 rounded-xl border transition-all duration-200 cursor-pointer block overflow-hidden shadow-xs hover:shadow-md ${
                                       !isAgent
                                         ? "bg-white/15 hover:bg-white/25 border-white/25 text-white"
                                         : "bg-white hover:bg-blue-50/50 border-slate-200 hover:border-blue-300 text-slate-900"
                                     }`}
                                     title="Click to view in Master Inventory"
                                   >
-                                    <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center gap-2.5 min-w-0">
                                       <div className={`p-2 rounded-lg shrink-0 transition-transform group-hover:scale-105 ${
                                         !isAgent
                                           ? "bg-white/20 text-white"
@@ -739,8 +739,8 @@ export default function AdminChatDrawer({
                                       }`}>
                                         <Package className="w-4 h-4" />
                                       </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className={`font-bold text-xs truncate transition-colors ${
+                                      <div className="min-w-0 flex-1 overflow-hidden">
+                                        <p className={`font-bold text-xs truncate leading-tight transition-colors ${
                                           !isAgent ? "text-white" : "text-slate-900 group-hover:text-blue-600"
                                         }`}>
                                           {msg.attachment.title}

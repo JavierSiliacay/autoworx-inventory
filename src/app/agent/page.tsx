@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import AgentSignOutModal from "@/components/agent/AgentSignOutModal";
 import InstallPromptBanner from "@/components/agent/InstallPromptBanner";
+import NotificationBellToggle from "@/components/common/NotificationBellToggle";
 
 export default function AgentDashboard() {
   const { data: session } = useSession();
@@ -210,6 +211,9 @@ export default function AgentDashboard() {
             </Link>
           </div>
         </div>
+
+        {/* System Push Notifications Card */}
+        <NotificationBellToggle variant="card" className="mt-8" />
 
         {/* In-Page Install App Section on Bottom */}
         <InstallPromptBanner />

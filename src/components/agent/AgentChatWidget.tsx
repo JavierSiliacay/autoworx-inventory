@@ -533,7 +533,7 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
             ) : (
               <>
                 {/* Chat Messages Feed */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-gradient-to-b from-slate-50/70 via-slate-100/40 to-slate-50">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-3.5 bg-gradient-to-b from-slate-50/70 via-slate-100/40 to-slate-50">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-12 px-4 text-center">
                       <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/90 p-2.5 flex items-center justify-center mb-3 shadow-sm shadow-slate-200/60 ring-4 ring-slate-100/80">
@@ -576,9 +576,9 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                             key={msg.id}
                             className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
                           >
-                            <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                            <div className={`min-w-0 max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                               <div
-                                className={`rounded-2xl p-3 sm:p-3.5 text-xs sm:text-sm shadow-xs ${
+                                className={`w-full min-w-0 max-w-full rounded-2xl p-3 sm:p-3.5 text-xs sm:text-sm shadow-xs break-words overflow-hidden ${
                                   isMe
                                     ? "bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-md shadow-blue-500/20"
                                     : "bg-white text-slate-800 rounded-bl-xs border border-slate-200/80"
@@ -587,7 +587,7 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                                 {/* Render Attached Product */}
                                 {msg.attachment && (
                                   <div
-                                    className={`mb-2.5 p-2 rounded-xl flex items-center gap-2.5 ${
+                                    className={`w-full min-w-0 max-w-full mb-2.5 p-2 rounded-xl flex items-center gap-2.5 overflow-hidden ${
                                       isMe
                                         ? "bg-white text-slate-900 border border-blue-100 shadow-sm"
                                         : "bg-slate-50 border border-slate-200 text-slate-900"
@@ -596,14 +596,14 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                                     <div className={`p-1.5 rounded-lg shrink-0 ${isMe ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-blue-500/20 text-blue-600"}`}>
                                       <Package className="w-4 h-4 text-blue-600" />
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-extrabold text-xs text-slate-900 truncate">{msg.attachment.title}</p>
+                                    <div className="min-w-0 flex-1 overflow-hidden">
+                                      <p className="font-extrabold text-xs text-slate-900 truncate leading-tight break-all">{msg.attachment.title}</p>
                                       {msg.attachment.subtitle && (
                                         <p className="text-[10px] text-slate-500 truncate">{msg.attachment.subtitle}</p>
                                       )}
-                                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                         {msg.attachment.metadata?.price && (
-                                          <span className="text-[11px] font-black text-emerald-600">
+                                          <span className="text-[11px] font-black text-emerald-600 shrink-0">
                                             ₱{Number(msg.attachment.metadata.price).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                                           </span>
                                         )}
