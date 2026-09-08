@@ -18,7 +18,8 @@ import {
   Trash2,
   Lock,
   ExternalLink,
-  ArrowUpRight
+  ArrowUpRight,
+  PhoneCall
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
@@ -38,6 +39,7 @@ import {
   resolveProductStocks
 } from "@/lib/chat";
 import { usePresence } from "@/context/PresenceContext";
+import { useAudioCallContext } from "@/context/AudioCallContext";
 
 interface AdminChatDrawerProps {
   isOpen: boolean;
@@ -55,6 +57,7 @@ export default function AdminChatDrawer({
   userRole,
 }: AdminChatDrawerProps) {
   const { data: session } = useSession();
+  const { startCall, callStatus } = useAudioCallContext();
   const { setSelectedBranchId } = useNetwork();
   const currentUserId = (session?.user as any)?.id || "admin-current";
   const currentUserName = session?.user?.name || "Admin Dispatch";
@@ -665,14 +668,41 @@ export default function AdminChatDrawer({
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleClearChat}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
-                    title="Clear conversation history"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Clear Chat</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {isMainDistribution && (
+                      <button
+                        onClick={() => {
+                          startCall(
+                            {
+                              id: selectedConv.agent_id,
+                              name: selectedConv.agent_name || "Sales Agent",
+                              role: "sales_agent",
+                              image: selectedConv.agent_image || undefined,
+                            },
+                            selectedConv.id
+                          );
+                        }}
+                        disabled={callStatus !== "idle"}
+                        className={`p-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                          callStatus !== "idle"
+                            ? "opacity-40 cursor-not-allowed text-slate-400 bg-slate-100"
+                            : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/80 active:scale-95"
+                        }`}
+                        title={callStatus !== "idle" ? "Call in progress" : `Voice Call ${selectedConv.agent_name || "Agent"}`}
+                      >
+                        <PhoneCall className="w-4 h-4 text-emerald-600" />
+                        <span className="hidden sm:inline">Call Agent</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={handleClearChat}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                      title="Clear conversation history"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Clear Chat</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Message Feed */}

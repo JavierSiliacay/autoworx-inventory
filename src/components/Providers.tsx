@@ -2,6 +2,8 @@
 
 import { SessionProvider } from "next-auth/react";
 import { NetworkProvider } from "@/context/NetworkContext";
+import { AudioCallProvider } from "@/context/AudioCallContext";
+import AudioCallOverlay from "@/components/chat/AudioCallOverlay";
 import { Suspense, useEffect } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,7 +22,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <Suspense fallback={null}>
         <NetworkProvider>
-           {children}
+          <AudioCallProvider>
+            {children}
+            <AudioCallOverlay />
+          </AudioCallProvider>
         </NetworkProvider>
       </Suspense>
     </SessionProvider>

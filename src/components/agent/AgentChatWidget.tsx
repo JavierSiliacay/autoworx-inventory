@@ -14,7 +14,8 @@ import {
   ChevronDown,
   Trash2,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  PhoneCall
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -36,9 +37,11 @@ import {
   resolveProductStocks
 } from "@/lib/chat";
 import { usePresence } from "@/context/PresenceContext";
+import { useAudioCallContext } from "@/context/AudioCallContext";
 
 export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (count: number) => void }) {
   const { data: session } = useSession();
+  const { startCall, callStatus } = useAudioCallContext();
   const user = session?.user;
   const agentId = (user as any)?.id;
   const userBranchIds = (user as any)?.branch_ids || [];
@@ -433,6 +436,29 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
 
               {/* Action Controls */}
               <div className="flex items-center gap-1 shrink-0">
+                {isMainDistribution && conversation && (
+                  <button
+                    onClick={() => {
+                      startCall(
+                        {
+                          id: "admin",
+                          name: "Main Distribution Admin",
+                          role: "admin",
+                        },
+                        conversation.id
+                      );
+                    }}
+                    disabled={callStatus !== "idle"}
+                    className={`rounded-xl p-2 transition-colors cursor-pointer flex items-center justify-center ${
+                      callStatus !== "idle"
+                        ? "opacity-40 cursor-not-allowed text-slate-500"
+                        : "text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 active:scale-95"
+                    }`}
+                    title={callStatus !== "idle" ? "Call in progress" : "Voice Call Main Distribution Admin"}
+                  >
+                    <PhoneCall size={16} />
+                  </button>
+                )}
                 {messages.length > 0 && (
                   <button
                     onClick={handleClearChat}

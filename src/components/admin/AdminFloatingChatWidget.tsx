@@ -18,7 +18,8 @@ import {
   Trash2,
   Lock,
   ExternalLink,
-  ArrowUpRight
+  ArrowUpRight,
+  PhoneCall
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -39,9 +40,11 @@ import {
   resolveProductStocks
 } from "@/lib/chat";
 import { usePresence } from "@/context/PresenceContext";
+import { useAudioCallContext } from "@/context/AudioCallContext";
 
 export default function AdminFloatingChatWidget() {
   const { data: session } = useSession();
+  const { startCall, callStatus } = useAudioCallContext();
   const { selectedBranchId, setSelectedBranchId } = useNetwork();
   const role = (session?.user as any)?.role || "staff";
   const userBranchIds = (session?.user as any)?.branch_ids || [];
@@ -520,13 +523,37 @@ export default function AdminFloatingChatWidget() {
 
               <div className="flex items-center gap-1 shrink-0">
                 {selectedConv && isMainDistribution && (
-                  <button
-                    onClick={handleClearChat}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition-colors cursor-pointer"
-                    title="Clear conversation messages"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        startCall(
+                          {
+                            id: selectedConv.agent_id,
+                            name: selectedConv.agent_name || "Sales Agent",
+                            role: "sales_agent",
+                            image: selectedConv.agent_image || undefined,
+                          },
+                          selectedConv.id
+                        );
+                      }}
+                      disabled={callStatus !== "idle"}
+                      className={`rounded-lg p-1.5 transition-colors cursor-pointer flex items-center justify-center ${
+                        callStatus !== "idle"
+                          ? "opacity-40 cursor-not-allowed text-slate-500"
+                          : "text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 active:scale-95"
+                      }`}
+                      title={callStatus !== "idle" ? "Call in progress" : `Voice Call ${selectedConv.agent_name || "Agent"}`}
+                    >
+                      <PhoneCall size={16} />
+                    </button>
+                    <button
+                      onClick={handleClearChat}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Clear conversation messages"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => setIsMaximized(!isMaximized)}

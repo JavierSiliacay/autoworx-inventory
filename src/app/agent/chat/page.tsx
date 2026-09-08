@@ -21,7 +21,8 @@ import {
   Store,
   Trash2,
   Lock,
-  ChevronDown
+  ChevronDown,
+  PhoneCall
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { 
@@ -41,9 +42,11 @@ import {
   resolveProductStocks
 } from "@/lib/chat";
 import { usePresence } from "@/context/PresenceContext";
+import { useAudioCallContext } from "@/context/AudioCallContext";
 
 export default function AgentChatPage() {
   const { data: session } = useSession();
+  const { startCall, callStatus } = useAudioCallContext();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -451,6 +454,30 @@ export default function AgentChatPage() {
 
           {/* Right Header Actions: Clear Chat + Compact Branch Dropdown */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {isMainBranch && conversation && (
+              <button
+                type="button"
+                onClick={() => {
+                  startCall(
+                    {
+                      id: "admin",
+                      name: "Main Distribution Admin",
+                      role: "admin",
+                    },
+                    conversation.id
+                  );
+                }}
+                disabled={callStatus !== "idle"}
+                className={`p-1.5 sm:p-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                  callStatus !== "idle"
+                    ? "opacity-40 cursor-not-allowed text-slate-400"
+                    : "text-emerald-600 hover:text-emerald-700 active:bg-emerald-50"
+                }`}
+                title={callStatus !== "idle" ? "Call in progress" : "Voice Call Main Distribution Admin"}
+              >
+                <PhoneCall className="w-4 h-4" />
+              </button>
+            )}
             {messages.length > 0 && (
               <button
                 type="button"
