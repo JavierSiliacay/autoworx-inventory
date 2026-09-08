@@ -461,12 +461,26 @@ export default function NewStockInPage() {
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            {suppliers.find(s => s.id === supplierId)?.name.toLowerCase().includes("mixing") && (
-              <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                <span>Mixing station selected — Excluded from automatic payables</span>
-              </p>
-            )}
+            {(() => {
+              const sName = suppliers.find(s => s.id === supplierId)?.name?.toLowerCase() || "";
+              let reason = "";
+              if (sName.includes("mixing")) {
+                reason = "Mixing station selected — Excluded from automatic payables";
+              } else if (sName.includes("beginning balance") || sName.includes("additional balance") || sName.includes("balance")) {
+                reason = "Beginning balance selected — Excluded from automatic payables";
+              } else if (sName.includes("inventory")) {
+                reason = "Inventory balance selected — Excluded from automatic payables";
+              }
+
+              if (!reason) return null;
+
+              return (
+                <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>{reason}</span>
+                </p>
+              );
+            })()}
           </div>
           {/* Invoice Number */}
           <div>
