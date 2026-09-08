@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788856690185",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "Continuous background call ringing",
+    description: "Incoming calls now ring continuously in the background, so you won't miss them even when the app is minimized or the screen is off."
+  },
+
+  {
     id: "update-1788856488402",
     version: "v1.9.8",
     date: "2026-09-08",
