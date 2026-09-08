@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788834468887",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "Live Chat & Smarter Catalog Experience",
+    description: "Staff can now chat instantly with admins, see contextual links and stock badges right in the app, enjoy faster data loading, and benefit from an improved mobile catalog with better search feedback and clearer empty states."
+  },
+
+  {
     id: "update-1788604972623",
     version: "v1.9.5",
     date: "2026-09-05",
