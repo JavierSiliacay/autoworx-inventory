@@ -15,16 +15,38 @@ export default function AgentClientWrapper({ children }: { children: React.React
   const user = session?.user;
   const agentId = (user as any)?.id;
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
-  // Determine whether to show floating chat widget trigger button
   const isDirectChatPage = pathname === "/agent/chat";
+
+  // Show full-screen permission modal 0.8s after page load if not yet granted
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      const t = setTimeout(() => setShowPermissionModal(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const handleGrantPermission = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    const perm = await Notification.requestPermission();
+    setShowPermissionModal(false);
+    if (perm === "granted" && agentId) {
+      autoPromptPushPermission({
+        id: agentId,
+        email: user?.email,
+        role: (user as any)?.role || "agent",
+        branch_id: (user as any)?.activeBranch || null,
+      }).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (!agentId) return;
 
     let isMounted = true;
 
-    // Load initial unread count across agent's conversations
     async function loadUnread() {
       try {
         const { data, error } = await supabase
@@ -33,8 +55,8 @@ export default function AgentClientWrapper({ children }: { children: React.React
           .eq("agent_id", agentId);
 
         if (!error && data && isMounted) {
-          const totalUnread = data.reduce((acc, curr) => acc + (curr.unread_agent_count || 0), 0);
-          setUnreadCount(totalUnread);
+          const total = data.reduce((acc, curr) => acc + (curr.unread_agent_count || 0), 0);
+          setUnreadCount(total);
         }
       } catch (err) {
         console.warn("Failed to load initial unread count:", err);
@@ -43,41 +65,24 @@ export default function AgentClientWrapper({ children }: { children: React.React
 
     loadUnread();
 
-    // Auto-prompt and subscribe to Web Push (TaraFix pattern — 100% silent background engine, no modals)
-    if (isPushNotificationSupported()) {
-      autoPromptPushPermission({
-        id: agentId,
-        email: user?.email,
-        role: (user as any)?.role || "agent",
-        branch_id: (user as any)?.activeBranch || null,
-      }).catch(() => {});
-
-      // For mobile browsers requiring a user gesture before showing native prompt:
-      const handleUserGesture = () => {
-        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-          autoPromptPushPermission({
-            id: agentId,
-            email: user?.email,
-            role: (user as any)?.role || "agent",
-            branch_id: (user as any)?.activeBranch || null,
-          }).catch(() => {});
-        }
-      };
-
-      window.addEventListener("click", handleUserGesture, { once: true });
-      window.addEventListener("touchstart", handleUserGesture, { once: true });
+    // Silently re-register push token if permission already granted (keeps subscription fresh)
+    if (isPushNotificationSupported() && typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        autoPromptPushPermission({
+          id: agentId,
+          email: user?.email,
+          role: (user as any)?.role || "agent",
+          branch_id: (user as any)?.activeBranch || null,
+        }).catch(() => {});
+      }
     }
 
-    // Listen to real-time message inserts
+    // Real-time in-app sound + badge on new admin messages
     const channel = supabase
       .channel(`agent-global-notifications-${agentId}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "agent_admin_messages",
-        },
+        { event: "INSERT", schema: "public", table: "agent_admin_messages" },
         (payload: any) => {
           const newMsg = payload.new;
           if (newMsg.sender_role !== "agent") {
@@ -96,51 +101,44 @@ export default function AgentClientWrapper({ children }: { children: React.React
     };
   }, [agentId, isDirectChatPage, user]);
 
-  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        setShowPermissionPrompt(true);
-      }
-    }
-  }, []);
-
-  const handleGrantPermission = async () => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      const perm = await Notification.requestPermission();
-      setShowPermissionPrompt(false);
-      if (perm === "granted" && agentId) {
-        autoPromptPushPermission({
-          id: agentId,
-          email: user?.email,
-          role: (user as any)?.role || "agent",
-          branch_id: (user as any)?.activeBranch || null,
-        }).catch(() => {});
-      }
-    }
-  };
-
   return (
     <>
-      {/* 1-Tap Force Permission Activator Overlay if not yet granted */}
-      {showPermissionPrompt && (
-        <div className="fixed inset-x-4 top-4 z-[9999] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-              <span className="text-xl">🔔</span>
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white leading-tight">Enable Live Chat Alerts</p>
-              <p className="text-[11px] text-slate-300 leading-snug mt-0.5">Get notified instantly when Admin replies to your inquiries.</p>
+      {/* ─── Full-Screen Android-style Push Permission Sheet ─── */}
+      {showPermissionModal && (
+        <div className="fixed inset-0 z-[99999] flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm mx-4 mb-6 sm:mb-0 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300">
+            {/* Brand accent bar */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600" />
+
+            <div className="p-6 text-center">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                <span className="text-4xl">🔔</span>
+              </div>
+
+              <h2 className="text-lg font-extrabold text-slate-900 mb-1">
+                Enable Notifications
+              </h2>
+              <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                Allow <strong>Autoworx APC Agent</strong> to send you instant alerts when
+                Ma&apos;am Carla or Admin sends a message — even when the app is closed.
+              </p>
+
+              <button
+                onClick={handleGrantPermission}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md transition-all duration-150 mb-3"
+              >
+                Allow Notifications
+              </button>
+
+              {/* "Maybe Later" re-shows this modal next time they open the app */}
+              <button
+                onClick={() => setShowPermissionModal(false)}
+                className="w-full py-2.5 text-slate-400 text-xs font-medium rounded-xl hover:text-slate-600 transition-colors"
+              >
+                Maybe Later
+              </button>
             </div>
           </div>
-          <button
-            onClick={handleGrantPermission}
-            className="shrink-0 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
-          >
-            Allow
-          </button>
         </div>
       )}
 
@@ -151,7 +149,7 @@ export default function AgentClientWrapper({ children }: { children: React.React
       {/* Floating Chat Widget across agent portal (hidden on dedicated chat page) */}
       {!isDirectChatPage && <AgentChatWidget onUnreadChange={setUnreadCount} />}
 
-      {/* Modern iOS/Android-style bottom navigation for mobile agents (hidden in full-screen chat thread) */}
+      {/* Bottom navigation for mobile agents */}
       {!isDirectChatPage && <AgentBottomNav unreadChatCount={unreadCount} />}
     </>
   );
