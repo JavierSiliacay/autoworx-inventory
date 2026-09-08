@@ -138,6 +138,7 @@ export async function POST(req: NextRequest) {
       try {
         await webpush.sendNotification(pushSubscription as any, payload, {
           TTL: 60 * 60 * 24, // 24 hours
+          urgency: "high",
         });
         sentCount++;
       } catch (err: any) {

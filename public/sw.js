@@ -1,7 +1,7 @@
 // Autoworx Service Worker — Background Push Notifications & PWA Handler
 // Modeled after proven TaraFix production implementation
 
-const CACHE_NAME = "apc-agent-shell-v2";
+const CACHE_NAME = "apc-agent-shell-v3";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request));
 });
 
-// Background Push Notification Event
+// Background Push Notification Event (Exact TaraFix implementation)
 self.addEventListener("push", (event) => {
   let title = "Autoworx Alert";
   let body = "You have a new message.";
@@ -52,13 +52,7 @@ self.addEventListener("push", (event) => {
     data: { url: url },
     tag: tag,
     renotify: true,
-    requireInteraction: true,
-    actions: [
-      {
-        action: "open",
-        title: "Open Chat",
-      },
-    ],
+    requireInteraction: true
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

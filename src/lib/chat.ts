@@ -299,6 +299,8 @@ export async function sendMessage(params: {
   senderImage?: string;
   content: string;
   attachment?: ChatAttachment | null;
+  recipientId?: string;
+  recipientEmail?: string;
 }): Promise<ChatMessage> {
   const newMsgId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `msg-${Date.now()}`;
   const now = new Date().toISOString();
@@ -362,12 +364,28 @@ export async function sendMessage(params: {
           params.content ||
           (params.attachment ? `Inquiry on: ${params.attachment.title}` : "New message");
 
+        // Resolve target email for 100% reliable FCM dispatch
+        let targetEmail = params.recipientEmail;
+        const targetUserId = !isAgent ? (params.recipientId || currentConv?.agent_id) : undefined;
+
+        if (!isAgent && !targetEmail && targetUserId) {
+          try {
+            const { data: u } = await supabase
+              .from("users")
+              .select("email")
+              .eq("id", targetUserId)
+              .maybeSingle();
+            if (u?.email) targetEmail = u.email;
+          } catch {}
+        }
+
         fetch("/api/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             targetRole: isAgent ? "admin" : undefined,
-            targetUserId: !isAgent ? currentConv?.agent_id : undefined,
+            targetUserId: targetUserId,
+            targetUserEmail: targetEmail,
             targetBranchId: params.branchId,
             title: pushTitle,
             body: pushBody,

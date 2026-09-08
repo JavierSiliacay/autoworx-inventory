@@ -338,6 +338,8 @@ export default function AdminFloatingChatWidget() {
         senderRole: roleToSave as any,
         senderImage: currentUserImage,
         content: text,
+        recipientId: selectedConv.agent_id,
+        recipientEmail: selectedConv.agent_email,
       });
 
       setMessages((prev) => {
