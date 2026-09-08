@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788856488402",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "More reliable mobile call notifications",
+    description: "Incoming calls now reliably wake your mobile device and dismiss automatically when canceled, so you stay informed without extra noise."
+  },
+
+  {
     id: "update-1788855210318",
     version: "v1.9.8",
     date: "2026-09-08",
