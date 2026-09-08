@@ -354,46 +354,50 @@ export async function sendMessage(params: {
         .update(updateData)
         .eq("id", params.conversationId);
 
-      // Asynchronously trigger Web Push notification (non-blocking)
-      if (typeof window !== "undefined") {
-        const pushTitle = isAgent
-          ? `${params.senderName} (Sales Agent)`
-          : `${params.senderName} (Admin Reply)`;
+      // Trigger Web Push notification (non-blocking fire-and-forget)
+      // NOTE: no window check — works in both browser (client) and SSR (server)
+      const pushTitle = isAgent
+        ? `${params.senderName} (Sales Agent)`
+        : `${params.senderName} (Admin Reply)`;
 
-        const pushBody =
-          params.content ||
-          (params.attachment ? `Inquiry on: ${params.attachment.title}` : "New message");
+      const pushBody =
+        params.content ||
+        (params.attachment ? `Inquiry on: ${params.attachment.title}` : "New message");
 
-        // Resolve target email for 100% reliable FCM dispatch
-        let targetEmail = params.recipientEmail;
-        const targetUserId = !isAgent ? (params.recipientId || currentConv?.agent_id) : undefined;
+      // Resolve target email for 100% reliable FCM dispatch
+      let targetEmail = params.recipientEmail;
+      const targetUserId = !isAgent ? (params.recipientId || currentConv?.agent_id) : undefined;
 
-        if (!isAgent && !targetEmail && targetUserId) {
-          try {
-            const { data: u } = await supabase
-              .from("users")
-              .select("email")
-              .eq("id", targetUserId)
-              .maybeSingle();
-            if (u?.email) targetEmail = u.email;
-          } catch {}
-        }
-
-        fetch("/api/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            targetRole: isAgent ? "admin" : undefined,
-            targetUserId: targetUserId,
-            targetUserEmail: targetEmail,
-            targetBranchId: params.branchId,
-            title: pushTitle,
-            body: pushBody,
-            url: isAgent ? `/admin` : `/agent/chat?branch=${params.branchId}`,
-            tag: `apc-chat-${params.conversationId}`,
-          }),
-        }).catch((err) => console.warn("[chat/push] Non-blocking push notification error:", err));
+      if (!isAgent && !targetEmail && targetUserId) {
+        try {
+          const { data: u } = await supabase
+            .from("users")
+            .select("email")
+            .eq("id", targetUserId)
+            .maybeSingle();
+          if (u?.email) targetEmail = u.email;
+        } catch {}
       }
+
+      // Use absolute URL so this works both client-side and server-side (SSR)
+      const pushApiUrl = typeof window !== "undefined"
+        ? "/api/push/send"
+        : `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/push/send`;
+
+      fetch(pushApiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetRole: isAgent ? "admin" : undefined,
+          targetUserId: targetUserId,
+          targetUserEmail: targetEmail,
+          targetBranchId: params.branchId,
+          title: pushTitle,
+          body: pushBody,
+          url: isAgent ? `/admin` : `/agent/chat?branch=${params.branchId}`,
+          tag: `apc-chat-${params.conversationId}`,
+        }),
+      }).catch((err) => console.warn("[chat/push] Non-blocking push notification error:", err));
     }
   } catch (e) {
     console.warn("Supabase message insert failed, using fallback:", e);
