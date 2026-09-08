@@ -96,8 +96,54 @@ export default function AgentClientWrapper({ children }: { children: React.React
     };
   }, [agentId, isDirectChatPage, user]);
 
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        setShowPermissionPrompt(true);
+      }
+    }
+  }, []);
+
+  const handleGrantPermission = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const perm = await Notification.requestPermission();
+      setShowPermissionPrompt(false);
+      if (perm === "granted" && agentId) {
+        autoPromptPushPermission({
+          id: agentId,
+          email: user?.email,
+          role: (user as any)?.role || "agent",
+          branch_id: (user as any)?.activeBranch || null,
+        }).catch(() => {});
+      }
+    }
+  };
+
   return (
     <>
+      {/* 1-Tap Force Permission Activator Overlay if not yet granted */}
+      {showPermissionPrompt && (
+        <div className="fixed inset-x-4 top-4 z-[9999] max-w-md mx-auto bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center justify-between gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+              <span className="text-xl">🔔</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white leading-tight">Enable Live Chat Alerts</p>
+              <p className="text-[11px] text-slate-300 leading-snug mt-0.5">Get notified instantly when Admin replies to your inquiries.</p>
+            </div>
+          </div>
+          <button
+            onClick={handleGrantPermission}
+            className="shrink-0 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+          >
+            Allow
+          </button>
+        </div>
+      )}
+
       <div className={isDirectChatPage ? "h-[100dvh] overflow-hidden" : "pb-16 sm:pb-0 min-h-screen"}>
         {children}
       </div>
