@@ -1,6 +1,5 @@
-// Minimal service worker — required for PWA installability & Web Push notifications.
-// We intentionally skip offline caching since inventory data must always be live.
-// The SW intercepts fetch events and passes them straight through (network-only).
+// Autoworx Service Worker — Background Push Notifications & PWA Handler
+// Modeled after proven TaraFix production implementation
 
 const CACHE_NAME = "apc-agent-shell-v2";
 
@@ -21,80 +20,69 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Network-only strategy — always fetch live data, never serve stale inventory
+// Network-only strategy for API and dynamic data
 self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request));
 });
 
-// Push notification received event
+// Background Push Notification Event
 self.addEventListener("push", (event) => {
-  let data = {
-    title: "New Notification",
-    body: "You have a new message.",
-    icon: "/logo.png",
-    badge: "/favicon.png",
-    tag: "apc-push-notification",
-    url: "/",
-  };
+  let title = "Autoworx Alert";
+  let body = "You have a new message.";
+  let url = "/agent/chat";
+  let tag = "apc-chat-" + Date.now();
 
-  try {
-    if (event.data) {
-      const payload = event.data.json();
-      data = { ...data, ...payload };
-    }
-  } catch (err) {
-    if (event.data) {
-      data.body = event.data.text();
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      if (data.title) title = data.title;
+      if (data.body) body = data.body;
+      if (data.url) url = data.url;
+      if (data.tag) tag = data.tag;
+    } catch (e) {
+      body = event.data.text() || body;
     }
   }
 
   const options = {
-    body: data.body,
-    icon: data.icon || "/logo.png",
-    badge: data.badge || "/favicon.png",
-    tag: data.tag || `apc-chat-${Date.now()}`,
+    body: body,
+    icon: "/logo.png",
+    badge: "/favicon.png",
+    vibrate: [200, 100, 200, 100, 200],
+    data: { url: url },
+    tag: tag,
     renotify: true,
-    vibrate: [200, 100, 200],
-    data: {
-      url: data.url || "/",
-      dateOfArrival: Date.now(),
-      primaryKey: 1,
-    },
+    requireInteraction: true,
     actions: [
       {
-        action: "open_url",
-        title: "View Message",
+        action: "open",
+        title: "Open Chat",
       },
     ],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click event — focus existing tab or open target URL
+// Notification Click -> Open or Focus App
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const targetUrl = event.notification.data?.url || "/";
 
   event.waitUntil(
-    clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windowClients) => {
-        // Check if there is already a window open with this URL or app origin
-        for (let client of windowClients) {
-          if (client.url.includes(self.location.origin) && "focus" in client) {
-            client.focus();
-            if ("navigate" in client && targetUrl !== "/") {
-              client.navigate(targetUrl);
-            }
-            return;
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          if ("navigate" in client && targetUrl !== "/") {
+            client.navigate(targetUrl);
           }
+          return client.focus();
         }
-        // If no matching window is open, open a new one
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
-        }
-      })
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
   );
 });

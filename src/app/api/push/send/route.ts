@@ -8,36 +8,30 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+const vapidPublicKey =
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+  "BBg2MimWLVby1MIPvcssV9dt5S-WFehPssTkwlzpYht9GgCCoBMvddmQE5qqhEBjqUzIco8uSzkxUx-uuv1Ivcs";
+const vapidPrivateKey =
+  process.env.VAPID_PRIVATE_KEY || "B64KUIjLeIJ3KPLAEMPzJF-EtXpbU_5KK2NY-jj1jmA";
 const vapidSubject = process.env.VAPID_SUBJECT || "mailto:siliacay.javier@gmail.com";
 
-if (vapidPublicKey && vapidPrivateKey) {
-  try {
-    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
-  } catch (err) {
-    console.error("[push/send] Failed to configure VAPID details:", err);
-  }
+try {
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+} catch (err) {
+  console.error("[push/send] Failed to configure VAPID details:", err);
 }
 
 export async function POST(req: NextRequest) {
   try {
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      console.warn("[push/send] VAPID keys are not configured in environment.");
-      return NextResponse.json(
-        { error: "VAPID keys not configured on server." },
-        { status: 500 }
-      );
-    }
-
     const body = await req.json();
     const {
       targetUserId,
+      targetUserEmail,
       targetRole, // "admin" | "agent"
       targetBranchId,
-      title = "New Notification",
+      title = "Autoworx Alert",
       body: messageBody = "",
-      url = "/",
+      url = "/agent/chat",
       tag,
       icon = "/logo.png",
       badge = "/favicon.png",
@@ -46,16 +40,24 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase();
     let query = supabase.from("push_subscriptions").select("*");
 
-    if (targetUserId) {
-      query = query.eq("user_id", String(targetUserId));
+    if (targetUserEmail) {
+      query = query.ilike("user_email", String(targetUserEmail).toLowerCase().trim());
+    } else if (targetUserId) {
+      query = query.or(`user_id.eq.${String(targetUserId)},user_email.ilike.${String(targetUserId)}`);
     } else if (targetRole === "admin") {
-      query = query.in("role", ["admin", "manager", "developer", "owner"]);
+      try {
+        query = query.in("role", ["admin", "manager", "developer", "owner"]);
+      } catch {}
     } else if (targetRole === "agent") {
-      query = query.eq("role", "agent");
+      try {
+        query = query.eq("role", "agent");
+      } catch {}
     }
 
     if (targetBranchId) {
-      query = query.or(`branch_id.eq.${targetBranchId},branch_id.is.null`);
+      try {
+        query = query.or(`branch_id.eq.${targetBranchId},branch_id.is.null`);
+      } catch {}
     }
 
     const { data: subscriptions, error } = await query;
@@ -75,7 +77,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
+    let activeSubscriptions = subscriptions || [];
+
+    // Fallback: If no subscriptions found by user_id, resolve email from users table
+    if (activeSubscriptions.length === 0 && targetUserId) {
+      try {
+        const { data: u } = await supabase
+          .from("users")
+          .select("email")
+          .eq("id", targetUserId)
+          .maybeSingle();
+
+        if (u?.email) {
+          const { data: emailSubs } = await supabase
+            .from("push_subscriptions")
+            .select("*")
+            .ilike("user_email", u.email.toLowerCase().trim());
+
+          if (emailSubs && emailSubs.length > 0) {
+            activeSubscriptions = emailSubs;
+          }
+        }
+      } catch (err) {
+        console.warn("[push/send] User email fallback resolution error:", err);
+      }
+    }
+
+    if (activeSubscriptions.length === 0) {
       return NextResponse.json({
         success: true,
         message: "No active push subscriptions found for criteria",
@@ -87,7 +115,7 @@ export async function POST(req: NextRequest) {
       title,
       body: messageBody,
       url,
-      tag: tag || `apc-${Date.now()}`,
+      tag: tag || `apc-chat-${Date.now()}`,
       icon,
       badge,
     });
@@ -95,8 +123,9 @@ export async function POST(req: NextRequest) {
     const staleEndpoints: string[] = [];
     let sentCount = 0;
 
-    const pushPromises = subscriptions.map(async (sub) => {
-      const pushSubscription = {
+    const pushPromises = activeSubscriptions.map(async (sub) => {
+      // Support both JSONB subscription (TaraFix format) and individual columns
+      const pushSubscription = sub.subscription || {
         endpoint: sub.endpoint,
         keys: {
           p256dh: sub.p256dh,
@@ -104,17 +133,19 @@ export async function POST(req: NextRequest) {
         },
       };
 
+      if (!pushSubscription || !pushSubscription.endpoint) return;
+
       try {
-        await webpush.sendNotification(pushSubscription, payload, {
+        await webpush.sendNotification(pushSubscription as any, payload, {
           TTL: 60 * 60 * 24, // 24 hours
         });
         sentCount++;
       } catch (err: any) {
         // 404 or 410 indicates the subscription has expired or unsubscribed
         if (err.statusCode === 404 || err.statusCode === 410) {
-          staleEndpoints.push(sub.endpoint);
+          staleEndpoints.push(pushSubscription.endpoint);
         } else {
-          console.error(`[push/send] Failed to send push to ${sub.endpoint.substring(0, 30)}...:`, err.message);
+          console.error(`[push/send] Failed to send push to ${pushSubscription.endpoint.substring(0, 30)}...:`, err.message);
         }
       }
     });
@@ -127,7 +158,7 @@ export async function POST(req: NextRequest) {
         await supabase
           .from("push_subscriptions")
           .delete()
-          .in("endpoint", staleEndpoints);
+          .or(`endpoint.in.(${staleEndpoints.join(",")}),subscription->>endpoint.in.(${staleEndpoints.join(",")})`);
         console.log(`[push/send] Pruned ${staleEndpoints.length} expired subscriptions.`);
       } catch (e: any) {
         console.error("[push/send] Error pruning stale endpoints:", e?.message);

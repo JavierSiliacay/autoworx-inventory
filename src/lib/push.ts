@@ -1,7 +1,12 @@
 /**
  * Web Push Notifications Client & Utility Library
  * Handles W3C Push API registration, VAPID key conversion, and dispatching.
+ * Modeled after proven TaraFix production implementation.
  */
+
+export const VAPID_PUBLIC_KEY =
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+  "BBg2MimWLVby1MIPvcssV9dt5S-WFehPssTkwlzpYht9GgCCoBMvddmQE5qqhEBjqUzIco8uSzkxUx-uuv1Ivcs";
 
 // Helper to convert base64 VAPID public key to Uint8Array
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -46,12 +51,6 @@ export async function registerPushSubscription(user: UserSubscriptionContext): P
     return { success: false, error: "Push notifications are not supported in this browser." };
   }
 
-  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!vapidPublicKey) {
-    console.error("[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing from environment.");
-    return { success: false, error: "VAPID key is missing on the client." };
-  }
-
   try {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
@@ -62,7 +61,7 @@ export async function registerPushSubscription(user: UserSubscriptionContext): P
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey as any,
@@ -77,7 +76,7 @@ export async function registerPushSubscription(user: UserSubscriptionContext): P
         action: "subscribe",
         subscription: subscription.toJSON(),
         user_id: user.id,
-        user_email: user.email || null,
+        user_email: user.email ? user.email.toLowerCase().trim() : null,
         role: user.role || "agent",
         branch_id: user.branch_id || null,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
@@ -94,6 +93,64 @@ export async function registerPushSubscription(user: UserSubscriptionContext): P
     console.error("[push] Registration error:", err);
     return { success: false, error: err.message || "Failed to register push subscription." };
   }
+}
+
+/**
+ * Automatically prompt for notification permission and register token (TaraFix pattern).
+ * Will trigger browser native prompt if permission is 'default', or auto-register if 'granted'.
+ */
+export async function autoPromptPushPermission(user: UserSubscriptionContext): Promise<boolean> {
+  if (!isPushNotificationSupported()) return false;
+
+  try {
+    const registerPushToken = async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        let sub = await registration.pushManager.getSubscription();
+        if (!sub) {
+          const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+          sub = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey as any,
+          });
+        }
+        if (sub) {
+          await fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "subscribe",
+              subscription: sub.toJSON(),
+              user_id: user.id,
+              user_email: user.email ? user.email.toLowerCase().trim() : null,
+              role: user.role || "agent",
+              branch_id: user.branch_id || null,
+              userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+            }),
+          });
+          return true;
+        }
+      } catch (e) {
+        console.warn("[push] Background sync token registration:", e);
+      }
+      return false;
+    };
+
+    if (Notification.permission === "granted") {
+      await registerPushToken();
+      return true;
+    } else if (Notification.permission === "default") {
+      // Auto-prompt user automatically
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        await registerPushToken();
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn("[push] autoPromptPushPermission error:", err);
+  }
+  return false;
 }
 
 /**
@@ -132,6 +189,7 @@ export async function unregisterPushSubscription(user_id: string): Promise<{ suc
  */
 export async function sendPushNotification(payload: {
   targetUserId?: string;
+  targetUserEmail?: string;
   targetRole?: "admin" | "agent";
   targetBranchId?: string;
   title: string;

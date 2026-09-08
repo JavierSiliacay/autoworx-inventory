@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
 import AdminChatDrawer from "@/components/admin/AdminChatDrawer";
 import NotificationBellToggle from "@/components/common/NotificationBellToggle";
+import { autoPromptPushPermission, isPushNotificationSupported } from "@/lib/push";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -43,8 +44,17 @@ export default function Header() {
 
     if (session) {
       fetchBranches();
+
+      if (isPushNotificationSupported()) {
+        autoPromptPushPermission({
+          id: (session.user as any)?.id,
+          email: session.user?.email,
+          role: (session.user as any)?.role || "admin",
+          branch_id: selectedBranchId !== "all" ? selectedBranchId : null,
+        }).catch(() => {});
+      }
     }
-  }, [session]);
+  }, [session, selectedBranchId]);
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranchId(branchId);
