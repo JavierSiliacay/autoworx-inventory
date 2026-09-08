@@ -45,36 +45,94 @@ const ICE_SERVERS: RTCConfiguration = {
   ],
 };
 
-// Background-Resilient Ringtone Player using HTML5 Audio element (unthrottled by browser in background)
+// Background-Resilient Ringtone Player using persistent DOM Audio elements + Pre-Warmed Web Audio Context + MediaSession API
 class RingtonePlayer {
-  private audioElement: HTMLAudioElement | null = null;
-  private fallbackCtx: AudioContext | null = null;
+  private incomingAudio: HTMLAudioElement | null = null;
+  private outgoingAudio: HTMLAudioElement | null = null;
+  private persistentCtx: AudioContext | null = null;
+  private chimeTimer: NodeJS.Timeout | null = null;
   public isRinging: boolean = false;
 
   constructor() {
     if (typeof window !== "undefined") {
-      try {
-        const audio = new Audio();
-        audio.preload = "auto";
-        audio.loop = true;
-        (audio as any).playsInline = true;
-        this.audioElement = audio;
+      this.initDomAudio();
+    }
+  }
 
-        // Auto-prime audio on first user interaction anywhere on page
-        const unlock = () => {
-          if (this.audioElement) {
-            this.audioElement.load();
-          }
-          window.removeEventListener("click", unlock);
-          window.removeEventListener("touchstart", unlock);
-          window.removeEventListener("keydown", unlock);
-        };
-        window.addEventListener("click", unlock, { once: true });
-        window.addEventListener("touchstart", unlock, { once: true });
-        window.addEventListener("keydown", unlock, { once: true });
-      } catch (e) {
-        console.warn("Could not instantiate Ringtone Audio element:", e);
+  private initDomAudio() {
+    try {
+      // 1. Incoming Call Ringtone Element
+      let inc = document.getElementById("autoworx-incoming-ringtone") as HTMLAudioElement;
+      if (!inc) {
+        inc = document.createElement("audio");
+        inc.id = "autoworx-incoming-ringtone";
+        inc.src = "/sounds/phone-ring.wav";
+        inc.loop = true;
+        inc.preload = "auto";
+        (inc as any).playsInline = true;
+        inc.style.display = "none";
+        document.body.appendChild(inc);
       }
+      this.incomingAudio = inc;
+
+      // 2. Outgoing Call Ringback Element
+      let out = document.getElementById("autoworx-outgoing-ringback") as HTMLAudioElement;
+      if (!out) {
+        out = document.createElement("audio");
+        out.id = "autoworx-outgoing-ringback";
+        out.src = "/sounds/phone-ringback.wav";
+        out.loop = true;
+        out.preload = "auto";
+        (out as any).playsInline = true;
+        out.style.display = "none";
+        document.body.appendChild(out);
+      }
+      this.outgoingAudio = out;
+
+      // 3. User Gesture Unlocker: Pre-warms both HTML5 Audio and Web Audio Context
+      // Once unlocked during ANY user click/tap/key, the browser permanently permits background audio playback!
+      const unlock = () => {
+        try {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioCtx && !this.persistentCtx) {
+            this.persistentCtx = new AudioCtx();
+          }
+          if (this.persistentCtx && this.persistentCtx.state === "suspended") {
+            this.persistentCtx.resume().catch(() => {});
+          }
+        } catch (e) {}
+
+        if (this.incomingAudio) {
+          this.incomingAudio.play().then(() => {
+            if (!this.isRinging) {
+              this.incomingAudio?.pause();
+              if (this.incomingAudio) this.incomingAudio.currentTime = 0;
+            }
+          }).catch(() => {});
+        }
+        if (this.outgoingAudio) {
+          this.outgoingAudio.play().then(() => {
+            if (!this.isRinging) {
+              this.outgoingAudio?.pause();
+              if (this.outgoingAudio) this.outgoingAudio.currentTime = 0;
+            }
+          }).catch(() => {});
+        }
+
+        window.removeEventListener("click", unlock);
+        window.removeEventListener("touchstart", unlock);
+        window.removeEventListener("touchend", unlock);
+        window.removeEventListener("pointerdown", unlock);
+        window.removeEventListener("keydown", unlock);
+      };
+
+      window.addEventListener("click", unlock, { once: true });
+      window.addEventListener("touchstart", unlock, { once: true });
+      window.addEventListener("touchend", unlock, { once: true });
+      window.addEventListener("pointerdown", unlock, { once: true });
+      window.addEventListener("keydown", unlock, { once: true });
+    } catch (e) {
+      console.warn("Could not setup DOM ringtone audio elements:", e);
     }
   }
 
@@ -82,87 +140,148 @@ class RingtonePlayer {
     this.stop();
     this.isRinging = true;
 
-    // 1. Continuous phone ring vibration cadence on mobile
+    // 1. Continuous phone ring vibration cadence on mobile [1s vibrate, 0.4s pause]
     if (!isOutgoing && typeof navigator !== "undefined" && navigator.vibrate) {
       try {
-        navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500]);
+        navigator.vibrate([1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000, 400]);
       } catch {}
     }
 
-    const soundFile = isOutgoing ? "/sounds/phone-ringback.wav" : "/sounds/phone-ring.wav";
-
-    // 2. Play via HTML5 Audio element — guaranteed to ring in background tabs and locked screens!
-    if (this.audioElement) {
+    // 2. Set MediaSession metadata to elevate browser to active audio playback foreground service on mobile
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
       try {
-        this.audioElement.src = soundFile;
-        this.audioElement.loop = true;
-        this.audioElement.currentTime = 0;
-        const playPromise = this.audioElement.play();
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: isOutgoing ? "Calling..." : "📞 Incoming Audio Call",
+          artist: "Autoworx Inventory",
+          album: "Voice Call Alert",
+          artwork: [{ src: "/logo.png", sizes: "512x512", type: "image/png" }],
+        });
+        navigator.mediaSession.playbackState = "playing";
+      } catch (e) {}
+    }
+
+    if (!this.incomingAudio || !this.outgoingAudio) {
+      this.initDomAudio();
+    }
+
+    const targetAudio = isOutgoing ? this.outgoingAudio : this.incomingAudio;
+
+    // 3. Play via pre-loaded DOM audio element (unthrottled in background tabs)
+    let domAudioSuccess = false;
+    if (targetAudio) {
+      try {
+        targetAudio.currentTime = 0;
+        const playPromise = targetAudio.play();
         if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn("HTML5 Ringtone play prevented, running Web Audio fallback:", err);
-            this.playWebAudioFallback(isOutgoing);
-          });
+          playPromise
+            .then(() => {
+              domAudioSuccess = true;
+            })
+            .catch((err) => {
+              console.warn("HTML5 Ringtone play prevented, running Web Audio fallback:", err);
+              this.startWebAudioLoop(isOutgoing);
+            });
         }
       } catch (e) {
-        this.playWebAudioFallback(isOutgoing);
+        this.startWebAudioLoop(isOutgoing);
       }
     } else {
-      this.playWebAudioFallback(isOutgoing);
+      this.startWebAudioLoop(isOutgoing);
     }
+
+    // Also run Web Audio as backup if DOM audio takes longer or is silent
+    setTimeout(() => {
+      if (this.isRinging && !domAudioSuccess) {
+        this.startWebAudioLoop(isOutgoing);
+      }
+    }, 400);
   }
 
-  private playWebAudioFallback(isOutgoing: boolean) {
+  private startWebAudioLoop(isOutgoing: boolean) {
+    if (this.chimeTimer) return;
+    this.playToneBurst(isOutgoing);
+    this.chimeTimer = setInterval(() => {
+      if (!this.isRinging) {
+        if (this.chimeTimer) clearInterval(this.chimeTimer);
+        this.chimeTimer = null;
+        return;
+      }
+      this.playToneBurst(isOutgoing);
+    }, isOutgoing ? 4000 : 3000);
+  }
+
+  private playToneBurst(isOutgoing: boolean) {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      this.fallbackCtx = new AudioCtx();
-      if (this.fallbackCtx.state === "suspended") {
-        this.fallbackCtx.resume().catch(() => {});
+      if (!this.persistentCtx) {
+        this.persistentCtx = new AudioCtx();
+      }
+      if (this.persistentCtx.state === "suspended") {
+        this.persistentCtx.resume().catch(() => {});
       }
 
-      const osc1 = this.fallbackCtx.createOscillator();
-      const osc2 = this.fallbackCtx.createOscillator();
-      const gain = this.fallbackCtx.createGain();
+      const ctx = this.persistentCtx;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc1.type = "sine";
       osc2.type = "sine";
 
-      const f1 = isOutgoing ? 440 : 523.25;
-      const f2 = isOutgoing ? 480 : 659.25;
-      osc1.frequency.setValueAtTime(f1, this.fallbackCtx.currentTime);
-      osc2.frequency.setValueAtTime(f2, this.fallbackCtx.currentTime);
+      const f1 = isOutgoing ? 440 : 523.25; // A4 or C5
+      const f2 = isOutgoing ? 480 : 659.25; // B4 or E5
+      osc1.frequency.setValueAtTime(f1, ctx.currentTime);
+      osc2.frequency.setValueAtTime(f2, ctx.currentTime);
 
-      gain.gain.setValueAtTime(0.16, this.fallbackCtx.currentTime);
+      const burstDuration = isOutgoing ? 1.5 : 1.8;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.22, ctx.currentTime + burstDuration - 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + burstDuration);
+
       osc1.connect(gain);
       osc2.connect(gain);
-      gain.connect(this.fallbackCtx.destination);
+      gain.connect(ctx.destination);
 
-      osc1.start();
-      osc2.start();
+      osc1.start(ctx.currentTime);
+      osc2.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + burstDuration);
+      osc2.stop(ctx.currentTime + burstDuration);
     } catch (e) {
-      console.warn("Web Audio fallback error:", e);
+      console.warn("Tone burst playback error:", e);
     }
   }
 
   stop() {
     this.isRinging = false;
-    if (this.audioElement) {
+    if (this.chimeTimer) {
+      clearInterval(this.chimeTimer);
+      this.chimeTimer = null;
+    }
+    if (this.incomingAudio) {
       try {
-        this.audioElement.pause();
-        this.audioElement.currentTime = 0;
+        this.incomingAudio.pause();
+        this.incomingAudio.currentTime = 0;
       } catch (e) {}
     }
-    if (this.fallbackCtx) {
+    if (this.outgoingAudio) {
       try {
-        this.fallbackCtx.close();
+        this.outgoingAudio.pause();
+        this.outgoingAudio.currentTime = 0;
       } catch (e) {}
-      this.fallbackCtx = null;
     }
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      try {
-        navigator.vibrate(0);
-      } catch {}
+    if (typeof navigator !== "undefined") {
+      if (navigator.vibrate) {
+        try {
+          navigator.vibrate(0);
+        } catch {}
+      }
+      if ("mediaSession" in navigator) {
+        try {
+          navigator.mediaSession.playbackState = "none";
+        } catch {}
+      }
     }
   }
 }
@@ -553,8 +672,10 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       if (!data || !data.type) return;
 
       if (data.type === "PLAY_INCOMING_CALL_RINGTONE") {
-        if (callStatusRef.current === "idle") {
+        if (!ringtoneRef.current.isRinging && callStatusRef.current !== "connected") {
           ringtoneRef.current.startRinging(false);
+        }
+        if (callStatusRef.current === "idle") {
           setCallStatus("ringing");
           if (data.callId) {
             activeRoomIdRef.current = data.callId;

@@ -1,7 +1,7 @@
 // Autoworx Service Worker — Background Push Notifications & PWA Handler
 // Modeled after proven TaraFix production implementation
 
-const CACHE_NAME = "apc-agent-shell-v6";
+const CACHE_NAME = "apc-agent-shell-v7";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -41,7 +41,7 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Background Push Notification Event with Incoming Call Wakeup
+// Background Push Notification Event with Continuous Incoming Call Ringing
 self.addEventListener("push", (event) => {
   let title = "Autoworx Alert";
   let body = "You have a new message.";
@@ -91,31 +91,17 @@ self.addEventListener("push", (event) => {
 
   const isCall = type === "incoming-call" || (tag && tag.startsWith("apc-call-")) || title.includes("Incoming Audio Call");
 
-  // If this is an incoming call, broadcast message to background tabs so their audio element rings!
-  if (isCall) {
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      clients.forEach((client) => {
-        client.postMessage({
-          type: "PLAY_INCOMING_CALL_RINGTONE",
-          callId: callId,
-          url: url,
-          title: title,
-        });
-      });
-    });
-  }
-
   const options = {
     body: body,
     icon: "/logo.png",
     badge: "/favicon.png",
     sound: "/sounds/phone-ring.wav",
     silent: false,
-    // Distinct continuous phone call ring pattern
+    // Heavy phone call vibration pattern [vibrate 1s, pause 0.4s, repeat]
     vibrate: isCall
-      ? [1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500]
+      ? [1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000, 400]
       : [200, 100, 200, 100, 200],
-    data: { url: url, type: type, callId: callId },
+    data: { url: url, type: type, callId: callId, tag: tag },
     tag: tag,
     renotify: true,
     requireInteraction: true,
@@ -127,7 +113,66 @@ self.addEventListener("push", (event) => {
       : [],
   };
 
+  if (isCall) {
+    // Keep notifying/vibrating in a loop for up to ~22 seconds or until answered/cancelled
+    event.waitUntil(
+      (async () => {
+        // 1. Alert all open windows/tabs to start ringing their audio immediately!
+        try {
+          const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+          clients.forEach((client) => {
+            client.postMessage({
+              type: "PLAY_INCOMING_CALL_RINGTONE",
+              callId: callId,
+              url: url,
+              title: title,
+            });
+          });
+        } catch (e) {
+          console.warn("[SW] Could not postMessage to clients:", e);
+        }
+
+        // 2. Loop showNotification with renotify: true so Android buzzes/rings continuously like a phone call
+        for (let i = 0; i < 7; i++) {
+          // If after the first show the user dismissed or answered the notification, stop loop
+          if (i > 0) {
+            try {
+              const activeNotifs = await self.registration.getNotifications({ tag: tag });
+              if (!activeNotifs || activeNotifs.length === 0) {
+                break; // User dismissed or clicked
+              }
+            } catch (err) {
+              break;
+            }
+          }
+
+          await self.registration.showNotification(title, {
+            ...options,
+            renotify: true,
+          });
+
+          // Wait 3.2 seconds before triggering next ring pulse
+          await new Promise((res) => setTimeout(res, 3200));
+        }
+      })()
+    );
+    return;
+  }
+
   event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification Dismiss (Swiped Away) -> Stop Ringing
+self.addEventListener("notificationclose", (event) => {
+  const callId = event.notification.data?.callId;
+  self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "STOP_INCOMING_CALL_RINGTONE",
+        callId: callId,
+      });
+    });
+  });
 });
 
 // Notification Click -> Open or Focus App
