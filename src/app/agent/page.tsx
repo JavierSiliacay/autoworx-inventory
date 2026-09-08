@@ -44,7 +44,8 @@ export default function AgentDashboard() {
           </div>
 
           {/* User Profile & Logout */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+
             <div className="flex items-center gap-2 bg-slate-100/80 border border-slate-200/60 rounded-full py-1 px-2.5 sm:py-1.5 sm:px-3">
               {user?.image ? (
                 <img src={user.image} alt={user.name || "Agent"} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-white shadow-xs" />
@@ -122,19 +123,19 @@ export default function AgentDashboard() {
         {/* Feature Cards Grid */}
         <div className="mb-6">
           <h2 className="text-xl font-black text-slate-900 mb-1">Agent Portal Features</h2>
-          <p className="text-xs font-medium text-slate-500">Select an action below to manage stock and client orders.</p>
+          <p className="text-xs font-medium text-slate-500">Select an action below to manage stock, client orders, and direct branch communication.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Card 1 */}
-          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
             <div>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
                 <Package className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Live Inventory Catalog</h3>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Live Inventory</h3>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                Browse available paints, accessories, and stock across all Autoworx distribution centers in real time.
+                Browse available paints, accessories, and real-time stock levels across distribution centers.
               </p>
             </div>
             <Link href="/agent/catalog" className="w-full">
@@ -146,12 +147,12 @@ export default function AgentDashboard() {
           </div>
 
           {/* Card 2 */}
-          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
             <div>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
                 <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Client Stock Orders</h3>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Client Orders</h3>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
                 Submit product reservation and allocation requests directly to branch managers for your clients.
               </p>
@@ -159,18 +160,45 @@ export default function AgentDashboard() {
             <Link href="/agent/reservations" className="w-full">
               <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer active:scale-98">
                 <Store className="w-4 h-4" />
-                View &amp; Request Reservations
+                Reservations
               </button>
             </Link>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
+          {/* Card 3: Chat with Branch Staff */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-blue-200/80 shadow-xs hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
             <div>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-50 border border-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900">Branch Chat</h3>
+                <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[9px] font-black uppercase tracking-wide">Live</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                Direct realtime messaging with Maam Carla, admins, and warehouse clerks.
+              </p>
+            </div>
+            <Link href="/agent/chat" className="w-full">
+              <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer active:scale-98 shadow-sm">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Open Admin Chat
+              </button>
+            </Link>
+          </div>
+
+          {/* Card 4 */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
+            <div>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-50 border border-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mb-4 group-hover:scale-110 transition-transform">
                 <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Sales Activity & Dashboard</h3>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5">Sales Activity</h3>
               <p className="text-xs text-slate-500 leading-relaxed mb-5">
                 View your recent client activity, approved stock requests, and agent history log.
               </p>

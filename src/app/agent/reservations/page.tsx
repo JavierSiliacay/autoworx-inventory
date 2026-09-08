@@ -24,6 +24,7 @@ import EditReservationModal from "@/components/agent/EditReservationModal";
 import ReservationDetailsModal from "@/components/inventory/ReservationDetailsModal";
 import CancelReservationModal from "@/components/agent/CancelReservationModal";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface AgentReservation {
   id: string;
@@ -40,8 +41,12 @@ interface AgentReservation {
 }
 
 export default function AgentReservationsPage() {
-  const [reservations, setReservations] = useState<AgentReservation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const agentId = (session?.user as any)?.id;
+  const userRole = (session?.user as any)?.role;
+  const userBranchIds = (session?.user as any)?.branch_ids || [];
+
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "cancelled">("all");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancellingReservation, setCancellingReservation] = useState<AgentReservation | null>(null);
@@ -49,125 +54,119 @@ export default function AgentReservationsPage() {
   const [editingReservation, setEditingReservation] = useState<AgentReservation | null>(null);
   const [selectedReservation, setSelectedReservation] = useState<AgentReservation | null>(null);
 
-  const { data: session } = useSession();
-  const userBranchIds = (session?.user as any)?.branch_ids || [];
-
-  const handleSaveEdit = (updatedItem: AgentReservation) => {
-    setReservations((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
-    );
-  };
-
-  const fetchReservations = async () => {
-    if (!session) return;
-    setLoading(true);
-    try {
-      let combined: AgentReservation[] = [];
-
-      // Read local storage saved reservations
-      try {
-        const local = localStorage.getItem("autoworx_agent_reservations");
-        if (local) {
-          combined = JSON.parse(local);
-        }
-      } catch (e) {
-        console.warn("Local storage read error:", e);
-      }
-
-      // Read Supabase table
+  // TanStack Query for instant cached loading and background synchronization
+  const {
+    data: reservations = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery<AgentReservation[]>({
+    queryKey: ["agent-reservations", agentId],
+    queryFn: async (): Promise<AgentReservation[]> => {
       let query = supabase
         .from("agent_reservations")
         .select("*")
-        .neq('status', 'deleted');
+        .neq("status", "deleted");
 
-      const userRole = (session?.user as any)?.role;
-      const userId = (session?.user as any)?.id;
-
-      // Filter by agent if they are a sales agent
-      if (userRole === 'sales_agent' && userId) {
-        query = query.eq('agent_id', userId);
+      if (userRole === "sales_agent" && agentId) {
+        query = query.eq("agent_id", agentId);
       }
 
       const { data, error } = await query.order("created_at", { ascending: false });
+      if (error) throw error;
 
-      if (!error && data) {
-        const missingUnit = data.some((d: any) => !d.unit);
-        let enrichedData = data as AgentReservation[];
+      let enrichedData = (data || []) as AgentReservation[];
+      const missingUnit = enrichedData.some((d: any) => !d.unit);
 
-        if (missingUnit) {
-          try {
-            const { data: invUnits } = await supabase
-              .from('inventory')
-              .select('id, product_name, unit');
-            if (invUnits) {
-              const unitMap: Record<string, string> = {};
-              invUnits.forEach((inv: any) => {
-                if (inv.id && inv.unit) unitMap[inv.id] = inv.unit;
-                if (inv.product_name && inv.unit) unitMap[inv.product_name] = inv.unit;
-              });
-              enrichedData = (data as any[]).map((d: any) => ({
-                ...d,
-                unit: d.unit || (d.item_id ? unitMap[d.item_id] : undefined) || (d.product_name ? unitMap[d.product_name] : undefined) || undefined
-              }));
-            }
-          } catch (e) {}
-        }
-
-        combined = enrichedData;
+      if (missingUnit) {
         try {
-          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(enrichedData));
+          const { data: invUnits } = await supabase
+            .from("inventory")
+            .select("id, product_name, unit");
+          if (invUnits) {
+            const unitMap: Record<string, string> = {};
+            invUnits.forEach((inv: any) => {
+              if (inv.id && inv.unit) unitMap[inv.id] = inv.unit;
+              if (inv.product_name && inv.unit) unitMap[inv.product_name] = inv.unit;
+            });
+            enrichedData = enrichedData.map((d: any) => ({
+              ...d,
+              unit: d.unit || (d.item_id ? unitMap[d.item_id] : undefined) || (d.product_name ? unitMap[d.product_name] : undefined) || undefined,
+            }));
+          }
         } catch (e) {
-          console.warn("Local storage write error:", e);
+          console.warn("Unit enrichment error:", e);
         }
       }
 
-      setReservations(combined);
-    } catch (err) {
-      console.error("Error:", err);
-    } finally {
-      setLoading(false);
-    }
+      try {
+        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(enrichedData));
+      } catch (e) {
+        console.warn("Local storage write error:", e);
+      }
+
+      return enrichedData;
+    },
+    initialData: (): AgentReservation[] => {
+      if (typeof window === "undefined") return [];
+      try {
+        const local = localStorage.getItem("autoworx_agent_reservations");
+        if (local) return JSON.parse(local) as AgentReservation[];
+      } catch (e) {}
+      return [];
+    },
+    enabled: !!session,
+    staleTime: 30 * 1000,
+  });
+
+  const handleSaveEdit = (updatedItem: AgentReservation) => {
+    queryClient.setQueryData<AgentReservation[]>(["agent-reservations", agentId], (old = []) => {
+      const next = old.map((item) => (item.id === updatedItem.id ? updatedItem : item));
+      try {
+        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+    queryClient.invalidateQueries({ queryKey: ["agent-reservations"] });
   };
 
+  // Realtime subscription for instant multi-user synchronization
   useEffect(() => {
-    fetchReservations();
-
     const channel = supabase
-      .channel('agent-reservations-realtime')
+      .channel("agent-reservations-realtime")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'agent_reservations' },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agent_reservations" },
         (payload) => {
-          if (payload.eventType === 'DELETE') {
+          if (payload.eventType === "DELETE") {
             const deletedId = payload.old.id;
-            setReservations(prev => {
-              const next = prev.filter(r => r.id !== deletedId);
-              localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+            queryClient.setQueryData<AgentReservation[]>(["agent-reservations", agentId], (old = []) => {
+              const next = old.filter((r) => r.id !== deletedId);
+              try {
+                localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+              } catch (e) {}
               return next;
             });
-          } else if (payload.eventType === 'UPDATE') {
+          } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as AgentReservation;
-            setReservations(prev => {
-              const next = prev.map(r => r.id === updated.id ? { ...r, ...updated, unit: r.unit || updated.unit } : r);
-              localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+            queryClient.setQueryData<AgentReservation[]>(["agent-reservations", agentId], (old = []) => {
+              const next = old.map((r) => (r.id === updated.id ? { ...r, ...updated, unit: r.unit || updated.unit } : r));
+              try {
+                localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+              } catch (e) {}
               return next;
             });
-          } else if (payload.eventType === 'INSERT') {
-            fetchReservations();
+          } else if (payload.eventType === "INSERT") {
+            queryClient.invalidateQueries({ queryKey: ["agent-reservations"] });
           }
         }
       )
       .subscribe();
 
-    const pollInterval = setInterval(() => {
-      fetchReservations();
-    }, 10000);
-
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(pollInterval);
     };
-  }, [session]);
+  }, [agentId, queryClient]);
 
   const handleCancelClick = (item: AgentReservation) => {
     setCancellingReservation(item);
@@ -184,14 +183,14 @@ export default function AgentReservationsPage() {
       : `[Cancellation Reason: ${reason}]`;
 
     try {
-      // Update local storage
-      try {
-        const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
-        const updatedLocal = local.map((item: any) => (item.id === id ? { ...item, status: "cancelled", notes: updatedNotes } : item));
-        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
-      } catch (err) {
-        console.warn("Local storage update error:", err);
-      }
+      // Optimistic update
+      queryClient.setQueryData<AgentReservation[]>(["agent-reservations", agentId], (old = []) => {
+        const next = old.map((item) => (item.id === id ? { ...item, status: "cancelled" as const, notes: updatedNotes } : item));
+        try {
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
 
       // Update Supabase table
       const { error } = await supabase
@@ -203,10 +202,7 @@ export default function AgentReservationsPage() {
         console.error("Error cancelling reservation:", error);
       }
 
-      // Update state
-      setReservations((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status: "cancelled" as const, notes: updatedNotes } : item))
-      );
+      queryClient.invalidateQueries({ queryKey: ["agent-reservations"] });
     } catch (err) {
       console.error("Error cancelling:", err);
     } finally {
@@ -221,7 +217,20 @@ export default function AgentReservationsPage() {
     setDeletingId(id);
 
     try {
-      // RLS blocks DELETE, so we perform a soft-delete instead
+      // Optimistic update
+      queryClient.setQueryData<AgentReservation[]>(["agent-reservations", agentId], (old = []) => {
+        const next = old.filter((item) => item.id !== id);
+        try {
+          localStorage.setItem("autoworx_agent_reservations", JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      if (selectedReservation?.id === id) {
+        setSelectedReservation(null);
+      }
+
+      // Soft-delete in Supabase
       const { error } = await supabase
         .from("agent_reservations")
         .update({ status: 'deleted' })
@@ -231,21 +240,7 @@ export default function AgentReservationsPage() {
         console.error("Error deleting reservation:", error);
       }
 
-      // Update local storage
-      try {
-        const local = JSON.parse(localStorage.getItem("autoworx_agent_reservations") || "[]");
-        const updatedLocal = local.filter((item: any) => item.id !== id);
-        localStorage.setItem("autoworx_agent_reservations", JSON.stringify(updatedLocal));
-      } catch (err) {
-        console.warn("Local storage delete error:", err);
-      }
-
-      // Update state
-      setReservations((prev) => prev.filter((item) => item.id !== id));
-      
-      if (selectedReservation?.id === id) {
-        setSelectedReservation(null);
-      }
+      queryClient.invalidateQueries({ queryKey: ["agent-reservations"] });
     } catch (err: any) {
       console.error("Error deleting:", err);
     } finally {
@@ -305,11 +300,12 @@ export default function AgentReservationsPage() {
           </div>
 
           <button
-            onClick={fetchReservations}
-            disabled={loading}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors text-xs font-bold flex items-center gap-2 cursor-pointer"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            title="Refresh Orders"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin text-blue-600" : ""}`} />
             <span className="hidden sm:inline">Refresh Orders</span>
           </button>
         </div>
@@ -389,7 +385,7 @@ export default function AgentReservationsPage() {
         </div>
 
         {/* List of Reservations */}
-        {loading ? (
+        {isLoading && reservations.length === 0 ? (
           <div className="py-20 text-center flex flex-col items-center">
             <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-3" />
             <p className="text-xs font-bold text-slate-600">Loading your reservations...</p>

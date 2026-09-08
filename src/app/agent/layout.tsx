@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import AgentClientWrapper from "@/components/agent/AgentClientWrapper";
+import { PresenceProvider } from "@/context/PresenceContext";
 
 export default async function AgentLayout({
   children,
@@ -18,5 +20,12 @@ export default async function AgentLayout({
     redirect("/login");
   }
 
-  return <>{children}</>;
+  return (
+    <PresenceProvider>
+      <AgentClientWrapper>
+        {children}
+      </AgentClientWrapper>
+    </PresenceProvider>
+  );
 }
+

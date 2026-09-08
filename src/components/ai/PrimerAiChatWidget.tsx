@@ -174,7 +174,7 @@ export default function PrimerAiChatWidget() {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-transparent shadow-2xl transition-transform hover:scale-110 active:scale-95 overflow-hidden border-2 border-white cursor-pointer"
+            className="fixed bottom-6 right-6 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-transparent shadow-2xl transition-transform hover:scale-110 active:scale-95 overflow-hidden border-2 border-white cursor-pointer"
             onClick={() => setIsOpen(true)}
           >
             <img 

@@ -81,10 +81,21 @@ const HighlightText = ({ text, tokens }: { text: string; tokens: string[] }) => 
 
 export default function AdminInventoryPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const { selectedBranchId } = useNetwork();
   const filterBranch = selectedBranchId === "all" ? null : selectedBranchId;
 
-  const [filter, setFilter] = useState("");
+  const initialSearch = searchParams ? (searchParams.get("search") || searchParams.get("q") || "") : "";
+  const [filter, setFilter] = useState(initialSearch);
+
+  useEffect(() => {
+    if (!searchParams) return;
+    const q = searchParams.get("search") || searchParams.get("q");
+    if (q !== null && q !== undefined && q !== "") {
+      setFilter(q);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const [showOnlyLowStock, setShowOnlyLowStock] = useState(false);

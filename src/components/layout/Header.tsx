@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X, Building2, Clock, CreditCard } from "lucide-react";
+import { Bell, Filter, ChevronDown, UserCircle, Rocket, Wrench, Bug, CalendarDays, AlertTriangle, X, Building2, Clock, CreditCard, MessageSquare, Lock } from "lucide-react";
 import { SYSTEM_UPDATES } from "@/data/changelog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
+import AdminChatDrawer from "@/components/admin/AdminChatDrawer";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -53,6 +54,16 @@ export default function Header() {
   const userBranchIds = (session?.user as any)?.branch_ids || [];
 
   const currentBranch = branches.find(b => b.id === selectedBranchId);
+  const mainBranch = branches.find(
+    (b) => b.name.toLowerCase().includes("main") || b.id === "2af9ac25-18e7-4cbd-a750-299452f32491"
+  );
+  const isMainDistribution = Boolean(
+    selectedBranchId === "2af9ac25-18e7-4cbd-a750-299452f32491" ||
+    (currentBranch && currentBranch.name.toLowerCase().includes("main"))
+  );
+  const canSwitchToMain = Boolean(
+    mainBranch && (!isStaff || userBranchIds.length === 0 || userBranchIds.includes(mainBranch.id))
+  );
   
   // Smart naming engine based on user selection
   let branchTerm = "";
@@ -96,6 +107,8 @@ export default function Header() {
 
   const [mounted, setMounted] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [readUpdates, setReadUpdates] = useState<string[]>([]);
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
 
@@ -248,12 +261,39 @@ export default function Header() {
         }
       };
 
-      await Promise.all([fetchPayables(), fetchReceivables()]);
+      const fetchUnreadChats = async () => {
+        try {
+          let query = supabase.from('agent_admin_conversations').select('unread_admin_count');
+          if (selectedBranchId && selectedBranchId !== 'all') {
+            query = query.eq('branch_id', selectedBranchId);
+          } else if (userBranchIds.length > 0) {
+            query = query.in('branch_id', userBranchIds);
+          }
+          const { data } = await query;
+          if (data) {
+            const sum = data.reduce((acc: number, curr: any) => acc + (curr.unread_admin_count || 0), 0);
+            setUnreadChatCount((prev) => {
+              if (sum > prev && sum > 0) {
+                try {
+                  const audio = new Audio('/sounds/notification.mp3');
+                  audio.play().catch(() => {});
+                } catch(e) {}
+              }
+              return sum;
+            });
+          }
+        } catch {}
+      };
 
-      // Listen for real-time changes to payables & receivables!
+      await Promise.all([fetchPayables(), fetchReceivables(), fetchUnreadChats()]);
+
+      // Listen for real-time changes to payables, receivables & agent conversations!
       payablesChannel = supabase.channel('payables-header-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_payables' }, () => {
           fetchPayables();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_admin_conversations' }, () => {
+          fetchUnreadChats();
         })
         .subscribe();
 
@@ -427,6 +467,28 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Agent Real-Time Chat Drawer Trigger */}
+          <button
+            onClick={() => setIsChatDrawerOpen(true)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90 relative group"
+            title={isMainDistribution ? "Agent Dispatch & Inquiries Chat" : "Agent Dispatch (Exclusively for Main Distribution)"}
+          >
+            <MessageSquare className={`w-5 h-5 ${isChatDrawerOpen ? 'text-[#1e40af]' : 'text-[#64748b] group-hover:text-[#1e40af]'}`} />
+            
+            {/* Lock indicator if not on Main Distribution */}
+            {!isMainDistribution && (
+              <span className="absolute -top-0.5 -right-0.5 p-0.5 bg-amber-500 text-white rounded-full border border-white shadow-xs">
+                <Lock className="w-2.5 h-2.5" />
+              </span>
+            )}
+
+            {isMainDistribution && unreadChatCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] bg-red-500 text-white font-black text-[10px] rounded-full flex items-center justify-center px-1 border-2 border-white shadow-md">
+                {unreadChatCount}
+              </span>
+            )}
+          </button>
+
           <div className="relative">
             <button 
               onClick={handleOpenNotifications}
@@ -713,6 +775,18 @@ export default function Header() {
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {/* Admin Agent-to-Admin Branch Chat Drawer */}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <AdminChatDrawer
+          isOpen={isChatDrawerOpen}
+          onClose={() => setIsChatDrawerOpen(false)}
+          selectedBranchId={selectedBranchId}
+          userBranchIds={userBranchIds}
+          userRole={role}
+        />,
         document.body
       )}
     </header>

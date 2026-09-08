@@ -607,13 +607,25 @@ export default function AgentCatalogPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Link
-                          href={`/agent/chat?inquiryItem=${encodeURIComponent(item.product_name)}&inquirySku=${encodeURIComponent(item.sku || "")}&inquiryBranchId=${item.branch_id}&inquiryPrice=${item.dealers_price || item.price || 0}`}
-                          className="p-3 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/80 hover:border-indigo-200 rounded-xl transition-colors shrink-0"
-                          title="Inquire to Branch Staff"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </Link>
+                        {(() => {
+                          const itemBranchName =
+                            (item.branches as any)?.name ||
+                            branches.find((b) => b.id === item.branch_id)?.name ||
+                            "Main Distribution";
+                          const isMain =
+                            itemBranchName.toLowerCase().includes("main") ||
+                            item.branch_id === "2af9ac25-18e7-4cbd-a750-299452f32491";
+
+                          return (
+                            <Link
+                              href={`/agent/chat?inquiryItem=${encodeURIComponent(item.product_name)}&inquirySku=${encodeURIComponent(item.sku || "")}&inquiryBranchId=${item.branch_id}&inquiryBranchName=${encodeURIComponent(itemBranchName)}&inquiryPrice=${item.dealers_price || item.price || 0}&inquiryQuantity=${item.quantity ?? 0}&inquiryUnit=${encodeURIComponent(item.unit || "")}`}
+                              className="p-3 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/80 hover:border-indigo-200 rounded-xl transition-colors shrink-0"
+                              title={isMain ? "Inquire to Ma'am Carla" : `Inquire to ${itemBranchName} Staff`}
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                            </Link>
+                          );
+                        })()}
 
                         <button
                           disabled={item.quantity <= 0}

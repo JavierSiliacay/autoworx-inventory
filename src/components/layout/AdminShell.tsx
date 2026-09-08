@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { Menu, X } from "lucide-react";
 import PrimerAiChatWidget from "../ai/PrimerAiChatWidget";
+import AdminFloatingChatWidget from "../admin/AdminFloatingChatWidget";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -60,6 +61,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </div>
 
       <div className="print:hidden">
+        <AdminFloatingChatWidget />
         <PrimerAiChatWidget />
       </div>
     </div>
