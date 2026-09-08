@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788853466189",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "feature",
+    title: "New Exclusion Indicators & Automatic Payables Exclusion",
+    description: "Staff can now easily see which beginning‑balance, inventory, and mixing‑supplier items are excluded via clear indicators, and mixing station and mixing‑supplier transactions are automatically omitted from payable calculations, saving time and reducing errors."
+  },
+
+  {
     id: "update-1788851445698",
     version: "v1.9.8",
     date: "2026-09-08",
