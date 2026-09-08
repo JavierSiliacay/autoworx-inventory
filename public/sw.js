@@ -1,7 +1,7 @@
 // Autoworx Service Worker — Background Push Notifications & PWA Handler
 // Modeled after proven TaraFix production implementation
 
-const CACHE_NAME = "apc-agent-shell-v3";
+const CACHE_NAME = "apc-agent-shell-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -20,10 +20,27 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Network-only strategy for API and dynamic data
+// Passthrough fetch — only intercept same-origin page navigations, never API or external
 self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
+  const url = new URL(event.request.url);
+
+  // Skip cross-origin, API routes, Next.js internals
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/_next/")
+  ) {
+    return; // Let browser handle natively — do NOT call event.respondWith()
+  }
+
+  // For same-origin page navigations, fall back gracefully
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("/") || fetch(event.request))
+    );
+  }
 });
+
 
 // Background Push Notification Event (Exact TaraFix implementation)
 self.addEventListener("push", (event) => {
