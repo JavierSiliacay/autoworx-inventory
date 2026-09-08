@@ -56,8 +56,30 @@ class RingtonePlayer {
       if (!AudioCtx) return;
       this.ctx = new AudioCtx();
 
+      // Autoplay safety: resume if browser suspended AudioContext
+      if (this.ctx.state === "suspended") {
+        this.ctx.resume().catch(() => {});
+        const unlockAudio = () => {
+          if (this.ctx && this.ctx.state === "suspended") {
+            this.ctx.resume().catch(() => {});
+          }
+        };
+        window.addEventListener("click", unlockAudio, { once: true });
+        window.addEventListener("touchstart", unlockAudio, { once: true });
+      }
+
+      // Haptic feedback on mobile for incoming calls
+      if (!isOutgoing && typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate([400, 200, 400]);
+        } catch {}
+      }
+
       const playPulse = () => {
         if (!this.ctx || this.ctx.state === "closed") return;
+        if (this.ctx.state === "suspended") {
+          this.ctx.resume().catch(() => {});
+        }
         const now = this.ctx.currentTime;
         const osc1 = this.ctx.createOscillator();
         const osc2 = this.ctx.createOscillator();
@@ -355,50 +377,98 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
     return room;
   }, [currentUserId, cleanupConnection, recordMissedCall]);
 
+  const broadcastSignal = useCallback((channelName: string, event: string, payload: any) => {
+    try {
+      const ch = supabase.channel(channelName, {
+        config: { broadcast: { self: true } },
+      });
+      if (ch.state === "joined") {
+        ch.send({
+          type: "broadcast",
+          event,
+          payload,
+        }).catch((err) => console.warn(`[WebRTC] send error on joined ${channelName}:`, err));
+      } else {
+        ch.subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            ch.send({
+              type: "broadcast",
+              event,
+              payload,
+            }).catch((err) => console.warn(`[WebRTC] send error on subscribed ${channelName}:`, err));
+          }
+        });
+      }
+    } catch (err) {
+      console.warn(`[WebRTC] broadcastSignal error on ${channelName}:`, err);
+    }
+  }, []);
+
+  const callStatusRef = useRef<CallStatus>("idle");
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
   // Global incoming call listeners (Listen on personal user channel & admin channel)
   useEffect(() => {
     if (!currentUserId) return;
 
+    const normalizedRole = (currentUserRole || "").toLowerCase().trim();
+    const isAdminOrStaff = normalizedRole !== "sales_agent" && normalizedRole !== "pending_agent";
+
     // 1. Personal Channel: webrtc-call-user-{userId}
     const userChannel = supabase.channel(`webrtc-call-user-${currentUserId}`, {
-      config: { broadcast: { self: false } },
+      config: { broadcast: { self: true } },
     });
 
     userChannel
       .on("broadcast", { event: "incoming-call" }, ({ payload }: { payload: any }) => {
-        if (callStatus !== "idle") return; // busy
+        if (!payload || !payload.caller) return;
+        if (payload.caller.id === currentUserId) return;
+        if (callStatusRef.current !== "idle") return; // busy
 
         pendingIncomingRef.current = payload;
+        activeRoomIdRef.current = payload.callId;
         setActivePeer(payload.caller);
         setCallStatus("ringing");
         ringtoneRef.current.startRinging(false);
+        if (payload.callId) {
+          joinRoomChannel(payload.callId);
+        }
       })
-      .on("broadcast", { event: "call-cancelled" }, () => {
-        cleanupConnection();
+      .on("broadcast", { event: "call-cancelled" }, ({ payload }: { payload?: any }) => {
+        if (!payload || !payload.callId || payload.callId === pendingIncomingRef.current?.callId || payload.callId === activeRoomIdRef.current) {
+          cleanupConnection();
+        }
       })
       .subscribe();
 
-    // 2. If user is Admin or Main Distribution Staff, also listen to webrtc-call-admins
+    // 2. Admin Channel: webrtc-call-admins
     let adminChannel: any = null;
-    const isAdminOrStaff = currentUserRole !== "sales_agent" && currentUserRole !== "pending_agent";
     if (isAdminOrStaff) {
       adminChannel = supabase.channel("webrtc-call-admins", {
-        config: { broadcast: { self: false } },
+        config: { broadcast: { self: true } },
       });
 
       adminChannel
         .on("broadcast", { event: "incoming-call" }, ({ payload }: { payload: any }) => {
-          if (callStatus !== "idle") return; // busy
-          // If the caller is not ourselves
+          if (!payload || !payload.caller) return;
           if (payload.caller.id === currentUserId) return;
+          if (callStatusRef.current !== "idle") return; // busy
 
           pendingIncomingRef.current = payload;
+          activeRoomIdRef.current = payload.callId;
           setActivePeer(payload.caller);
           setCallStatus("ringing");
           ringtoneRef.current.startRinging(false);
+          if (payload.callId) {
+            joinRoomChannel(payload.callId);
+          }
         })
-        .on("broadcast", { event: "call-cancelled" }, () => {
-          cleanupConnection();
+        .on("broadcast", { event: "call-cancelled" }, ({ payload }: { payload?: any }) => {
+          if (!payload || !payload.callId || payload.callId === pendingIncomingRef.current?.callId || payload.callId === activeRoomIdRef.current) {
+            cleanupConnection();
+          }
         })
         .subscribe();
     }
@@ -407,7 +477,7 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(userChannel);
       if (adminChannel) supabase.removeChannel(adminChannel);
     };
-  }, [currentUserId, currentUserRole, callStatus, cleanupConnection]);
+  }, [currentUserId, currentUserRole, joinRoomChannel, cleanupConnection]);
 
   // Action 1: Reject or End Call
   const endCall = useCallback(() => {
@@ -416,36 +486,40 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       callTimeoutTimerRef.current = null;
     }
 
-    if (callStatus === "calling" && outgoingCallMetaRef.current) {
-      const meta = outgoingCallMetaRef.current;
+    const wasCalling = callStatus === "calling";
+    const meta = outgoingCallMetaRef.current;
+    if (wasCalling && meta) {
       outgoingCallMetaRef.current = null;
       recordMissedCall(meta);
     }
 
     const roomId = activeRoomIdRef.current || pendingIncomingRef.current?.callId;
+    const eventType = callStatus === "ringing" ? "call-rejected" : wasCalling ? "call-cancelled" : "call-ended";
+
+    // 1. Broadcast on room channel
     if (roomChannelRef.current) {
-      const eventType = callStatus === "ringing" ? "call-rejected" : callStatus === "calling" ? "call-cancelled" : "call-ended";
       roomChannelRef.current.send({
         type: "broadcast",
         event: eventType,
-        payload: { from: currentUserId },
+        payload: { callId: roomId, from: currentUserId },
       });
     } else if (roomId) {
-      const tempChannel = supabase.channel(`webrtc-room-${roomId}`);
-      tempChannel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          tempChannel.send({
-            type: "broadcast",
-            event: callStatus === "ringing" ? "call-rejected" : "call-ended",
-            payload: { from: currentUserId },
-          });
-          supabase.removeChannel(tempChannel);
-        }
-      });
+      broadcastSignal(`webrtc-room-${roomId}`, eventType, { callId: roomId, from: currentUserId });
+    }
+
+    // 2. If cancelling an outgoing call before answer, ALSO broadcast call-cancelled directly to target channel(s)
+    if (wasCalling && meta) {
+      const isTargetAdmin = meta.target.id === "admin" || meta.target.role === "admin";
+      if (isTargetAdmin) {
+        broadcastSignal("webrtc-call-admins", "call-cancelled", { callId: roomId, from: currentUserId });
+      }
+      if (meta.target.id && meta.target.id !== "admin") {
+        broadcastSignal(`webrtc-call-user-${meta.target.id}`, "call-cancelled", { callId: roomId, from: currentUserId });
+      }
     }
 
     cleanupConnection();
-  }, [callStatus, currentUserId, cleanupConnection, recordMissedCall]);
+  }, [callStatus, currentUserId, cleanupConnection, recordMissedCall, broadcastSignal]);
 
   // Action 2: Start Outgoing Call
   const startCall = useCallback(async (target: CallParticipant, conversationId: string, branchId?: string) => {
@@ -497,30 +571,25 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       };
 
       // Broadcast to target
-      const targetChannelName = target.id === "admin" || target.role === "admin"
-        ? "webrtc-call-admins"
-        : `webrtc-call-user-${target.id}`;
+      const isTargetAdmin = target.id === "admin" || target.role === "admin";
+      const callPayload = {
+        callId: roomId,
+        caller: callerInfo,
+        offer,
+      };
 
-      const targetChannel = supabase.channel(targetChannelName);
-      targetChannel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          targetChannel.send({
-            type: "broadcast",
-            event: "incoming-call",
-            payload: {
-              callId: roomId,
-              caller: callerInfo,
-              offer,
-            },
-          });
-        }
-      });
+      if (isTargetAdmin) {
+        broadcastSignal("webrtc-call-admins", "incoming-call", callPayload);
+      }
+      if (target.id && target.id !== "admin") {
+        broadcastSignal(`webrtc-call-user-${target.id}`, "incoming-call", callPayload);
+      }
     } catch (err: any) {
       console.error("Failed to start call:", err);
       alert("Microphone permission is required to start a call. Please check your browser mic settings.");
       cleanupConnection();
     }
-  }, [currentUserId, currentUserName, currentUserRole, currentUserImage, joinRoomChannel, initPeerConnection, cleanupConnection, recordMissedCall, endCall]);
+  }, [currentUserId, currentUserName, currentUserRole, currentUserImage, joinRoomChannel, initPeerConnection, cleanupConnection, recordMissedCall, endCall, broadcastSignal]);
 
   // Action 3: Accept Incoming Call
   const acceptCall = useCallback(async () => {
