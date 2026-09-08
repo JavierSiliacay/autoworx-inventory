@@ -45,92 +45,124 @@ const ICE_SERVERS: RTCConfiguration = {
   ],
 };
 
-// Simple Web Audio Ringtone Generator (Zero network latency, no missing file errors)
+// Background-Resilient Ringtone Player using HTML5 Audio element (unthrottled by browser in background)
 class RingtonePlayer {
-  private ctx: AudioContext | null = null;
-  private intervalId: any = null;
+  private audioElement: HTMLAudioElement | null = null;
+  private fallbackCtx: AudioContext | null = null;
+  public isRinging: boolean = false;
+
+  constructor() {
+    if (typeof window !== "undefined") {
+      try {
+        const audio = new Audio();
+        audio.preload = "auto";
+        audio.loop = true;
+        (audio as any).playsInline = true;
+        this.audioElement = audio;
+
+        // Auto-prime audio on first user interaction anywhere on page
+        const unlock = () => {
+          if (this.audioElement) {
+            this.audioElement.load();
+          }
+          window.removeEventListener("click", unlock);
+          window.removeEventListener("touchstart", unlock);
+          window.removeEventListener("keydown", unlock);
+        };
+        window.addEventListener("click", unlock, { once: true });
+        window.addEventListener("touchstart", unlock, { once: true });
+        window.addEventListener("keydown", unlock, { once: true });
+      } catch (e) {
+        console.warn("Could not instantiate Ringtone Audio element:", e);
+      }
+    }
+  }
 
   startRinging(isOutgoing: boolean = false) {
     this.stop();
+    this.isRinging = true;
+
+    // 1. Continuous phone ring vibration cadence on mobile
+    if (!isOutgoing && typeof navigator !== "undefined" && navigator.vibrate) {
+      try {
+        navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500]);
+      } catch {}
+    }
+
+    const soundFile = isOutgoing ? "/sounds/phone-ringback.wav" : "/sounds/phone-ring.wav";
+
+    // 2. Play via HTML5 Audio element — guaranteed to ring in background tabs and locked screens!
+    if (this.audioElement) {
+      try {
+        this.audioElement.src = soundFile;
+        this.audioElement.loop = true;
+        this.audioElement.currentTime = 0;
+        const playPromise = this.audioElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn("HTML5 Ringtone play prevented, running Web Audio fallback:", err);
+            this.playWebAudioFallback(isOutgoing);
+          });
+        }
+      } catch (e) {
+        this.playWebAudioFallback(isOutgoing);
+      }
+    } else {
+      this.playWebAudioFallback(isOutgoing);
+    }
+  }
+
+  private playWebAudioFallback(isOutgoing: boolean) {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      this.ctx = new AudioCtx();
-
-      // Autoplay safety: resume if browser suspended AudioContext
-      if (this.ctx.state === "suspended") {
-        this.ctx.resume().catch(() => {});
-        const unlockAudio = () => {
-          if (this.ctx && this.ctx.state === "suspended") {
-            this.ctx.resume().catch(() => {});
-          }
-        };
-        window.addEventListener("click", unlockAudio, { once: true });
-        window.addEventListener("touchstart", unlockAudio, { once: true });
+      this.fallbackCtx = new AudioCtx();
+      if (this.fallbackCtx.state === "suspended") {
+        this.fallbackCtx.resume().catch(() => {});
       }
 
-      // Haptic feedback on mobile for incoming calls
-      if (!isOutgoing && typeof navigator !== "undefined" && navigator.vibrate) {
-        try {
-          navigator.vibrate([400, 200, 400]);
-        } catch {}
-      }
+      const osc1 = this.fallbackCtx.createOscillator();
+      const osc2 = this.fallbackCtx.createOscillator();
+      const gain = this.fallbackCtx.createGain();
 
-      const playPulse = () => {
-        if (!this.ctx || this.ctx.state === "closed") return;
-        if (this.ctx.state === "suspended") {
-          this.ctx.resume().catch(() => {});
-        }
-        const now = this.ctx.currentTime;
-        const osc1 = this.ctx.createOscillator();
-        const osc2 = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
+      osc1.type = "sine";
+      osc2.type = "sine";
 
-        osc1.type = "sine";
-        osc2.type = "sine";
+      const f1 = isOutgoing ? 440 : 523.25;
+      const f2 = isOutgoing ? 480 : 659.25;
+      osc1.frequency.setValueAtTime(f1, this.fallbackCtx.currentTime);
+      osc2.frequency.setValueAtTime(f2, this.fallbackCtx.currentTime);
 
-        if (isOutgoing) {
-          // Classic PBX ringback: 440Hz + 480Hz
-          osc1.frequency.setValueAtTime(440, now);
-          osc2.frequency.setValueAtTime(480, now);
-        } else {
-          // Messenger/Modern style chime: 523.25Hz (C5) + 659.25Hz (E5)
-          osc1.frequency.setValueAtTime(523.25, now);
-          osc2.frequency.setValueAtTime(659.25, now);
-        }
+      gain.gain.setValueAtTime(0.16, this.fallbackCtx.currentTime);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(this.fallbackCtx.destination);
 
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.12, now + 0.05);
-        gain.gain.setValueAtTime(0.12, now + (isOutgoing ? 1.2 : 0.6));
-        gain.gain.linearRampToValueAtTime(0, now + (isOutgoing ? 1.4 : 0.8));
-
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc1.start(now);
-        osc2.start(now);
-        osc1.stop(now + (isOutgoing ? 1.5 : 0.9));
-        osc2.stop(now + (isOutgoing ? 1.5 : 0.9));
-      };
-
-      playPulse();
-      this.intervalId = setInterval(playPulse, isOutgoing ? 3000 : 1800);
+      osc1.start();
+      osc2.start();
     } catch (e) {
-      console.warn("AudioContext error for ringtone:", e);
+      console.warn("Web Audio fallback error:", e);
     }
   }
 
   stop() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-    if (this.ctx) {
+    this.isRinging = false;
+    if (this.audioElement) {
       try {
-        this.ctx.close();
+        this.audioElement.pause();
+        this.audioElement.currentTime = 0;
       } catch (e) {}
-      this.ctx = null;
+    }
+    if (this.fallbackCtx) {
+      try {
+        this.fallbackCtx.close();
+      } catch (e) {}
+      this.fallbackCtx = null;
+    }
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try {
+        navigator.vibrate(0);
+      } catch {}
     }
   }
 }
@@ -511,6 +543,37 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(roleChannel);
     };
   }, [currentUserId, currentUserEmail, currentUserRole, joinRoomChannel, cleanupConnection]);
+
+  // Listen for Service Worker background wakeup messages (e.g. when app tab is backgrounded)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    const handleSwMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || !data.type) return;
+
+      if (data.type === "PLAY_INCOMING_CALL_RINGTONE") {
+        if (callStatusRef.current === "idle") {
+          ringtoneRef.current.startRinging(false);
+          setCallStatus("ringing");
+          if (data.callId) {
+            activeRoomIdRef.current = data.callId;
+            joinRoomChannel(data.callId);
+          }
+        }
+      } else if (data.type === "STOP_INCOMING_CALL_RINGTONE") {
+        ringtoneRef.current.stop();
+        if (callStatusRef.current === "ringing") {
+          cleanupConnection();
+        }
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleSwMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleSwMessage);
+    };
+  }, [joinRoomChannel, cleanupConnection]);
 
   // Action 1: Reject or End Call
   const endCall = useCallback(() => {

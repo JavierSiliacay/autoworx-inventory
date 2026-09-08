@@ -1,7 +1,7 @@
 // Autoworx Service Worker — Background Push Notifications & PWA Handler
 // Modeled after proven TaraFix production implementation
 
-const CACHE_NAME = "apc-agent-shell-v5";
+const CACHE_NAME = "apc-agent-shell-v6";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -66,6 +66,17 @@ self.addEventListener("push", (event) => {
 
   // If this push is to cancel/dismiss an incoming call that stopped ringing
   if (type === "call-cancelled") {
+    // Notify any open background tabs to stop their audio ringtone immediately
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "STOP_INCOMING_CALL_RINGTONE",
+          callId: callId,
+          tag: tag,
+        });
+      });
+    });
+
     event.waitUntil(
       self.registration.getNotifications().then((notifications) => {
         notifications.forEach((n) => {
@@ -80,12 +91,30 @@ self.addEventListener("push", (event) => {
 
   const isCall = type === "incoming-call" || (tag && tag.startsWith("apc-call-")) || title.includes("Incoming Audio Call");
 
+  // If this is an incoming call, broadcast message to background tabs so their audio element rings!
+  if (isCall) {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "PLAY_INCOMING_CALL_RINGTONE",
+          callId: callId,
+          url: url,
+          title: title,
+        });
+      });
+    });
+  }
+
   const options = {
     body: body,
     icon: "/logo.png",
     badge: "/favicon.png",
-    // Distinct phone call ring pattern if incoming call
-    vibrate: isCall ? [500, 250, 500, 250, 500, 250, 500, 250, 500] : [200, 100, 200, 100, 200],
+    sound: "/sounds/phone-ring.wav",
+    silent: false,
+    // Distinct continuous phone call ring pattern
+    vibrate: isCall
+      ? [1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500]
+      : [200, 100, 200, 100, 200],
     data: { url: url, type: type, callId: callId },
     tag: tag,
     renotify: true,
@@ -106,7 +135,15 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   if (event.action === "decline") {
-    // User explicitly declined
+    // User explicitly declined, message background clients to stop ringing
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "STOP_INCOMING_CALL_RINGTONE",
+          callId: event.notification.data?.callId,
+        });
+      });
+    });
     return;
   }
 
