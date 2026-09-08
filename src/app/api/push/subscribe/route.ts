@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       const { error } = await supabase
         .from("push_subscriptions")
         .delete()
-        .or(`endpoint.eq.${subscription.endpoint},subscription->>endpoint.eq.${subscription.endpoint}`);
+        .filter("subscription->>endpoint", "eq", subscription.endpoint);
 
       if (error) {
         console.error("[push/subscribe] Error deleting subscription:", error);
@@ -37,35 +37,28 @@ export async function POST(req: NextRequest) {
 
     // Subscribe / Upsert
     const endpoint = subscription.endpoint;
-    const p256dh = subscription.keys?.p256dh || "";
-    const auth = subscription.keys?.auth || "";
 
-    // 1. Try upserting full record (with JSONB subscription and columns)
-    const fullPayload: any = {
+    // Database schema: id, user_email, user_id, role, branch_id, subscription, created_at
+    const payload: any = {
       user_id: user_id ? String(user_id) : null,
       user_email: cleanEmail || "anonymous@autoworx.com",
       role: String(role).toLowerCase(),
       branch_id: branch_id ? String(branch_id) : null,
-      endpoint: endpoint,
-      p256dh: p256dh,
-      auth: auth,
       subscription: subscription,
-      user_agent: userAgent || null,
-      updated_at: new Date().toISOString(),
     };
 
-    // First check if an entry with this endpoint exists to avoid unique constraint collisions
+    // First check if an entry with this endpoint exists to avoid duplicate entries
     let { data: existing } = await supabase
       .from("push_subscriptions")
       .select("id")
-      .or(`endpoint.eq.${endpoint},subscription->>endpoint.eq.${endpoint}`)
+      .filter("subscription->>endpoint", "eq", endpoint)
       .maybeSingle();
 
     if (existing) {
       // Update existing record
       const { data, error } = await supabase
         .from("push_subscriptions")
-        .update(fullPayload)
+        .update(payload)
         .eq("id", existing.id)
         .select()
         .single();
@@ -73,33 +66,17 @@ export async function POST(req: NextRequest) {
       if (!error) {
         return NextResponse.json({ success: true, subscription: data });
       }
+      console.warn("[push/subscribe] Update failed, falling back to insert:", error.message);
     }
 
     // Insert new record
     const { data, error } = await supabase
       .from("push_subscriptions")
-      .insert(fullPayload)
+      .insert(payload)
       .select()
       .single();
 
     if (error) {
-      // Fallback: If table has pure TaraFix schema (only user_email, subscription)
-      if (error.message && (error.message.includes("column") || error.message.includes("endpoint"))) {
-        const minimalPayload = {
-          user_email: cleanEmail || "user@autoworx.com",
-          subscription: subscription,
-        };
-        const { data: minData, error: minErr } = await supabase
-          .from("push_subscriptions")
-          .insert(minimalPayload)
-          .select()
-          .single();
-
-        if (!minErr) {
-          return NextResponse.json({ success: true, subscription: minData });
-        }
-      }
-
       if ((error as any).code === "PGRST205") {
         console.warn(
           "[push/subscribe] 'public.push_subscriptions' table not found in Supabase. Run supabase/push_subscriptions_schema.sql to enable subscription storage."
