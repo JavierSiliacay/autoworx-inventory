@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
+import { sendMessage } from "@/lib/chat";
 
 export type CallStatus = "idle" | "calling" | "ringing" | "connected" | "ended";
 
@@ -27,7 +28,7 @@ interface AudioCallContextType {
   formattedDuration: string;
   isMinimized: boolean;
   setIsMinimized: (val: boolean) => void;
-  startCall: (target: CallParticipant, conversationId: string) => Promise<void>;
+  startCall: (target: CallParticipant, conversationId: string, branchId?: string) => Promise<void>;
   acceptCall: () => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
@@ -133,6 +134,46 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
   const pendingIncomingRef = useRef<IncomingCallData | null>(null);
   const activeRoomIdRef = useRef<string | null>(null);
 
+  const outgoingCallMetaRef = useRef<{
+    target: CallParticipant;
+    conversationId: string;
+    branchId?: string;
+  } | null>(null);
+  const callTimeoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const recordMissedCall = useCallback(async (meta: {
+    target: CallParticipant;
+    conversationId: string;
+    branchId?: string;
+  }) => {
+    if (!meta || !meta.conversationId || !currentUserId) return;
+    try {
+      await sendMessage({
+        conversationId: meta.conversationId,
+        branchId: meta.branchId || "2af9ac25-18e7-4cbd-a750-299452f32491",
+        senderId: currentUserId,
+        senderName: currentUserName,
+        senderRole: currentUserRole as any,
+        senderImage: currentUserImage,
+        content: "📞 Missed audio call",
+        attachment: {
+          type: "call",
+          title: "Missed audio call",
+          subtitle: "Tap to call back",
+          metadata: {
+            callType: "audio",
+            timestamp: new Date().toISOString(),
+            targetUserId: meta.target.id,
+            targetUserName: meta.target.name,
+          },
+        },
+        recipientId: meta.target.id === "admin" ? undefined : meta.target.id,
+      });
+    } catch (err) {
+      console.warn("Failed to record missed call message:", err);
+    }
+  }, [currentUserId, currentUserName, currentUserRole, currentUserImage]);
+
   // Initialize hidden remote audio element
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -166,6 +207,11 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
 
   // Teardown WebRTC connection & streams
   const cleanupConnection = useCallback(() => {
+    if (callTimeoutTimerRef.current) {
+      clearTimeout(callTimeoutTimerRef.current);
+      callTimeoutTimerRef.current = null;
+    }
+    outgoingCallMetaRef.current = null;
     ringtoneRef.current.stop();
 
     if (localStreamRef.current) {
@@ -259,6 +305,12 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
     room
       .on("broadcast", { event: "call-answer" }, async ({ payload }) => {
         if (payload.from === currentUserId) return;
+        if (callTimeoutTimerRef.current) {
+          clearTimeout(callTimeoutTimerRef.current);
+          callTimeoutTimerRef.current = null;
+        }
+        outgoingCallMetaRef.current = null;
+
         if (pcRef.current) {
           try {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.answer));
@@ -280,6 +332,15 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .on("broadcast", { event: "call-rejected" }, () => {
+        if (callTimeoutTimerRef.current) {
+          clearTimeout(callTimeoutTimerRef.current);
+          callTimeoutTimerRef.current = null;
+        }
+        if (outgoingCallMetaRef.current) {
+          const meta = outgoingCallMetaRef.current;
+          outgoingCallMetaRef.current = null;
+          recordMissedCall(meta);
+        }
         cleanupConnection();
       })
       .on("broadcast", { event: "call-cancelled" }, () => {
@@ -292,7 +353,7 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
 
     roomChannelRef.current = room;
     return room;
-  }, [currentUserId, cleanupConnection]);
+  }, [currentUserId, cleanupConnection, recordMissedCall]);
 
   // Global incoming call listeners (Listen on personal user channel & admin channel)
   useEffect(() => {
@@ -348,9 +409,63 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
     };
   }, [currentUserId, currentUserRole, callStatus, cleanupConnection]);
 
-  // Action 1: Start Outgoing Call
-  const startCall = useCallback(async (target: CallParticipant, conversationId: string) => {
+  // Action 1: Reject or End Call
+  const endCall = useCallback(() => {
+    if (callTimeoutTimerRef.current) {
+      clearTimeout(callTimeoutTimerRef.current);
+      callTimeoutTimerRef.current = null;
+    }
+
+    if (callStatus === "calling" && outgoingCallMetaRef.current) {
+      const meta = outgoingCallMetaRef.current;
+      outgoingCallMetaRef.current = null;
+      recordMissedCall(meta);
+    }
+
+    const roomId = activeRoomIdRef.current || pendingIncomingRef.current?.callId;
+    if (roomChannelRef.current) {
+      const eventType = callStatus === "ringing" ? "call-rejected" : callStatus === "calling" ? "call-cancelled" : "call-ended";
+      roomChannelRef.current.send({
+        type: "broadcast",
+        event: eventType,
+        payload: { from: currentUserId },
+      });
+    } else if (roomId) {
+      const tempChannel = supabase.channel(`webrtc-room-${roomId}`);
+      tempChannel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          tempChannel.send({
+            type: "broadcast",
+            event: callStatus === "ringing" ? "call-rejected" : "call-ended",
+            payload: { from: currentUserId },
+          });
+          supabase.removeChannel(tempChannel);
+        }
+      });
+    }
+
+    cleanupConnection();
+  }, [callStatus, currentUserId, cleanupConnection, recordMissedCall]);
+
+  // Action 2: Start Outgoing Call
+  const startCall = useCallback(async (target: CallParticipant, conversationId: string, branchId?: string) => {
     try {
+      outgoingCallMetaRef.current = {
+        target,
+        conversationId,
+        branchId,
+      };
+
+      if (callTimeoutTimerRef.current) clearTimeout(callTimeoutTimerRef.current);
+      callTimeoutTimerRef.current = setTimeout(() => {
+        if (outgoingCallMetaRef.current) {
+          const meta = outgoingCallMetaRef.current;
+          outgoingCallMetaRef.current = null;
+          recordMissedCall(meta);
+          endCall();
+        }
+      }, 35000);
+
       setActivePeer(target);
       setCallStatus("calling");
       ringtoneRef.current.startRinging(true);
@@ -405,11 +520,16 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       alert("Microphone permission is required to start a call. Please check your browser mic settings.");
       cleanupConnection();
     }
-  }, [currentUserId, currentUserName, currentUserRole, currentUserImage, joinRoomChannel, initPeerConnection, cleanupConnection]);
+  }, [currentUserId, currentUserName, currentUserRole, currentUserImage, joinRoomChannel, initPeerConnection, cleanupConnection, recordMissedCall, endCall]);
 
-  // Action 2: Accept Incoming Call
+  // Action 3: Accept Incoming Call
   const acceptCall = useCallback(async () => {
     try {
+      if (callTimeoutTimerRef.current) {
+        clearTimeout(callTimeoutTimerRef.current);
+        callTimeoutTimerRef.current = null;
+      }
+      outgoingCallMetaRef.current = null;
       ringtoneRef.current.stop();
       const incoming = pendingIncomingRef.current;
       if (!incoming) return;
@@ -451,33 +571,6 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       cleanupConnection();
     }
   }, [currentUserId, joinRoomChannel, initPeerConnection, cleanupConnection]);
-
-  // Action 3: Reject or End Call
-  const endCall = useCallback(() => {
-    const roomId = activeRoomIdRef.current || pendingIncomingRef.current?.callId;
-    if (roomChannelRef.current) {
-      const eventType = callStatus === "ringing" ? "call-rejected" : callStatus === "calling" ? "call-cancelled" : "call-ended";
-      roomChannelRef.current.send({
-        type: "broadcast",
-        event: eventType,
-        payload: { from: currentUserId },
-      });
-    } else if (roomId) {
-      const tempChannel = supabase.channel(`webrtc-room-${roomId}`);
-      tempChannel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          tempChannel.send({
-            type: "broadcast",
-            event: callStatus === "ringing" ? "call-rejected" : "call-ended",
-            payload: { from: currentUserId },
-          });
-          supabase.removeChannel(tempChannel);
-        }
-      });
-    }
-
-    cleanupConnection();
-  }, [callStatus, currentUserId, cleanupConnection]);
 
   // Action 4: Toggle Mute
   const toggleMute = useCallback(() => {

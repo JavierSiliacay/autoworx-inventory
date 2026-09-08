@@ -19,7 +19,8 @@ import {
   Lock,
   ExternalLink,
   ArrowUpRight,
-  PhoneCall
+  PhoneCall,
+  PhoneMissed
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
@@ -679,7 +680,8 @@ export default function AdminChatDrawer({
                               role: "sales_agent",
                               image: selectedConv.agent_image || undefined,
                             },
-                            selectedConv.id
+                            selectedConv.id,
+                            selectedConv.branch_id
                           );
                         }}
                         disabled={callStatus !== "idle"}
@@ -751,7 +753,7 @@ export default function AdminChatDrawer({
                                 }`}
                               >
                                 {/* Attached Catalog item with 'VIEW IN MASTER INVENTORY' Hover Interaction */}
-                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
+                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.type !== "call" && msg.attachment.title && (
                                   <a
                                     href={`/admin/inventory?search=${encodeURIComponent(msg.attachment.title)}`}
                                     target="_blank"
@@ -835,7 +837,55 @@ export default function AdminChatDrawer({
                                   </a>
                                 )}
 
-                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                {msg.attachment?.type === "call" || msg.content?.includes("Missed audio call") ? (
+                                  <div className="py-1 min-w-[200px] max-w-[260px]">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ${
+                                        !isAgent 
+                                          ? "bg-rose-500 text-white ring-white/30" 
+                                          : "bg-rose-100 text-rose-600 ring-rose-200/60"
+                                      }`}>
+                                        <PhoneMissed className="w-4 h-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className={`font-bold text-xs sm:text-sm leading-tight ${!isAgent ? "text-white" : "text-slate-900"}`}>
+                                          Missed audio call
+                                        </p>
+                                        <p className={`text-[10px] sm:text-xs mt-0.5 ${!isAgent ? "text-blue-100" : "text-slate-500"}`}>
+                                          {!isAgent ? "No answer" : "Tap to call back"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {selectedConv && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          startCall(
+                                            {
+                                              id: selectedConv.agent_id,
+                                              name: selectedConv.agent_name || "Sales Agent",
+                                              role: "sales_agent",
+                                              image: selectedConv.agent_image || undefined,
+                                            },
+                                            selectedConv.id,
+                                            selectedConv.branch_id
+                                          );
+                                        }}
+                                        disabled={callStatus !== "idle"}
+                                        className={`w-full mt-3 py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 ${
+                                          !isAgent
+                                            ? "bg-white text-blue-700 hover:bg-blue-50"
+                                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        }`}
+                                      >
+                                        <PhoneCall className="w-3.5 h-3.5" />
+                                        <span>{!isAgent ? "Call again" : "Call back"}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                                )}
                               </div>
 
                               <div className="flex items-center gap-1 mt-1 px-1">

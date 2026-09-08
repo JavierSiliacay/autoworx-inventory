@@ -15,7 +15,8 @@ import {
   Trash2,
   Lock,
   CheckCircle2,
-  PhoneCall
+  PhoneCall,
+  PhoneMissed
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -445,7 +446,8 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                           name: "Main Distribution Admin",
                           role: "admin",
                         },
-                        conversation.id
+                        conversation.id,
+                        conversation.branch_id
                       );
                     }}
                     disabled={callStatus !== "idle"}
@@ -658,7 +660,7 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                                 }`}
                               >
                                 {/* Render Attached Product only if valid product title is present */}
-                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
+                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.type !== "call" && msg.attachment.title && (
                                   <div
                                     className={`w-full min-w-0 max-w-full mb-2.5 p-2 rounded-xl flex items-center gap-2.5 overflow-hidden ${
                                       isMe
@@ -714,7 +716,54 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                                   </div>
                                 )}
 
-                                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                {msg.attachment?.type === "call" || msg.content?.includes("Missed audio call") ? (
+                                  <div className="py-1 min-w-[200px] max-w-[250px]">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ${
+                                        isMe 
+                                          ? "bg-rose-500 text-white ring-white/30" 
+                                          : "bg-rose-100 text-rose-600 ring-rose-200/60"
+                                      }`}>
+                                        <PhoneMissed className="w-4 h-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className={`font-bold text-xs leading-tight ${isMe ? "text-white" : "text-slate-900"}`}>
+                                          Missed audio call
+                                        </p>
+                                        <p className={`text-[10px] mt-0.5 ${isMe ? "text-blue-100" : "text-slate-500"}`}>
+                                          {isMe ? "No answer" : "Tap to call back"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {conversation && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          startCall(
+                                            {
+                                              id: "admin",
+                                              name: "Main Distribution Admin",
+                                              role: "admin",
+                                            },
+                                            conversation.id,
+                                            conversation.branch_id
+                                          );
+                                        }}
+                                        disabled={callStatus !== "idle"}
+                                        className={`w-full mt-2.5 py-1.5 px-3 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 ${
+                                          isMe
+                                            ? "bg-white text-blue-700 hover:bg-blue-50"
+                                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        }`}
+                                      >
+                                        <PhoneCall className="w-3.5 h-3.5" />
+                                        <span>{isMe ? "Call again" : "Call back"}</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                )}
                               </div>
 
                               {/* Timestamp & subtle check for earlier messages */}

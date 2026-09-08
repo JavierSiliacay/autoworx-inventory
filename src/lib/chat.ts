@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 export interface ChatAttachment {
-  type: "product" | "reservation" | "image" | "metadata";
+  type: "product" | "reservation" | "image" | "metadata" | "call";
   title: string;
   subtitle?: string;
   metadata?: Record<string, any>;

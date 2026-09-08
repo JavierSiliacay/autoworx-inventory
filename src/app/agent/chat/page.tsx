@@ -22,7 +22,8 @@ import {
   Trash2,
   Lock,
   ChevronDown,
-  PhoneCall
+  PhoneCall,
+  PhoneMissed
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { 
@@ -464,7 +465,8 @@ export default function AgentChatPage() {
                       name: "Main Distribution Admin",
                       role: "admin",
                     },
-                    conversation.id
+                    conversation.id,
+                    conversation.branch_id || selectedBranchId
                   );
                 }}
                 disabled={callStatus !== "idle"}
@@ -622,7 +624,7 @@ export default function AgentChatPage() {
                             }`}
                           >
                             {/* Render Attached Product / Reservation Chip */}
-                            {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
+                            {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.type !== "call" && msg.attachment.title && (
                               <div
                                 className={`w-full min-w-0 max-w-full mb-2.5 p-2.5 sm:p-3 rounded-2xl flex items-center gap-3 overflow-hidden ${
                                   isMe
@@ -678,7 +680,54 @@ export default function AgentChatPage() {
                               </div>
                             )}
 
-                            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                            {msg.attachment?.type === "call" || msg.content?.includes("Missed audio call") ? (
+                              <div className="py-1 min-w-[200px] max-w-[260px]">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ${
+                                    isMe 
+                                      ? "bg-rose-500 text-white ring-white/30" 
+                                      : "bg-rose-100 text-rose-600 ring-rose-200/60"
+                                  }`}>
+                                    <PhoneMissed className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className={`font-bold text-xs sm:text-sm leading-tight ${isMe ? "text-white" : "text-slate-900"}`}>
+                                      Missed audio call
+                                    </p>
+                                    <p className={`text-[10px] sm:text-xs mt-0.5 ${isMe ? "text-blue-100" : "text-slate-500"}`}>
+                                      {isMe ? "No answer" : "Tap to call back"}
+                                    </p>
+                                  </div>
+                                </div>
+                                {conversation && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      startCall(
+                                        {
+                                          id: "admin",
+                                          name: "Main Distribution Admin",
+                                          role: "admin",
+                                        },
+                                        conversation.id,
+                                        conversation.branch_id || selectedBranchId
+                                      );
+                                    }}
+                                    disabled={callStatus !== "idle"}
+                                    className={`w-full mt-3 py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 ${
+                                      isMe
+                                        ? "bg-white text-blue-700 hover:bg-blue-50"
+                                        : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    }`}
+                                  >
+                                    <PhoneCall className="w-3.5 h-3.5" />
+                                    <span>{isMe ? "Call again" : "Call back"}</span>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                            )}
                           </div>
 
                           {/* Timestamp */}
