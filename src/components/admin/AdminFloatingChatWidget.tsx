@@ -228,6 +228,15 @@ export default function AdminFloatingChatWidget() {
           if (payload.eventType === "INSERT") {
             const newMsg = payload.new as ChatMessage;
 
+            // Only play chime and handle message if it matches our branch scope:
+            // - If user has selected a specific branch, it must match
+            // - If user is staff, it must match one of their allowed branch IDs
+            const isRelevantBranch = 
+              (!selectedBranchId || selectedBranchId === "all" || newMsg.branch_id === selectedBranchId) &&
+              (role !== "staff" || userBranchIds.length === 0 || userBranchIds.includes(newMsg.branch_id));
+
+            if (!isRelevantBranch) return;
+
             // If incoming message is from an Agent, play audio chime and update badge!
             if (newMsg.sender_role === "agent") {
               playChatNotificationSound();
@@ -761,7 +770,7 @@ export default function AdminFloatingChatWidget() {
                                 }`}
                               >
                                 {/* Attached Product with 'VIEW IN MASTER INVENTORY' Hover Interaction */}
-                                {msg.attachment && (
+                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
                                   <a
                                     href={`/admin/inventory?search=${encodeURIComponent(msg.attachment.title)}`}
                                     target="_blank"

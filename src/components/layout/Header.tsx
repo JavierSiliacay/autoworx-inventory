@@ -272,6 +272,12 @@ export default function Header() {
       };
 
       const fetchUnreadChats = async () => {
+        // Only monitor unread chat counts for Main Distribution or allowed branches
+        if (!isMainDistribution && selectedBranchId !== 'all') {
+          setUnreadChatCount(0);
+          return;
+        }
+
         try {
           let query = supabase.from('agent_admin_conversations').select('unread_admin_count');
           if (selectedBranchId && selectedBranchId !== 'all') {
@@ -283,7 +289,7 @@ export default function Header() {
           if (data) {
             const sum = data.reduce((acc: number, curr: any) => acc + (curr.unread_admin_count || 0), 0);
             setUnreadChatCount((prev) => {
-              if (sum > prev && sum > 0) {
+              if (sum > prev && sum > 0 && isMainDistribution) {
                 try {
                   const audio = new Audio('/sounds/notification.mp3');
                   audio.play().catch(() => {});

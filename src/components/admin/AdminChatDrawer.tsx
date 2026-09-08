@@ -721,7 +721,7 @@ export default function AdminChatDrawer({
                                 }`}
                               >
                                 {/* Attached Catalog item with 'VIEW IN MASTER INVENTORY' Hover Interaction */}
-                                {msg.attachment && (
+                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
                                   <a
                                     href={`/admin/inventory?search=${encodeURIComponent(msg.attachment.title)}`}
                                     target="_blank"

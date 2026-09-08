@@ -43,8 +43,8 @@ export default function AgentsPage() {
       .subscribe();
 
     const interval = setInterval(() => {
-      fetchReservations();
-    }, 10000);
+      fetchReservations(true);
+    }, 15000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -52,9 +52,11 @@ export default function AgentsPage() {
     };
   }, []);
 
-  async function fetchReservations() {
+  async function fetchReservations(silent = false) {
     try {
-      setLoadingReservations(true);
+      if (!silent && reservations.length === 0) {
+        setLoadingReservations(true);
+      }
       let combined: any[] = [];
 
       try {
@@ -299,10 +301,10 @@ export default function AgentsPage() {
 
       {/* List */}
       <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden relative min-h-[400px]">
-        {(loading || loadingReservations) && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="w-10 h-10 text-[#f59e0b] animate-spin" />
-            <p className="text-[10px] font-bold text-[#f59e0b] uppercase tracking-[0.2em]">Loading Data...</p>
+        {/* Silent initial load indicator - non-intrusive slim bar only on cold start */}
+        {(loading && agents.length === 0) && (
+          <div className="absolute top-0 inset-x-0 h-1 bg-amber-500/20 overflow-hidden z-10">
+            <div className="h-full bg-amber-500 animate-pulse w-full" />
           </div>
         )}
 

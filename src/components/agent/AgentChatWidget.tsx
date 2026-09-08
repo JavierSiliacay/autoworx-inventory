@@ -571,12 +571,59 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                         const isMe = msg.sender_role === "agent" || msg.sender_id === agentId;
                         const isLastSentByMe = isMe && msg.id === lastAgentMsgId;
 
+                        const senderInitials = (msg.sender_name || "A").charAt(0).toUpperCase();
+                        const senderRoleLabel = msg.sender_role === "owner" 
+                          ? "Owner" 
+                          : msg.sender_role === "developer" 
+                          ? "Developer" 
+                          : msg.sender_role === "manager" 
+                          ? "Manager" 
+                          : "Staff";
+
                         return (
                           <div
                             key={msg.id}
-                            className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
+                            className={`flex items-end gap-2.5 ${isMe ? "justify-end" : "justify-start"}`}
                           >
+                            {/* Avatar for incoming office messages */}
+                            {!isMe && (
+                              <div 
+                                className={`w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black text-white shrink-0 overflow-hidden shadow-xs mb-5 ${
+                                  msg.sender_role === "owner"
+                                    ? "bg-amber-600 ring-2 ring-amber-200/60"
+                                    : msg.sender_role === "developer"
+                                    ? "bg-purple-600 ring-2 ring-purple-200/60"
+                                    : "bg-gradient-to-tr from-blue-600 to-indigo-600 ring-2 ring-blue-100"
+                                }`}
+                                title={`${msg.sender_name || 'Staff'} (${senderRoleLabel})`}
+                              >
+                                {msg.sender_image ? (
+                                  <img src={msg.sender_image} alt={msg.sender_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{senderInitials}</span>
+                                )}
+                              </div>
+                            )}
+
                             <div className={`min-w-0 max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                              {/* Sender Header for incoming messages */}
+                              {!isMe && (
+                                <div className="flex items-center gap-1.5 mb-1 px-1">
+                                  <span className="text-[11px] font-extrabold text-slate-800">
+                                    {msg.sender_name || "Autoworx Staff"}
+                                  </span>
+                                  <span className={`px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                    msg.sender_role === "owner"
+                                      ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                                      : msg.sender_role === "developer"
+                                      ? "bg-purple-50 text-purple-700 border border-purple-200/80"
+                                      : "bg-blue-50 text-blue-700 border border-blue-200/80"
+                                  }`}>
+                                    {senderRoleLabel}
+                                  </span>
+                                </div>
+                              )}
+
                               <div
                                 className={`w-full min-w-0 max-w-full rounded-2xl p-3 sm:p-3.5 text-xs sm:text-sm shadow-xs break-words overflow-hidden ${
                                   isMe
@@ -584,8 +631,8 @@ export default function AgentChatWidget({ onUnreadChange }: { onUnreadChange?: (
                                     : "bg-white text-slate-800 rounded-bl-xs border border-slate-200/80"
                                 }`}
                               >
-                                {/* Render Attached Product */}
-                                {msg.attachment && (
+                                {/* Render Attached Product only if valid product title is present */}
+                                {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
                                   <div
                                     className={`w-full min-w-0 max-w-full mb-2.5 p-2 rounded-xl flex items-center gap-2.5 overflow-hidden ${
                                       isMe

@@ -595,7 +595,7 @@ export default function AgentChatPage() {
                             }`}
                           >
                             {/* Render Attached Product / Reservation Chip */}
-                            {msg.attachment && (
+                            {msg.attachment && msg.attachment.type !== "metadata" && msg.attachment.title && (
                               <div
                                 className={`w-full min-w-0 max-w-full mb-2.5 p-2.5 sm:p-3 rounded-2xl flex items-center gap-3 overflow-hidden ${
                                   isMe
