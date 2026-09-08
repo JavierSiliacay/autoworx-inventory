@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788846350490",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "fix",
+    title: "Push notifications now work reliably",
+    description: "Removed a service worker fetch interceptor that was blocking FCM push messages, so you'll receive notifications promptly."
+  },
+
+  {
     id: "update-1788845977340",
     version: "v1.9.8",
     date: "2026-09-08",
