@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788845977340",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "improvement",
+    title: "Easier Android permission setup with one‑tap banner",
+    description: "Grant push notifications and other permissions instantly from a new top banner, and enjoy a cleaner, more reliable permission flow when opening the app."
+  },
+
+  {
     id: "update-1788845152179",
     version: "v1.9.8",
     date: "2026-09-08",
