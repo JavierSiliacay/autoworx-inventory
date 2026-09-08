@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788849424808",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "improvement",
+    title: "Refreshed Agent Details View",
+    description: "The agent details modal now features redesigned tabs and clearer activity badges, making it easier to navigate and understand agent information at a glance."
+  },
+
+  {
     id: "update-1788848617381",
     version: "v1.9.8",
     date: "2026-09-08",
