@@ -679,6 +679,7 @@ export default function AdminChatDrawer({
                               name: selectedConv.agent_name || "Sales Agent",
                               role: "sales_agent",
                               image: selectedConv.agent_image || undefined,
+                              email: selectedConv.agent_email || undefined,
                             },
                             selectedConv.id,
                             selectedConv.branch_id
@@ -866,6 +867,7 @@ export default function AdminChatDrawer({
                                               name: selectedConv.agent_name || "Sales Agent",
                                               role: "sales_agent",
                                               image: selectedConv.agent_image || undefined,
+                                              email: selectedConv.agent_email || undefined,
                                             },
                                             selectedConv.id,
                                             selectedConv.branch_id

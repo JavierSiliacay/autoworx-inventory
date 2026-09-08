@@ -41,28 +41,29 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase();
     let query = supabase.from("push_subscriptions").select("*");
 
-    if (targetUserEmail) {
+    if (targetUserEmail && targetUserId) {
+      query = query.or(`user_email.ilike.${String(targetUserEmail).toLowerCase().trim()},user_id.eq.${String(targetUserId)}`);
+    } else if (targetUserEmail) {
       query = query.ilike("user_email", String(targetUserEmail).toLowerCase().trim());
     } else if (targetUserId) {
       query = query.or(`user_id.eq.${String(targetUserId)},user_email.ilike.${String(targetUserId)}`);
     } else if (targetRole === "admin") {
       try {
-        query = query.in("role", ["admin", "manager", "developer", "owner"]);
+        query = query.in("role", ["admin", "manager", "developer", "owner", "staff"]);
       } catch {}
     } else if (targetRole === "agent") {
       try {
-        query = query.eq("role", "agent");
+        query = query.in("role", ["agent", "sales_agent", "pending_agent"]);
       } catch {}
     }
 
-    if (targetBranchId) {
+    if (targetBranchId && !targetUserEmail && !targetUserId) {
       try {
         query = query.or(`branch_id.eq.${targetBranchId},branch_id.is.null`);
       } catch {}
     }
 
     const { data: subscriptions, error } = await query;
-
 
     if (error) {
       if ((error as any).code === "PGRST205") {
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     let activeSubscriptions = subscriptions || [];
 
-    // Fallback: If no subscriptions found by user_id, resolve email from users table
+    // Fallback 1: If no subscriptions found by user_id, resolve email from users table
     if (activeSubscriptions.length === 0 && targetUserId) {
       try {
         const { data: u } = await supabase
@@ -105,6 +106,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Fallback 2: If calling a role without active specific subscription match, broadcast to role
+    if (activeSubscriptions.length === 0 && (targetRole === "admin" || targetRole === "agent")) {
+      try {
+        const roleList = targetRole === "admin"
+          ? ["admin", "manager", "developer", "owner", "staff"]
+          : ["agent", "sales_agent", "pending_agent"];
+        const { data: roleSubs } = await supabase
+          .from("push_subscriptions")
+          .select("*")
+          .in("role", roleList);
+
+        if (roleSubs && roleSubs.length > 0) {
+          activeSubscriptions = roleSubs;
+        }
+      } catch (err) {
+        console.warn("[push/send] Role fallback error:", err);
+      }
+    }
+
     if (activeSubscriptions.length === 0) {
       return NextResponse.json({
         success: true,
@@ -113,6 +133,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const isCall = body.type === "incoming-call" || body.type === "call-cancelled";
+    const ttlSeconds = isCall ? 60 : (body.ttl || 60 * 60 * 24);
+
     const payload = JSON.stringify({
       title,
       body: messageBody,
@@ -120,6 +143,9 @@ export async function POST(req: NextRequest) {
       tag: tag || `apc-chat-${Date.now()}`,
       icon,
       badge,
+      type: body.type || "message",
+      callId: body.callId || null,
+      actions: body.actions || null,
     });
 
     const staleEndpoints: string[] = [];
@@ -139,7 +165,7 @@ export async function POST(req: NextRequest) {
 
       try {
         await webpush.sendNotification(pushSubscription as any, payload, {
-          TTL: 60 * 60 * 24, // 24 hours
+          TTL: ttlSeconds,
           urgency: "high",
         });
         sentCount++;

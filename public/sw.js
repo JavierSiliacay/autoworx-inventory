@@ -1,7 +1,7 @@
 // Autoworx Service Worker — Background Push Notifications & PWA Handler
 // Modeled after proven TaraFix production implementation
 
-const CACHE_NAME = "apc-agent-shell-v4";
+const CACHE_NAME = "apc-agent-shell-v5";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -41,13 +41,14 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-
-// Background Push Notification Event (Exact TaraFix implementation)
+// Background Push Notification Event with Incoming Call Wakeup
 self.addEventListener("push", (event) => {
   let title = "Autoworx Alert";
   let body = "You have a new message.";
   let url = "/agent/chat";
   let tag = "apc-chat-" + Date.now();
+  let type = "message";
+  let callId = null;
 
   if (event.data) {
     try {
@@ -56,20 +57,45 @@ self.addEventListener("push", (event) => {
       if (data.body) body = data.body;
       if (data.url) url = data.url;
       if (data.tag) tag = data.tag;
+      if (data.type) type = data.type;
+      if (data.callId) callId = data.callId;
     } catch (e) {
       body = event.data.text() || body;
     }
   }
 
+  // If this push is to cancel/dismiss an incoming call that stopped ringing
+  if (type === "call-cancelled") {
+    event.waitUntil(
+      self.registration.getNotifications().then((notifications) => {
+        notifications.forEach((n) => {
+          if (n.tag === tag || (callId && n.tag && n.tag.includes(callId))) {
+            n.close();
+          }
+        });
+      })
+    );
+    return;
+  }
+
+  const isCall = type === "incoming-call" || (tag && tag.startsWith("apc-call-")) || title.includes("Incoming Audio Call");
+
   const options = {
     body: body,
     icon: "/logo.png",
     badge: "/favicon.png",
-    vibrate: [200, 100, 200, 100, 200],
-    data: { url: url },
+    // Distinct phone call ring pattern if incoming call
+    vibrate: isCall ? [500, 250, 500, 250, 500, 250, 500, 250, 500] : [200, 100, 200, 100, 200],
+    data: { url: url, type: type, callId: callId },
     tag: tag,
     renotify: true,
-    requireInteraction: true
+    requireInteraction: true,
+    actions: isCall
+      ? [
+          { action: "answer", title: "📞 Answer" },
+          { action: "decline", title: "❌ Decline" },
+        ]
+      : [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -79,7 +105,15 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || "/";
+  if (event.action === "decline") {
+    // User explicitly declined
+    return;
+  }
+
+  let targetUrl = event.notification.data?.url || "/";
+  if (event.action === "answer" && !targetUrl.includes("autoAnswer=true")) {
+    targetUrl += (targetUrl.includes("?") ? "&" : "?") + "autoAnswer=true";
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
