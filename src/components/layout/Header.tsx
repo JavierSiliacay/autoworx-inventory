@@ -10,7 +10,6 @@ import { useSession } from "next-auth/react";
 import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
 import AdminChatDrawer from "@/components/admin/AdminChatDrawer";
-import NotificationBellToggle from "@/components/common/NotificationBellToggle";
 import { autoPromptPushPermission, isPushNotificationSupported } from "@/lib/push";
 
 export default function Header() {
@@ -499,9 +498,6 @@ export default function Header() {
               </span>
             )}
           </button>
-          
-          {/* Web Push Notifications for Admin */}
-          <NotificationBellToggle variant="icon" />
 
           <div className="relative">
             <button 
