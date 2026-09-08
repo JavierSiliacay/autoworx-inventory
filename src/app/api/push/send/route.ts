@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       badge = "/favicon.png",
     } = body;
 
+
     const supabase = getSupabase();
     let query = supabase.from("push_subscriptions").select("*");
 
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: subscriptions, error } = await query;
+
 
     if (error) {
       if ((error as any).code === "PGRST205") {
