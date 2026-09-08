@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788848617381",
+    version: "v1.9.8",
+    date: "2026-09-08",
+    type: "improvement",
+    title: "More reliable push notifications",
+    description: "Push messages now fire consistently from both the browser and server, and we’ve cleaned up internal debug logs for a smoother experience."
+  },
+
+  {
     id: "update-1788846350490",
     version: "v1.9.8",
     date: "2026-09-08",
