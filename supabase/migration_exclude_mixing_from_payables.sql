@@ -1,9 +1,12 @@
 -- ========================================================
--- OPTIMIZE DATABASE: RPC for Bulk Stock In
+-- MIGRATION: Exclude Mixing Station / Mixing Suppliers from Automated Payables
 -- ========================================================
--- This function replaces a loop of 10+ network requests per item 
--- with a single, atomic database transaction.
+-- When performing Stock-In or editing Stock-In records and selecting
+-- "MIXING STATION", "TRANSFER TO MIXING AREA", or any supplier with "MIXING",
+-- it represents an internal stock movement or mixing batch rather than an
+-- external vendor debt. Thus, automated records in `supplier_payables` are skipped.
 
+-- 1. Update public.process_stock_in
 CREATE OR REPLACE FUNCTION public.process_stock_in(
   log_payload jsonb,
   items_payload jsonb
@@ -108,25 +111,18 @@ BEGIN
     v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_in;
 
     -- Compute Weighted Average Cost:
-    -- If adding stock (Stock In or Adj (+)), blend current value with new line total.
-    -- If deducting stock (Adj (-)), cost per unit stays the same.
     IF v_qty_in > 0 THEN
       IF COALESCE(v_curr_qty, 0) <= 0 THEN
-        -- If previous stock was 0 or negative, set cost directly to batch unit cost
         v_final_cost := v_line_total / NULLIF(v_qty_in, 0);
       ELSE
-        -- Weighted Average Cost = (Old Value + Incoming Value) / (Old Qty + Incoming Qty)
         v_final_cost := ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) + v_line_total ) / NULLIF(v_new_qty, 0);
       END IF;
     ELSE
-      -- On reduction, keep the existing unit cost
       v_final_cost := COALESCE(v_curr_cost, (v_item->>'unit_cost')::decimal);
     END IF;
 
-    -- Round cost to 4 decimal places for precision
     v_final_cost := ROUND(COALESCE(v_final_cost, (v_item->>'unit_cost')::decimal), 4);
 
-    -- Update inventory quantities and weighted average cost
     UPDATE public.inventory
     SET quantity = v_new_qty,
         cost = v_final_cost,
@@ -134,7 +130,6 @@ BEGIN
         updated_at = timezone('utc'::text, now())
     WHERE id = v_inventory_id;
 
-    -- Insert stock_transactions audit log
     INSERT INTO public.stock_transactions (
       inventory_id, branch_id, type, quantity, unit_price, reason
     ) VALUES (
@@ -155,12 +150,11 @@ BEGIN
   END IF;
 
   -- 5. Automatically create Supplier Payable if applicable
-  -- Fetch supplier name and due_days
   SELECT name, COALESCE(due_days, 0) INTO v_supplier_name, v_supplier_due_days
   FROM public.suppliers
   WHERE id = (log_payload->>'supplier_id')::uuid;
 
-  -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE' and does NOT contain 'MIXING'
+  -- Exclude 'INVENTORY%', 'BEGINNING BALANCE%', and any supplier with '%MIXING%'
   IF v_supplier_name IS NOT NULL 
      AND v_supplier_name NOT ILIKE 'INVENTORY%' 
      AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' 
@@ -189,6 +183,144 @@ BEGIN
       'Auto-generated from Stock-In',
       log_payload->>'received_by'
     );
+  END IF;
+
+END;
+$$;
+
+
+-- 2. Update public.edit_stock_in
+CREATE OR REPLACE FUNCTION public.edit_stock_in(
+  p_log_id uuid,
+  p_log_payload jsonb,
+  p_old_items_payload jsonb,
+  p_new_items_payload jsonb,
+  p_user_id text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_item jsonb;
+  v_inventory_id uuid;
+  v_qty_diff decimal;
+  v_cost decimal;
+  v_line_total decimal;
+  v_curr_qty decimal;
+  v_curr_cost decimal;
+  v_new_qty decimal;
+  v_final_cost decimal;
+  v_payable_amount decimal := 0;
+  v_supplier_name text;
+  v_supplier_due_days int;
+BEGIN
+  -- 1. Update stock_in_logs entry
+  UPDATE public.stock_in_logs
+  SET 
+    supplier_id = (p_log_payload->>'supplier_id')::uuid,
+    invoice_number = p_log_payload->>'invoice_number',
+    date_received = (p_log_payload->>'date_received')::timestamp,
+    total_amount = (p_log_payload->>'total_amount')::decimal,
+    updated_at = timezone('utc'::text, now())
+  WHERE id = p_log_id;
+
+  -- 2. Revert Old Items Impact on inventory
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_old_items_payload)
+  LOOP
+    v_inventory_id := (v_item->>'inventory_id')::uuid;
+    IF v_inventory_id IS NOT NULL THEN
+      UPDATE public.inventory
+      SET quantity = quantity - (v_item->>'quantity_received')::decimal
+      WHERE id = v_inventory_id;
+    END IF;
+  END LOOP;
+
+  -- 3. Delete Old stock_in_items
+  DELETE FROM public.stock_in_items
+  WHERE stock_in_id = p_log_id;
+
+  -- 4. Insert New Items & Re-apply Weighted Average Cost & Stock
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_new_items_payload)
+  LOOP
+    v_inventory_id := (v_item->>'inventory_id')::uuid;
+    v_cost := (v_item->>'unit_cost')::decimal;
+    v_line_total := COALESCE((v_item->>'total_amount')::decimal, (v_item->>'quantity_received')::decimal * v_cost);
+
+    INSERT INTO public.stock_in_items (
+      stock_in_id, inventory_id, quantity_received, unit_cost, total_cost, movement_type
+    ) VALUES (
+      p_log_id,
+      v_inventory_id,
+      (v_item->>'quantity_received')::decimal,
+      v_cost,
+      v_line_total,
+      COALESCE(v_item->>'movement_type', 'Stock In')
+    );
+
+    IF COALESCE(v_item->>'movement_type', 'Stock In') = 'Stock In' THEN
+      v_payable_amount := v_payable_amount + v_line_total;
+    END IF;
+
+    IF v_inventory_id IS NOT NULL THEN
+      SELECT quantity, cost INTO v_curr_qty, v_curr_cost
+      FROM public.inventory
+      WHERE id = v_inventory_id;
+
+      v_qty_diff := (v_item->>'quantity_received')::decimal;
+      v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_diff;
+
+      IF v_qty_diff > 0 THEN
+        IF COALESCE(v_curr_qty, 0) <= 0 THEN
+          v_final_cost := v_line_total / NULLIF(v_qty_diff, 0);
+        ELSE
+          v_final_cost := ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) + v_line_total ) / NULLIF(v_new_qty, 0);
+        END IF;
+      ELSE
+        v_final_cost := COALESCE(v_curr_cost, v_cost);
+      END IF;
+
+      v_final_cost := ROUND(COALESCE(v_final_cost, v_cost), 4);
+
+      UPDATE public.inventory
+      SET quantity = v_new_qty,
+          cost = v_final_cost,
+          updated_at = timezone('utc'::text, now())
+      WHERE id = v_inventory_id;
+    END IF;
+  END LOOP;
+
+  -- 5. Synchronize Supplier Payable if it exists and is not 'INVENTORY', 'BEGINNING BALANCE', or 'MIXING'
+  SELECT name, COALESCE(due_days, 0) INTO v_supplier_name, v_supplier_due_days
+  FROM public.suppliers
+  WHERE id = (p_log_payload->>'supplier_id')::uuid;
+
+  IF v_supplier_name IS NOT NULL 
+     AND v_supplier_name NOT ILIKE 'INVENTORY%' 
+     AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' 
+     AND v_supplier_name NOT ILIKE '%MIXING%' THEN
+    IF v_payable_amount > 0 THEN
+      UPDATE public.supplier_payables
+      SET 
+        supplier_name = v_supplier_name,
+        reference_no = p_log_payload->>'invoice_number',
+        amount_due = v_payable_amount,
+        balance = v_payable_amount - paid_amount,
+        due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
+      WHERE reference_no = p_log_payload->>'old_invoice_number';
+    ELSE
+      UPDATE public.supplier_payables
+      SET 
+        supplier_name = v_supplier_name,
+        reference_no = p_log_payload->>'invoice_number',
+        amount_due = 0,
+        balance = 0 - paid_amount,
+        due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
+      WHERE reference_no = p_log_payload->>'old_invoice_number';
+    END IF;
+  ELSE
+    DELETE FROM public.supplier_payables
+    WHERE reference_no = p_log_payload->>'old_invoice_number';
   END IF;
 
 END;

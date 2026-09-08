@@ -265,6 +265,19 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
       if (rpcErr) throw new Error("Failed to update stock-in: " + rpcErr.message);
 
+      // Exclude Mixing Station / Mixing suppliers from automatic payables
+      const selectedSupplier = suppliers.find(s => s.id === currentLog.supplier_id);
+      const isMixing = (selectedSupplier && selectedSupplier.name.toLowerCase().includes("mixing")) ||
+        (logData.supplier?.name && logData.supplier.name.toLowerCase().includes("mixing"));
+
+      if (isMixing) {
+        if (currentLog.invoice_number) {
+          await supabase.from("supplier_payables").delete().eq("reference_no", currentLog.invoice_number);
+        }
+        if (logData.invoice_number && logData.invoice_number !== currentLog.invoice_number) {
+          await supabase.from("supplier_payables").delete().eq("reference_no", logData.invoice_number);
+        }
+      }
       
       onSuccess();
       onClose();
@@ -317,6 +330,12 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
+              {suppliers.find(s => s.id === currentLog.supplier_id)?.name.toLowerCase().includes("mixing") && (
+                <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span>Mixing station — Excluded from automatic payables</span>
+                </p>
+              )}
             </div>
             
             <div>

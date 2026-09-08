@@ -103,13 +103,16 @@ BEGIN
     );
   END LOOP;
 
-  -- 5. Synchronize Supplier Payable if it exists and is not 'INVENTORY'
+  -- 5. Synchronize Supplier Payable if it exists and is not 'INVENTORY', 'BEGINNING BALANCE', or 'MIXING'
   SELECT name, COALESCE(due_days, 0) INTO v_supplier_name, v_supplier_due_days
   FROM public.suppliers
   WHERE id = (p_log_payload->>'supplier_id')::uuid;
 
-  -- Check if supplier name does NOT start with 'INVENTORY' or 'BEGINNING BALANCE'
-  IF v_supplier_name IS NOT NULL AND v_supplier_name NOT ILIKE 'INVENTORY%' AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' THEN
+  -- Check if supplier name does NOT start with 'INVENTORY', 'BEGINNING BALANCE', and does NOT contain 'MIXING'
+  IF v_supplier_name IS NOT NULL 
+     AND v_supplier_name NOT ILIKE 'INVENTORY%' 
+     AND v_supplier_name NOT ILIKE 'BEGINNING BALANCE%' 
+     AND v_supplier_name NOT ILIKE '%MIXING%' THEN
     IF v_payable_amount > 0 THEN
       UPDATE public.supplier_payables
       SET 
@@ -120,8 +123,7 @@ BEGIN
         due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
       WHERE reference_no = p_log_payload->>'old_invoice_number';
     ELSE
-      -- If the edit removed all Stock In items, we should theoretically delete or zero out the payable.
-      -- But usually we just update it to 0.
+      -- If the edit removed all Stock In items, we delete or zero out the payable.
       UPDATE public.supplier_payables
       SET 
         supplier_name = v_supplier_name,
@@ -131,6 +133,10 @@ BEGIN
         due_date = ((p_log_payload->>'date_received')::timestamp + (v_supplier_due_days || ' days')::interval)
       WHERE reference_no = p_log_payload->>'old_invoice_number';
     END IF;
+  ELSE
+    -- If supplier was changed to MIXING, remove any previous payable associated with old_invoice_number
+    DELETE FROM public.supplier_payables
+    WHERE reference_no = p_log_payload->>'old_invoice_number';
   END IF;
 
 END;

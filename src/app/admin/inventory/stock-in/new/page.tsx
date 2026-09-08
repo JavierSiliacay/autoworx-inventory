@@ -346,6 +346,17 @@ export default function NewStockInPage() {
       });
 
       if (rpcErr) throw rpcErr;
+
+      // Exclude Mixing Station / Mixing suppliers from automatic payables
+      const selectedSupplier = suppliers.find(s => s.id === supplierId);
+      const isMixingSupplier = selectedSupplier && selectedSupplier.name.toLowerCase().includes("mixing");
+      if (isMixingSupplier && finalInvoiceNumber) {
+        await supabase
+          .from("supplier_payables")
+          .delete()
+          .eq("reference_no", finalInvoiceNumber);
+      }
+
       try {
         localStorage.removeItem(`stock_in_draft_${selectedBranchId || 'default'}`);
       } catch (e) {}
@@ -450,6 +461,12 @@ export default function NewStockInPage() {
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            {suppliers.find(s => s.id === supplierId)?.name.toLowerCase().includes("mixing") && (
+              <p className="mt-1.5 text-[11px] font-semibold text-emerald-600 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>Mixing station selected — Excluded from automatic payables</span>
+              </p>
+            )}
           </div>
           {/* Invoice Number */}
           <div>
