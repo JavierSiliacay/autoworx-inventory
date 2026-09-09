@@ -101,13 +101,15 @@ export default function NewStockInPage() {
     let invQuery = supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id, quantity").order("product_name");
     let poQuery = supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("status", "pending");
 
+    let supplierQuery = supabase.from("suppliers").select("id, name").order("name");
     if (targetBranchId) {
       invQuery = invQuery.eq("branch_id", targetBranchId);
       poQuery = poQuery.eq("branch_id", targetBranchId);
+      supplierQuery = supplierQuery.or(`branch_id.eq.${targetBranchId},branch_id.is.null`);
     }
 
     const [sRes, iRes, pRes] = await Promise.all([
-      supabase.from("suppliers").select("id, name").order("name"),
+      supplierQuery,
       invQuery,
       poQuery,
     ]);

@@ -211,8 +211,14 @@ export default function CreatePurchaseOrderPage() {
     }
     // else: admin with no branch restrictions — load all (will be deduped below)
 
+    let supplierQuery = supabase.from("suppliers").select("id, name").order("name");
+    const targetBranch = selectedBranchId && selectedBranchId !== "all" ? selectedBranchId : userBranchIds[0];
+    if (targetBranch) {
+      supplierQuery = supplierQuery.or(`branch_id.eq.${targetBranch},branch_id.is.null`);
+    }
+
     const [sRes, iRes] = await Promise.all([
-      supabase.from("suppliers").select("id, name").order("name"),
+      supplierQuery,
       inventoryQuery,
     ]);
 

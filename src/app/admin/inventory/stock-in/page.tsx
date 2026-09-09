@@ -127,8 +127,12 @@ export default function StockInPage() {
   async function fetchCatalog() {
     try {
       const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
+      let supplierQuery = supabase.from("suppliers").select("id, name").order("name");
+      if (branchId) {
+        supplierQuery = supplierQuery.or(`branch_id.eq.${branchId},branch_id.is.null`);
+      }
       const [sRes, iRes] = await Promise.all([
-        supabase.from("suppliers").select("id, name").order("name"),
+        supplierQuery,
         supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id").eq("branch_id", branchId).order("product_name"),
       ]);
       setGlobalSuppliers(sRes.data || []);
