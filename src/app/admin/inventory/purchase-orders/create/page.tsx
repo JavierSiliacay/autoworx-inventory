@@ -193,33 +193,41 @@ export default function CreatePurchaseOrderPage() {
     const role = (session?.user as any)?.role;
     const userBranchIds = (session?.user as any)?.branch_ids || [];
 
-    // Align with Master Inventory filtering logic
+    // ── Inventory: always filter by a specific branch so pricing is correct ──
+    // Priority: (1) explicitly selected branch, (2) user's first assigned branch,
+    // (3) all branches (admin-only fallback when no branch context exists).
     let inventoryQuery = supabase
       .from("inventory")
       .select("id, product_name, unit, cost")
       .order("product_name");
 
     if (selectedBranchId && selectedBranchId !== "all") {
-      // Specific branch selected
+      // A specific branch is selected — use it
       inventoryQuery = inventoryQuery.eq("branch_id", selectedBranchId);
-    } else if (role === "staff") {
-      // Staff view across multiple allowed branches
-      if (userBranchIds.length > 0) {
-        inventoryQuery = inventoryQuery.in("branch_id", userBranchIds);
-      } else {
-        setInventory([]);
-        return;
-      }
+    } else if (userBranchIds.length > 0) {
+      // "All Network" selected but user has assigned branches — use the first one
+      // (PO creation is always branch-specific; this ensures correct pricing)
+      inventoryQuery = inventoryQuery.eq("branch_id", userBranchIds[0]);
     }
+    // else: admin with no branch restrictions — load all (will be deduped below)
 
     const [sRes, iRes] = await Promise.all([
       supabase.from("suppliers").select("id, name").order("name"),
       inventoryQuery,
     ]);
+
+    // ── Suppliers: deduplicate by normalized name (ignoring punctuation like commas/periods) ──
+    const uniqueSupplierMap = new Map<string, Supplier>();
+    (sRes.data || []).forEach((s: any) => {
+      // Clean name for comparison: strip punctuation (commas, periods, etc.) and spaces
+      const normalizedKey = s.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!uniqueSupplierMap.has(normalizedKey)) {
+        uniqueSupplierMap.set(normalizedKey, s as Supplier);
+      }
+    });
+    setSuppliers(Array.from(uniqueSupplierMap.values()));
     
-    setSuppliers(sRes.data || []);
-    
-    // Filter to unique product names so the list remains clean
+    // ── Inventory: deduplicate by product name (keep branch-correct price) ──
     const uniqueMap = new Map();
     (iRes.data || []).forEach(item => {
       if (!uniqueMap.has(item.product_name)) {

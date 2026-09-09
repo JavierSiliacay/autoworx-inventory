@@ -92,14 +92,36 @@ export default function NewStockInPage() {
   useEffect(() => { fetchData(); }, [selectedBranchId]);
 
   async function fetchData() {
-    const branchId = selectedBranchId === "all" ? "" : selectedBranchId;
+    const userBranchIds = (session?.user as any)?.branch_ids || [];
+    let targetBranchId = selectedBranchId && selectedBranchId !== "all" ? selectedBranchId : "";
+    if (!targetBranchId && userBranchIds.length > 0) {
+      targetBranchId = userBranchIds[0];
+    }
+
+    let invQuery = supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id, quantity").order("product_name");
+    let poQuery = supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("status", "pending");
+
+    if (targetBranchId) {
+      invQuery = invQuery.eq("branch_id", targetBranchId);
+      poQuery = poQuery.eq("branch_id", targetBranchId);
+    }
+
     const [sRes, iRes, pRes] = await Promise.all([
       supabase.from("suppliers").select("id, name").order("name"),
-      supabase.from("inventory").select("id, product_name, category, unit, cost, price, branch_id, quantity").eq("branch_id", branchId).order("product_name"),
-      supabase.from("purchase_orders").select("id, po_number, supplier_id, items:purchase_order_items(*)").eq("branch_id", branchId).eq("status", "pending"),
+      invQuery,
+      poQuery,
     ]);
 
-    setSuppliers(sRes.data || []);
+    // Deduplicate suppliers by normalized name
+    const uniqueSupplierMap = new Map<string, any>();
+    (sRes.data || []).forEach(s => {
+      const key = s.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!uniqueSupplierMap.has(key)) {
+        uniqueSupplierMap.set(key, s);
+      }
+    });
+
+    setSuppliers(Array.from(uniqueSupplierMap.values()));
     
     // Create a unique catalog by product name
     const uniqueMap = new Map();
