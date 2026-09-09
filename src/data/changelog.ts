@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788942544394",
+    version: "v1.9.9",
+    date: "2026-09-09",
+    type: "fix",
+    title: "Supplier filtering improved for purchase orders",
+    description: "When creating a purchase order or receiving stock, you'll now only see suppliers that belong to your current branch, making it easier to select the right vendor."
+  },
+
+  {
     id: "update-1788942000849",
     version: "v1.9.9",
     date: "2026-09-09",
