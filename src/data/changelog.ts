@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1788942000849",
+    version: "v1.9.9",
+    date: "2026-09-09",
+    type: "fix",
+    title: "Cleaner purchase order handling",
+    description: "Purchase orders are now kept separate by branch and duplicate supplier entries are merged, making ordering smoother and reducing errors."
+  },
+
+  {
     id: "update-1788857360916",
     version: "v1.9.8",
     date: "2026-09-08",
