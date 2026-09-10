@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789021344925",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Stock-in validation guides you to missing fields",
+    description: "When required stock-in information is missing, the form automatically highlights and scrolls to the empty fields, helping you complete entries faster and avoid errors."
+  },
+
+  {
     id: "update-1789020591193",
     version: "v1.9.10",
     date: "2026-09-10",
