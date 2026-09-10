@@ -105,22 +105,27 @@ BEGIN
     v_movement_type := COALESCE(v_item->>'movement_type', 'Stock In');
     v_qty_in := (v_item->>'quantity_received')::decimal;
     v_line_total := COALESCE((v_item->>'total_amount')::decimal, v_qty_in * (v_item->>'unit_cost')::decimal);
-    v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_in;
 
-    -- Compute Weighted Average Cost:
-    -- If adding stock (Stock In or Adj (+)), blend current value with new line total.
-    -- If deducting stock (Adj (-)), cost per unit stays the same.
-    IF v_qty_in > 0 THEN
-      IF COALESCE(v_curr_qty, 0) <= 0 THEN
-        -- If previous stock was 0 or negative, set cost directly to batch unit cost
-        v_final_cost := v_line_total / NULLIF(v_qty_in, 0);
-      ELSE
-        -- Weighted Average Cost = (Old Value + Incoming Value) / (Old Qty + Incoming Qty)
-        v_final_cost := ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) + v_line_total ) / NULLIF(v_new_qty, 0);
-      END IF;
+    IF v_movement_type = 'Adjustment (Cost)' OR v_movement_type = 'Adj (Cost)' OR v_movement_type ILIKE '%cost%' THEN
+      v_qty_in := 0;
+      v_new_qty := COALESCE(v_curr_qty, 0);
+      v_final_cost := (v_item->>'unit_cost')::decimal;
     ELSE
-      -- On reduction, keep the existing unit cost
-      v_final_cost := COALESCE(v_curr_cost, (v_item->>'unit_cost')::decimal);
+      v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_in;
+
+      -- Compute Weighted Average Cost:
+      IF v_qty_in > 0 THEN
+        IF COALESCE(v_curr_qty, 0) <= 0 THEN
+          -- If previous stock was 0 or negative, set cost directly to batch unit cost
+          v_final_cost := v_line_total / NULLIF(v_qty_in, 0);
+        ELSE
+          -- Weighted Average Cost = (Old Value + Incoming Value) / (Old Qty + Incoming Qty)
+          v_final_cost := ( (COALESCE(v_curr_qty, 0) * COALESCE(v_curr_cost, 0)) + v_line_total ) / NULLIF(v_new_qty, 0);
+        END IF;
+      ELSE
+        -- On reduction, keep the existing unit cost
+        v_final_cost := COALESCE(v_curr_cost, (v_item->>'unit_cost')::decimal);
+      END IF;
     END IF;
 
     -- Round cost to 4 decimal places for precision

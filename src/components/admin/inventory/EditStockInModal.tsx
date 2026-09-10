@@ -90,21 +90,43 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     const newItems = [...currentLog.items];
     const item = { ...newItems[index] };
 
-    if (field === 'total_amount') {
+    if (field === 'unit_cost') {
+      const cost = value === "" || value === undefined ? "" : Number(value);
+      item.unit_cost = cost;
+      if (item.movement_type === "Adjustment (Cost)") {
+        item.quantity_received = 0;
+        item.total_amount = 0;
+      } else {
+        const qty = Number(item.quantity_received) || 0;
+        if (cost !== "") {
+          item.total_amount = Number((Number(cost) * qty).toFixed(2));
+        }
+      }
+    } else if (field === 'total_amount') {
       const totalVal = value === "" || value === undefined ? "" : Number(value);
-      item.total_amount = totalVal;
+      item.total_amount = item.movement_type === "Adjustment (Cost)" ? 0 : totalVal;
     } else if (field === 'quantity_received') {
       const qty = value === "" || value === undefined ? "" : Number(value);
-      item.quantity_received = qty;
-      const cost = Number(item.unit_cost) || 0;
-      if (qty !== "") {
-        item.total_amount = Number((cost * Number(qty)).toFixed(2));
+      if (item.movement_type === "Adjustment (Cost)") {
+        item.quantity_received = 0;
+        item.total_amount = 0;
+      } else {
+        item.quantity_received = qty;
+        const cost = Number(item.unit_cost) || 0;
+        if (qty !== "") {
+          item.total_amount = Number((cost * Number(qty)).toFixed(2));
+        }
       }
     } else if (field === 'movement_type') {
       item.movement_type = value;
-      const cost = Number(item.unit_cost) || 0;
-      const qty = Number(item.quantity_received) || 0;
-      item.total_amount = Number((cost * qty).toFixed(2));
+      if (value === "Adjustment (Cost)") {
+        item.quantity_received = 0;
+        item.total_amount = 0;
+      } else {
+        const cost = Number(item.unit_cost) || 0;
+        const qty = Number(item.quantity_received) || 0;
+        item.total_amount = Number((cost * qty).toFixed(2));
+      }
     } else {
       item[field] = value;
     }
@@ -201,13 +223,13 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const hasInvalidQuantity = currentLog.items.some(item => item.inventory_id && Number(item.quantity_received) <= 0);
+    const hasInvalidQuantity = currentLog.items.some(item => item.inventory_id && item.movement_type !== "Adjustment (Cost)" && Number(item.quantity_received) <= 0);
     if (hasInvalidQuantity) {
-      alert("Error: All stock-in quantities must be greater than 0. You cannot input negative stocks here.");
+      alert("Error: All stock-in quantities must be greater than 0 (except for Adj (Cost)). You cannot input negative stocks here.");
       return;
     }
 
-    const validItems = currentLog.items.filter(item => item.inventory_id && Number(item.quantity_received) > 0);
+    const validItems = currentLog.items.filter(item => item.inventory_id && (item.movement_type === "Adjustment (Cost)" || Number(item.quantity_received) > 0));
     
     if (validItems.length === 0 || !currentLog.invoice_number || !currentLog.supplier_id) {
       alert("Please ensure Supplier, Invoice Number, and at least one valid item are provided.");
@@ -238,12 +260,13 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       }));
 
       const newItemsPayload = validItems.map(item => {
+        const isCostAdj = item.movement_type === "Adjustment (Cost)";
         const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
-        const qty = (Number(item.quantity_received) || 1) * multiplier;
-        const baseItemTotal = item.total_amount !== undefined && item.total_amount !== ""
+        const qty = isCostAdj ? 0 : ((Number(item.quantity_received) || 1) * multiplier);
+        const baseItemTotal = isCostAdj ? 0 : (item.total_amount !== undefined && item.total_amount !== ""
           ? Number(item.total_amount)
-          : (Number(item.quantity_received) || 1) * Number(item.unit_cost || 0);
-        const itemTotal = baseItemTotal * multiplier;
+          : (Number(item.quantity_received) || 1) * Number(item.unit_cost || 0));
+        const itemTotal = isCostAdj ? 0 : (baseItemTotal * multiplier);
         return {
           inventory_id: item.inventory_id,
           quantity_received: qty,
@@ -264,6 +287,14 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       });
 
       if (rpcErr) throw new Error("Failed to update stock-in: " + rpcErr.message);
+
+      // Direct cost updates for Adjustment (Cost) items
+      const costAdjItems = currentLog.items.filter(i => i.movement_type === "Adjustment (Cost)" && i.inventory_id);
+      if (costAdjItems.length > 0) {
+        await Promise.all(costAdjItems.map(item => 
+          supabase.from("inventory").update({ cost: Number(item.unit_cost) || 0, updated_at: new Date().toISOString() }).eq("id", item.inventory_id)
+        ));
+      }
 
       // Exclude Mixing Station / Mixing suppliers from automatic payables
       const selectedSupplier = suppliers.find(s => s.id === currentLog.supplier_id);
@@ -526,27 +557,50 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                           <option value="Stock In">Stock In</option>
                           <option value="Adjustment (+)">Adj (+)</option>
                           <option value="Adjustment (-)">Adj (-)</option>
+                          <option value="Adjustment (Cost)">Adj (Cost)</option>
                         </select>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          step="any"
-                          min={0.0001}
-                          value={item.quantity_received}
-                          onChange={(e) => handleRowChange(index, 'quantity_received', e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
-                        />
+                        {item.movement_type === "Adjustment (Cost)" ? (
+                          <span className="block text-center text-xs font-semibold text-slate-400 bg-slate-100 py-1.5 rounded-lg">0</span>
+                        ) : (
+                          <input
+                            type="number"
+                            step="any"
+                            min={0.0001}
+                            value={item.quantity_received}
+                            onChange={(e) => handleRowChange(index, 'quantity_received', e.target.value === "" ? "" : Number(e.target.value))}
+                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-500 text-right">
-                        ₱{Number(item.unit_cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {(() => {
+                          const isCostAdj = item.movement_type === "Adjustment (Cost)";
+                          if (isCostAdj) {
+                            return (
+                              <FormattedNumberInput
+                                value={item.unit_cost === "" || item.unit_cost === undefined ? undefined : Number(item.unit_cost)}
+                                onChange={(val) => handleRowChange(index, 'unit_cost', val)}
+                                className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm font-bold text-purple-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-purple-50 text-right"
+                              />
+                            );
+                          }
+                          return (
+                            <span>₱{Number(item.unit_cost || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <FormattedNumberInput
-                          value={item.total_amount === "" || item.total_amount === undefined ? undefined : Number(item.total_amount)}
-                          onChange={(val) => handleRowChange(index, 'total_amount', val)}
-                          className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-right"
-                        />
+                        {item.movement_type === "Adjustment (Cost)" ? (
+                          <span className="text-sm font-semibold text-slate-400">₱0.00</span>
+                        ) : (
+                          <FormattedNumberInput
+                            value={item.total_amount === "" || item.total_amount === undefined ? undefined : Number(item.total_amount)}
+                            onChange={(val) => handleRowChange(index, 'total_amount', val)}
+                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-right"
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button

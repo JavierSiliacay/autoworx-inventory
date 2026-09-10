@@ -345,14 +345,18 @@ export default function StockInPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col -space-y-[1px]">
-                          {Array.from(new Set(log.items?.map((i: any) => i.movement_type || "Stock In"))).sort().map((type: any, idx, arr) => (
+                          {Array.from(new Set((log.items || []).map((i: any) => i.movement_type || "Stock In"))).sort().map((type: any, idx, arr) => (
                              <span key={idx} className={`inline-flex items-center justify-center px-2 py-1 text-[9px] font-bold uppercase tracking-wider border relative ${
-                               type.includes("Adjustment (+)") ? "bg-blue-50 text-blue-700 border-blue-200" :
-                               type.includes("Adjustment (-)") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                               type.includes("Adjustment (+)") || type.includes("Adj (+)") ? "bg-blue-50 text-blue-700 border-blue-200" :
+                               type.includes("Adjustment (-)") || type.includes("Adj (-)") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                               type.includes("Adjustment (Cost)") || type.includes("Adj (Cost)") ? "bg-purple-50 text-purple-700 border-purple-200" :
                                "bg-green-50 text-green-700 border-green-200"
                              } ${idx === 0 && arr.length > 1 ? "rounded-t-md" : ""} ${idx === arr.length - 1 && arr.length > 1 ? "rounded-b-md" : ""} ${arr.length === 1 ? "rounded-md" : ""}`}
                              style={{ zIndex: arr.length - idx }}>
-                               {type.includes("Adjustment (+)") ? "Adj (+)" : type.includes("Adjustment (-)") ? "Adj (-)" : "Stock-In"}
+                               {type.includes("Adjustment (+)") ? "Adj (+)" :
+                                type.includes("Adjustment (-)") ? "Adj (-)" :
+                                type.includes("Adjustment (Cost)") || type.includes("Adj (Cost)") ? "Adj (Cost)" :
+                                "Stock-In"}
                              </span>
                           ))}
                         </div>
@@ -393,7 +397,7 @@ export default function StockInPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={async () => {
                               // Fetch items first
@@ -417,17 +421,17 @@ export default function StockInPage() {
                               setSelectedEditLog({ ...log, items: itemsWithTotal });
                               setIsEditModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-100/80 hover:bg-blue-50 border border-slate-200/60 rounded-lg transition-all active:scale-95"
                             title="Edit stock-in"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => deleteLog(log)}
-                            className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-500 hover:text-red-600 bg-slate-100/80 hover:bg-red-50 border border-slate-200/60 rounded-lg transition-all active:scale-95"
                             title="Delete and reverse stock"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -511,6 +515,8 @@ export default function StockInPage() {
                                               <span className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (+)</span>
                                             ) : item.movement_type === "Adjustment (-)" ? (
                                               <span className="inline-flex px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (-)</span>
+                                            ) : item.movement_type === "Adjustment (Cost)" || item.movement_type === "Adj (Cost)" ? (
+                                              <span className="inline-flex px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (Cost)</span>
                                             ) : (
                                               <span className="inline-flex px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[9px] font-bold uppercase tracking-wider">Stock-In</span>
                                             )}
@@ -649,14 +655,20 @@ export default function StockInPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 ml-7">
-                        {log.invoice_number?.startsWith('[ADJ+]') ? (
-                          <span className="inline-flex px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (+)</span>
-                        ) : log.invoice_number?.startsWith('[ADJ-]') ? (
-                          <span className="inline-flex px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-bold uppercase tracking-wider">Adj (-)</span>
-                        ) : (
-                          <span className="inline-flex px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[9px] font-bold uppercase tracking-wider">Stock-In</span>
-                        )}
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1 ml-7">
+                        {Array.from(new Set((log.items || []).map((i: any) => i.movement_type || "Stock In"))).sort().map((type: any, idx) => (
+                          <span key={idx} className={`inline-flex px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                            type.includes("Adjustment (+)") || type.includes("Adj (+)") ? "bg-blue-50 text-blue-700 border-blue-200" :
+                            type.includes("Adjustment (-)") || type.includes("Adj (-)") ? "bg-amber-50 text-amber-700 border-amber-200" :
+                            type.includes("Adjustment (Cost)") || type.includes("Adj (Cost)") ? "bg-purple-50 text-purple-700 border-purple-200" :
+                            "bg-green-50 text-green-700 border-green-200"
+                          }`}>
+                            {type.includes("Adjustment (+)") ? "Adj (+)" :
+                             type.includes("Adjustment (-)") ? "Adj (-)" :
+                             type.includes("Adjustment (Cost)") || type.includes("Adj (Cost)") ? "Adj (Cost)" :
+                             "Stock-In"}
+                          </span>
+                        ))}
                       </div>
                       <div className="flex items-center gap-2">
                         <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${isExpanded ? "bg-green-100 text-green-600" : "text-slate-300"}`}>
@@ -712,6 +724,8 @@ export default function StockInPage() {
                                       <span className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[8px] font-bold uppercase tracking-wider">Adj (+)</span>
                                     ) : item.movement_type === "Adjustment (-)" ? (
                                       <span className="inline-flex px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[8px] font-bold uppercase tracking-wider">Adj (-)</span>
+                                    ) : item.movement_type === "Adjustment (Cost)" || item.movement_type === "Adj (Cost)" ? (
+                                      <span className="inline-flex px-1.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[8px] font-bold uppercase tracking-wider">Adj (Cost)</span>
                                     ) : (
                                       <span className="inline-flex px-1.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[8px] font-bold uppercase tracking-wider">Stock-In</span>
                                     )}

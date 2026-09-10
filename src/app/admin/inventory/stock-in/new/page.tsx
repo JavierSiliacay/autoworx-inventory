@@ -14,7 +14,7 @@ import { AutoSaveToast } from "@/components/ui/AutoSaveToast";
 interface Supplier { id: string; name: string; }
 interface InventoryItem { id: string; product_name: string; category?: string; unit?: string; cost: number; price?: number; branch_id?: string; quantity?: number; }
 interface POHeader { id: string; po_number: string; supplier_id: string; items: any[]; }
-interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; total_amount?: number; movement_type?: "Stock In" | "Adjustment (+)" | "Adjustment (-)"; }
+interface StockInItem { inventory_id: string; product_name: string; quantity_received: number; unit_cost: number; total_amount?: number; movement_type?: "Stock In" | "Adjustment (+)" | "Adjustment (-)" | "Adjustment (Cost)"; }
 
 const HighlightMatch = ({ text, query }: { text: string; query: string }) => {
   if (!query) return <>{text}</>;
@@ -236,25 +236,44 @@ export default function NewStockInPage() {
 
       const updated = { ...item, [field]: value };
 
-      if (field === "total_amount") {
+      if (field === "unit_cost") {
+        const cost = Number(value) || 0;
+        updated.unit_cost = cost;
+        if (updated.movement_type === "Adjustment (Cost)") {
+          updated.quantity_received = 0;
+          updated.total_amount = 0;
+        } else {
+          const qty = Number(updated.quantity_received) || 0;
+          updated.total_amount = Number((cost * qty).toFixed(2));
+        }
+      } else if (field === "total_amount") {
         const totalAmt = Number(value) || 0;
         const qty = Number(updated.quantity_received) || 0;
-        // Only recompute unit_cost if total_amount was explicitly typed and it's not Adjustment (-)
-        if (updated.movement_type === "Adjustment (-)") {
-          // In Adjustment (-), unit_cost always stays master cost
+        if (updated.movement_type === "Adjustment (-)" || updated.movement_type === "Adjustment (Cost)") {
           const template = inventory.find(inv => inv.product_name === updated.product_name);
           updated.unit_cost = template?.cost || updated.unit_cost || 0;
+          if (updated.movement_type === "Adjustment (Cost)") {
+            updated.total_amount = 0;
+          }
         } else {
           updated.unit_cost = qty > 0 ? Number((totalAmt / qty).toFixed(4)) : 0;
         }
       } else if (field === "quantity_received") {
         const qty = Number(value) || 0;
-        const cost = Number(updated.unit_cost) || 0;
-        // When typing quantity, PRESERVE unit_cost and recalculate total_amount
-        updated.total_amount = Number((cost * qty).toFixed(2));
+        if (updated.movement_type === "Adjustment (Cost)") {
+          updated.quantity_received = 0;
+          updated.total_amount = 0;
+        } else {
+          const cost = Number(updated.unit_cost) || 0;
+          updated.total_amount = Number((cost * qty).toFixed(2));
+        }
       } else if (field === "movement_type") {
-        if (value === "Adjustment (-)") {
-          // Reset unit cost to master inventory cost
+        if (value === "Adjustment (Cost)") {
+          const template = inventory.find(inv => inv.product_name === updated.product_name);
+          updated.unit_cost = template?.cost || updated.unit_cost || 0;
+          updated.quantity_received = 0;
+          updated.total_amount = 0;
+        } else if (value === "Adjustment (-)") {
           const template = inventory.find(inv => inv.product_name === updated.product_name);
           const masterCost = template?.cost || updated.unit_cost || 0;
           const qty = Number(updated.quantity_received) || 0;
@@ -293,9 +312,9 @@ export default function NewStockInPage() {
       return; 
     }
 
-    const hasInvalidQuantity = items.some(i => Number(i.quantity_received) <= 0);
+    const hasInvalidQuantity = items.some(i => i.movement_type !== "Adjustment (Cost)" && Number(i.quantity_received) <= 0);
     if (hasInvalidQuantity) {
-      alert("Error: All stock-in quantities must be greater than 0. You cannot input negative stocks here.");
+      alert("Error: All stock-in quantities must be greater than 0 (except for Adj (Cost)). You cannot input negative stocks here.");
       return;
     }
 
@@ -370,6 +389,14 @@ export default function NewStockInPage() {
       });
 
       if (rpcErr) throw rpcErr;
+
+      // Direct cost updates for Adjustment (Cost) items
+      const costAdjItems = items.filter(i => i.movement_type === "Adjustment (Cost)" && i.inventory_id);
+      if (costAdjItems.length > 0) {
+        await Promise.all(costAdjItems.map(item => 
+          supabase.from("inventory").update({ cost: item.unit_cost, updated_at: new Date().toISOString() }).eq("id", item.inventory_id)
+        ));
+      }
 
       // Exclude Mixing Station / Mixing suppliers from automatic payables
       const selectedSupplier = suppliers.find(s => s.id === supplierId);
@@ -680,7 +707,9 @@ export default function NewStockInPage() {
                             const lineTotal = (item.total_amount !== undefined ? Number(item.total_amount) : (item.quantity_received * item.unit_cost)) * multiplier;
                             
                             let projectedCost = currentCost;
-                            if (multiplier > 0) {
+                            if (item.movement_type === "Adjustment (Cost)") {
+                              projectedCost = Number(item.unit_cost) || 0;
+                            } else if (multiplier > 0) {
                               if (currentStock <= 0) {
                                 projectedCost = item.quantity_received > 0 ? (lineTotal / item.quantity_received) : currentCost;
                               } else if (newStock > 0) {
@@ -703,17 +732,39 @@ export default function NewStockInPage() {
                             <option value="Stock In">Stock In</option>
                             <option value="Adjustment (+)">Adj (+)</option>
                             <option value="Adjustment (-)">Adj (-)</option>
+                            <option value="Adjustment (Cost)">Adj (Cost)</option>
                           </select>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <input type="number" step="any" value={item.quantity_received} min={0.0001}
-                            onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
-                            className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
+                          {item.movement_type === "Adjustment (Cost)" ? (
+                            <span className="inline-block text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg">0</span>
+                          ) : (
+                            <input type="number" step="any" value={item.quantity_received} min={0.0001}
+                              onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-20 text-center px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#16a34a]" />
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {(() => {
                             const template = inventory.find(i => i.product_name === item.product_name);
-                            const displayCost = item.movement_type === "Adjustment (-)" ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+                            const isCostAdj = item.movement_type === "Adjustment (Cost)";
+                            const isAdjMinus = item.movement_type === "Adjustment (-)";
+                            const displayCost = isAdjMinus ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+
+                            if (isCostAdj) {
+                              return (
+                                <FormattedNumberInput
+                                  autoSize
+                                  prefixElement={<span className="absolute left-2.5 text-purple-600 text-xs z-10 font-bold">₱</span>}
+                                  value={item.unit_cost !== undefined ? item.unit_cost : (template?.cost || 0)}
+                                  onChange={val => {
+                                    updateItem(idx, "unit_cost", val);
+                                  }}
+                                  className="w-28 pl-6 pr-2 py-1.5 bg-purple-50 border border-purple-300 rounded-lg text-sm text-right font-bold text-purple-900 outline-none focus:border-[#16a34a] focus:ring-1 focus:ring-[#16a34a]"
+                                />
+                              );
+                            }
+
                             return (
                               <span className="text-sm font-medium text-slate-500">
                                 ₱{Number(displayCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -722,7 +773,9 @@ export default function NewStockInPage() {
                           })()}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {item.movement_type === "Adjustment (-)" ? (
+                          {item.movement_type === "Adjustment (Cost)" ? (
+                            <span className="text-sm font-semibold text-slate-400">₱0.00</span>
+                          ) : item.movement_type === "Adjustment (-)" ? (
                             (() => {
                               const template = inventory.find(i => i.product_name === item.product_name);
                               const cost = template?.cost || item.unit_cost || 0;
@@ -783,7 +836,9 @@ export default function NewStockInPage() {
                           const lineTotal = (item.total_amount !== undefined ? Number(item.total_amount) : (item.quantity_received * item.unit_cost)) * multiplier;
                           
                           let projectedCost = currentCost;
-                          if (multiplier > 0) {
+                          if (item.movement_type === "Adjustment (Cost)") {
+                            projectedCost = Number(item.unit_cost) || 0;
+                          } else if (multiplier > 0) {
                             if (currentStock <= 0) {
                               projectedCost = item.quantity_received > 0 ? (lineTotal / item.quantity_received) : currentCost;
                             } else if (newStock > 0) {
@@ -816,19 +871,42 @@ export default function NewStockInPage() {
                           <option value="Stock In">Stock In</option>
                           <option value="Adjustment (+)">Adj (+)</option>
                           <option value="Adjustment (-)">Adj (-)</option>
+                          <option value="Adjustment (Cost)">Adj (Cost)</option>
                         </select>
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Qty</p>
-                        <input type="number" step="any" min={0.0001} value={item.quantity_received}
-                          onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
+                        {item.movement_type === "Adjustment (Cost)" ? (
+                          <p className="py-1.5 text-sm font-semibold text-slate-400 text-center bg-slate-100 rounded-lg">0</p>
+                        ) : (
+                          <input type="number" step="any" min={0.0001} value={item.quantity_received}
+                            onChange={e => updateItem(idx, "quantity_received", e.target.value === "" ? "" : Number(e.target.value))}
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-center outline-none" />
+                        )}
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Unit Cost</p>
                         {(() => {
                           const template = inventory.find(i => i.product_name === item.product_name);
-                          const displayCost = item.movement_type === "Adjustment (-)" ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+                          const isCostAdj = item.movement_type === "Adjustment (Cost)";
+                          const isAdjMinus = item.movement_type === "Adjustment (-)";
+                          const displayCost = isAdjMinus ? (template?.cost || item.unit_cost || 0) : item.unit_cost;
+
+                          if (isCostAdj) {
+                            return (
+                              <div className="relative inline-flex items-center w-full">
+                                <span className="absolute left-2.5 text-purple-600 text-xs font-bold">₱</span>
+                                <FormattedNumberInput
+                                  value={item.unit_cost !== undefined ? item.unit_cost : (template?.cost || 0)}
+                                  onChange={val => {
+                                    updateItem(idx, "unit_cost", val);
+                                  }}
+                                  className="w-full pl-6 pr-2 py-1.5 bg-purple-50 border border-purple-300 rounded-lg text-sm font-bold text-purple-900 outline-none focus:border-[#16a34a]"
+                                />
+                              </div>
+                            );
+                          }
+
                           return (
                             <p className="py-1.5 text-sm font-medium text-slate-500">
                               ₱{Number(displayCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -838,7 +916,9 @@ export default function NewStockInPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 mb-1">Total</p>
-                        {item.movement_type === "Adjustment (-)" ? (
+                        {item.movement_type === "Adjustment (Cost)" ? (
+                          <p className="py-1.5 text-sm font-semibold text-slate-400">₱0.00</p>
+                        ) : item.movement_type === "Adjustment (-)" ? (
                           (() => {
                             const template = inventory.find(i => i.product_name === item.product_name);
                             const cost = template?.cost || item.unit_cost || 0;
