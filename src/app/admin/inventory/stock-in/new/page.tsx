@@ -291,14 +291,18 @@ export default function NewStockInPage() {
     e.preventDefault();
     setHasSubmitted(true);
     
-    const isAdjustmentOnly = items.length > 0 && items.every(i => i.movement_type && i.movement_type.includes("Adjustment"));
-    
-    if (!isAdjustmentOnly && (!supplierId || !invoiceNumber)) { 
-      alert("Supplier and Invoice No are required for Stock In."); 
+    if (!supplierId || !invoiceNumber.trim()) { 
+      alert("Supplier and Invoice / Receipt No. are required."); 
+      if (!supplierId) {
+        document.getElementById("supplier-select-container")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        document.getElementById("invoice-number-input")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return; 
     }
     if (items.length === 0) {
       alert("At least one item is required."); 
+      document.getElementById("search-input-container")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return; 
     }
 
@@ -336,16 +340,11 @@ export default function NewStockInPage() {
       const userRole = (session?.user as any)?.role || "staff";
       const formattedRole = userRole.charAt(0).toUpperCase() + userRole.slice(1);
 
-      let finalInvoiceNumber = invoiceNumber;
-      if (isAdjustmentOnly && !finalInvoiceNumber) {
-        finalInvoiceNumber = `[ADJ]-${Date.now()}`;
-      }
-
       const logPayload = {
         reference_po_id: selectedPO || null,
         branch_id: selectedBranchId,
-        supplier_id: isAdjustmentOnly && !supplierId ? null : supplierId,
-        invoice_number: finalInvoiceNumber,
+        supplier_id: supplierId,
+        invoice_number: invoiceNumber.trim(),
         date_received: dateReceived,
         received_by: `${session?.user?.name || session?.user?.email || "System"} (${formattedRole})`,
         receipt_image_url: imageUrl,
@@ -391,11 +390,11 @@ export default function NewStockInPage() {
       // Exclude Mixing Station / Mixing suppliers from automatic payables
       const selectedSupplier = suppliers.find(s => s.id === supplierId);
       const isMixingSupplier = selectedSupplier && selectedSupplier.name.toLowerCase().includes("mixing");
-      if (isMixingSupplier && finalInvoiceNumber) {
+      if (isMixingSupplier && invoiceNumber.trim()) {
         await supabase
           .from("supplier_payables")
           .delete()
-          .eq("reference_no", finalInvoiceNumber);
+          .eq("reference_no", invoiceNumber.trim());
       }
 
       try {
@@ -492,13 +491,13 @@ export default function NewStockInPage() {
             </div>
           </div>
           {/* Supplier */}
-          <div>
+          <div id="supplier-select-container">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Supplier</label>
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
               <select disabled={!!selectedPO} value={supplierId} onChange={e => setSupplierId(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId && !items.every(i => i.movement_type?.includes("Adjustment")) ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
-                <option value="">{items.length > 0 && items.every(i => i.movement_type?.includes("Adjustment")) ? "Not Required for Adjustments" : "Select supplier..."}</option>
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors ${selectedPO ? "opacity-50 cursor-not-allowed" : ""} ${hasSubmitted && !supplierId ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`}>
+                <option value="">Select supplier...</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -524,13 +523,13 @@ export default function NewStockInPage() {
             })()}
           </div>
           {/* Invoice Number */}
-          <div>
+          <div id="invoice-number-input">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Invoice / Receipt No.</label>
             <div className="relative">
               <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input type="text" placeholder={items.length > 0 && items.every(i => i.movement_type?.includes("Adjustment")) ? "Auto-generated if left blank" : "e.g. INV-9812"} value={invoiceNumber}
+              <input type="text" placeholder="e.g. INV-9812" value={invoiceNumber}
                 onChange={e => setInvoiceNumber(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber && !items.every(i => i.movement_type?.includes("Adjustment")) ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
+                className={`w-full pl-9 pr-3 py-2.5 bg-slate-50 border rounded-xl text-sm font-medium outline-none transition-colors uppercase placeholder:normal-case ${hasSubmitted && !invoiceNumber.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200 focus:border-[#16a34a]"}`} />
             </div>
           </div>
           {/* Date */}
