@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789012351504",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "New Cost Adjustment and Preview Tools",
+    description: "Staff can now adjust costs directly when recording stock‑in entries, preview the cost impact before confirming, and use permanent action buttons for a faster, more reliable workflow."
+  },
+
+  {
     id: "update-1789010894638",
     version: "v1.9.10",
     date: "2026-09-10",
