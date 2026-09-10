@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789026786954",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Support Negative Quantities for Stock Corrections",
+    description: "You can now enter negative numbers in sales invoices to adjust inventory, and the system correctly updates stock when saving or deleting, with improved input controls to prevent accidental changes."
+  },
+
+  {
     id: "update-1789024429606",
     version: "v1.9.10",
     date: "2026-09-10",
