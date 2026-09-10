@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789010894638",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "improvement",
+    title: "Updated Search Bar Placeholder Text",
+    description: "The search bar now displays a personalized placeholder with staff name Carla, making it clearer and more relevant for users while removing the generic Javier, System placeholder."
+  },
+
+  {
     id: "update-1789010501047",
     version: "v1.9.10",
     date: "2026-09-10",
