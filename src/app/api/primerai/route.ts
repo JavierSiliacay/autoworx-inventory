@@ -489,11 +489,11 @@ Follow-Up Question Handling (CRITICAL RULES):
         // 2. Automatic Fallback Provider: OpenRouter Free Models
         if (!isSuccess && OPENROUTER_API_KEY) {
             const fallbackModels = [
-                "minimax/minimax-m3:free",
-                "minimax/minimax-m2.7:free",
+                "openrouter/free",
+                "nex-agi/nex-n2.5-mini:free",
+                "nvidia/nemotron-3-super-120b-a12b:free",
                 "google/gemma-4-31b-it:free",
-                "google/gemma-4-26b-a4b-it:free",
-                "z-ai/glm-5.2:free"
+                "google/gemma-4-26b-a4b-it:free"
             ];
 
             for (const fbModel of fallbackModels) {
