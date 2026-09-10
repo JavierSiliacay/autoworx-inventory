@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789010501047",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Clearer Calls & Smarter Chat Discovery",
+    description: "Audio calls are now sharper and ringing is more reliable, plus finding the right agent in chat is faster and easier."
+  },
+
+  {
     id: "update-1789008334765",
     version: "v1.9.10",
     date: "2026-09-10",
