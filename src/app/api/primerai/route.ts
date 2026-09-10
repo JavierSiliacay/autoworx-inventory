@@ -331,8 +331,8 @@ When guiding users to different sections, ALWAYS provide clickable markdown link
 - **Master Inventory**: [/admin/inventory](/admin/inventory) - Search items by name, SKU, category, or creator (e.g. "Javier"), stock adjustments, and ink-saving print sheets.
 - **Purchase Orders**: [/admin/inventory/purchase-orders](/admin/inventory/purchase-orders) - Manage POs, real-time status updates (Draft, Sent, Partial, Received, Cancelled), print previews.
 - **Create Purchase Order**: [/admin/inventory/purchase-orders/create](/admin/inventory/purchase-orders/create) - Branch-isolated PO sequence (YYYYMMDD-XXXX), supplier picker, line items.
-- **Stock-In / Receiving**: [/admin/inventory/stock-in](/admin/inventory/stock-in) - Receive orders, PO linkage, mixed multi-item movements (Stock In, Adjustment +, Adjustment -).
-- **New Stock-In**: [/admin/inventory/stock-in/new](/admin/inventory/stock-in/new) - Process incoming stock and invoices.
+- **Stock-In / Receiving**: [/admin/inventory/stock-in](/admin/inventory/stock-in) - Receive orders, PO linkage, mixed multi-item movements (Stock In, Adjustment +, Adjustment -, Adjustment Cost).
+- **New Stock-In**: [/admin/inventory/stock-in/new](/admin/inventory/stock-in/new) - Process incoming stock, invoices, or unit cost adjustments.
 - **Stock-Out / Transfers**: [/admin/inventory/stock-out](/admin/inventory/stock-out) - Record outward item movements.
 - **Suppliers**: [/admin/inventory/suppliers](/admin/inventory/suppliers) - Supplier directory, payment terms, contact info.
 - **Sales Center**: [/admin/sales](/admin/sales) - Process sales invoices, payment filters (Cash, GCash, Bank Transfer, Charge, Delivery), Daily Sales Report generator.
@@ -367,7 +367,7 @@ Key System Features & Detailed Workflows:
    - **Settle Account Undo Sync**: Kung i-click ang **UNDO** sa usa ka cheque payment sulod sa **Settle Account Balance** modal, ang linked cheque **ma-delete** sa Cheque Log aron dili magdoble ang records.
 
 3. **Stock Reservations System**:
-   - **Agent Submission**: Ang mga sales agents makasumiter og stock reservation para sa ilang kliyente sa [/agent/catalog](/agent/catalog) ug [/agent/reservations](/agent/reservations) nga adunay Client Name, Phone, Quantity, ug Notes.
+   - **Agent Submission**: Ang mga sales agents makasumiter og stock reservation para sa ilang kliyente sa [/agent/catalog](/agent/catalog) ug [/agent/reservations](/agent/reservations) yang adunay Client Name, Phone, Quantity, ug Notes.
    - **Admin Management**: Makita sa admin sa [/admin/agents](/admin/agents) ang \`Submitted By\` (avatar ug pangan sa agent), dynamic unit badge (\`SET\`, \`LITER\`, \`GAL/S\`), ug 2-way real-time approval/declination.
 
 4. **Multi-Keyword Tokenized Search**:
@@ -376,7 +376,14 @@ Key System Features & Detailed Workflows:
 5. **Sales Dynamic Subtotal Math**:
    - Sa Sales Center, kung usbon ang Subtotal, ang formula (\`Subtotal / Quantity = Unit Price\`) mo-calculate sa custom rate para sa maong invoice nga dili maapektohan ang master inventory standard price.
 
-6. **Smart Movement Types & Unit Cost Stability**: Line items within a Stock-In can have different movement types ("Stock In", "Adjustment (+)", "Adjustment (-)"). The generated Payable only computes costs from actual "Stock In" items. In addition, inventory adjustments preserve movement types and maintain weighted average cost (WAC) stability without altering unit costs.
+6. **Smart Movement Types & Unit Cost Adjustments (\`Adj (Cost)\`)**:
+   Line items within a Stock-In record can have 4 distinct movement types:
+   - **\`Stock In\`**: Standard incoming inventory. Increases physical stock quantity, computes Weighted Average Cost (WAC), and generates Supplier Payables.
+   - **\`Adjustment (+)\`** (\`Adj (+)\`): Positive stock adjustment (reconciles missing stock). Increases physical stock without generating payables.
+   - **\`Adjustment (-)\`** (\`Adj (-)\`): Negative stock adjustment (reconciles damaged/lost items). Decreases physical stock while keeping unit cost unchanged.
+   - **\`Adjustment (Cost)\`** (\`Adj (Cost)\`): **Unit Cost Adjustment only**. Designed for updating an item's master unit cost (e.g. paint mixing color adjustments) directly during stock-in. Locks **Quantity Received** to \`0\` and **Total Amount** to \`₱0.00\` so stock counts and payables are unaffected, while updating the master inventory cost in real time with visual \`Master Cost: ₱500 ➔ ₱400\` live previews.
+   - **Mixed Transactions**: A single Stock-In invoice can contain items with different movement types, and the history table displays dynamic stacked badges (\`STOCK-IN\`, \`ADJ (COST)\`, \`ADJ (+)\`, \`ADJ (-)\`) per invoice.
+
 7. **Daily Sales & Petty Cash Breakdown**: The Daily Sales report splits Cash receipts from Digital (GCash / Bank Transfer) and deducts Petty Cash and Distribution expenses to compute exact Net Cash Turn-Over. In Agora Daily Sales reports, staff can also include optional **Transittal** and **Check payments** breakdowns.
 8. **Billing Statement Smart Pagination & Historical Invoices**: Prints scale automatically and chunk data across 20-item A4 portrait pages with running total and isolated bottom signatures. Historical invoice items remain fully preserved on saved statements.
 9. **Master Inventory Creator Search**: Search products not only by name, SKU, or category, but also by the staff member who created/modified it (e.g. typing "Javier" or "System").
