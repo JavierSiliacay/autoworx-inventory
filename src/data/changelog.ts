@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789020591193",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Improved Cost Adjustment Guide",
+    description: "The cost adjustment guide modal has been updated for clarity, and line-item totals are now locked to prevent accidental changes."
+  },
+
+  {
     id: "update-1789017791688",
     version: "v1.9.10",
     date: "2026-09-10",
