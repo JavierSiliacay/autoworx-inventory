@@ -107,8 +107,14 @@ BEGIN
     v_line_total := COALESCE((v_item->>'total_amount')::decimal, v_qty_in * (v_item->>'unit_cost')::decimal);
 
     IF v_movement_type = 'Adjustment (Cost)' OR v_movement_type = 'Adj (Cost)' OR v_movement_type ILIKE '%cost%' THEN
-      v_qty_in := 0;
-      v_new_qty := COALESCE(v_curr_qty, 0);
+      -- If a qty_received was provided (> 0), treat it as an absolute qty override
+      IF (v_item->>'quantity_received')::decimal > 0 THEN
+        v_qty_in := 0; -- no delta for transaction log
+        v_new_qty := (v_item->>'quantity_received')::decimal;
+      ELSE
+        v_qty_in := 0;
+        v_new_qty := COALESCE(v_curr_qty, 0);
+      END IF;
       v_final_cost := (v_item->>'unit_cost')::decimal;
     ELSE
       v_new_qty := COALESCE(v_curr_qty, 0) + v_qty_in;

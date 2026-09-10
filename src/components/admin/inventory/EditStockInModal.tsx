@@ -36,6 +36,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const [itemSearch, setItemSearch] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [showAdjCostModal, setShowAdjCostModal] = useState(false);
 
   useEffect(() => { setFocusedIndex(-1); }, [itemSearch]);
 
@@ -93,40 +94,25 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
     if (field === 'unit_cost') {
       const cost = value === "" || value === undefined ? "" : Number(value);
       item.unit_cost = cost;
-      if (item.movement_type === "Adjustment (Cost)") {
-        item.quantity_received = 0;
-        item.total_amount = 0;
-      } else {
-        const qty = Number(item.quantity_received) || 0;
-        if (cost !== "") {
-          item.total_amount = Number((Number(cost) * qty).toFixed(2));
-        }
+      const qty = Number(item.quantity_received) || 0;
+      if (cost !== "") {
+        item.total_amount = Number((Number(cost) * qty).toFixed(2));
       }
     } else if (field === 'total_amount') {
       const totalVal = value === "" || value === undefined ? "" : Number(value);
-      item.total_amount = item.movement_type === "Adjustment (Cost)" ? 0 : totalVal;
+      item.total_amount = totalVal;
     } else if (field === 'quantity_received') {
       const qty = value === "" || value === undefined ? "" : Number(value);
-      if (item.movement_type === "Adjustment (Cost)") {
-        item.quantity_received = 0;
-        item.total_amount = 0;
-      } else {
-        item.quantity_received = qty;
-        const cost = Number(item.unit_cost) || 0;
-        if (qty !== "") {
-          item.total_amount = Number((cost * Number(qty)).toFixed(2));
-        }
+      item.quantity_received = qty;
+      const cost = Number(item.unit_cost) || 0;
+      if (qty !== "") {
+        item.total_amount = Number((cost * Number(qty)).toFixed(2));
       }
     } else if (field === 'movement_type') {
       item.movement_type = value;
-      if (value === "Adjustment (Cost)") {
-        item.quantity_received = 0;
-        item.total_amount = 0;
-      } else {
-        const cost = Number(item.unit_cost) || 0;
-        const qty = Number(item.quantity_received) || 0;
-        item.total_amount = Number((cost * qty).toFixed(2));
-      }
+      const cost = Number(item.unit_cost) || 0;
+      const qty = Number(item.quantity_received) || 0;
+      item.total_amount = Number((cost * qty).toFixed(2));
     } else {
       item[field] = value;
     }
@@ -215,6 +201,7 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
 
   const calculateTotal = () => {
     return currentLog.items.reduce((sum, item) => {
+      if (item.movement_type === "Adjustment (Cost)") return sum; // Cost corrections don't affect total purchase
       const itemTotal = item.total_amount === "" || item.total_amount === undefined ? 0 : Number(item.total_amount);
       return sum + itemTotal;
     }, 0);
@@ -223,13 +210,13 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const hasInvalidQuantity = currentLog.items.some(item => item.inventory_id && item.movement_type !== "Adjustment (Cost)" && Number(item.quantity_received) <= 0);
+    const hasInvalidQuantity = currentLog.items.some(item => item.inventory_id && Number(item.quantity_received) <= 0);
     if (hasInvalidQuantity) {
-      alert("Error: All stock-in quantities must be greater than 0 (except for Adj (Cost)). You cannot input negative stocks here.");
+      alert("Error: All quantities must be greater than 0. You cannot input zero or negative stocks here.");
       return;
     }
 
-    const validItems = currentLog.items.filter(item => item.inventory_id && (item.movement_type === "Adjustment (Cost)" || Number(item.quantity_received) > 0));
+    const validItems = currentLog.items.filter(item => item.inventory_id && Number(item.quantity_received) > 0);
     
     if (validItems.length === 0 || !currentLog.invoice_number || !currentLog.supplier_id) {
       alert("Please ensure Supplier, Invoice Number, and at least one valid item are provided.");
@@ -260,13 +247,12 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
       }));
 
       const newItemsPayload = validItems.map(item => {
-        const isCostAdj = item.movement_type === "Adjustment (Cost)";
         const multiplier = item.movement_type === "Adjustment (-)" ? -1 : 1;
-        const qty = isCostAdj ? 0 : ((Number(item.quantity_received) || 1) * multiplier);
-        const baseItemTotal = isCostAdj ? 0 : (item.total_amount !== undefined && item.total_amount !== ""
+        const qty = (Number(item.quantity_received) || 1) * multiplier;
+        const baseItemTotal = item.total_amount !== undefined && item.total_amount !== ""
           ? Number(item.total_amount)
-          : (Number(item.quantity_received) || 1) * Number(item.unit_cost || 0));
-        const itemTotal = isCostAdj ? 0 : (baseItemTotal * multiplier);
+          : (Number(item.quantity_received) || 1) * Number(item.unit_cost || 0);
+        const itemTotal = item.movement_type === "Adjustment (-)" ? -Math.abs(baseItemTotal) : Math.abs(baseItemTotal);
         return {
           inventory_id: item.inventory_id,
           quantity_received: qty,
@@ -549,30 +535,42 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <select 
-                          value={item.movement_type || "Stock In"} 
-                          onChange={(e) => handleRowChange(index, 'movement_type', e.target.value)}
-                          className="w-full text-[11px] font-medium px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
-                        >
-                          <option value="Stock In">Stock In</option>
-                          <option value="Adjustment (+)">Adj (+)</option>
-                          <option value="Adjustment (-)">Adj (-)</option>
-                          <option value="Adjustment (Cost)">Adj (Cost)</option>
-                        </select>
+                        <div className="flex items-center gap-1.5">
+                          <select 
+                            value={item.movement_type || "Stock In"} 
+                            onChange={(e) => handleRowChange(index, 'movement_type', e.target.value)}
+                            className="flex-1 text-[11px] font-medium px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                          >
+                            <option value="Stock In">Stock In</option>
+                            <option value="Adjustment (+)">Adj (+)</option>
+                            <option value="Adjustment (-)">Adj (-)</option>
+                            <option value="Adjustment (Cost)">Adj (Cost)</option>
+                          </select>
+                          {item.movement_type === "Adjustment (Cost)" && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAdjCostModal(true)}
+                              className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 flex items-center justify-center text-[10px] font-black transition-colors shrink-0"
+                              title="What is Adj (Cost)?"
+                            >
+                              i
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        {item.movement_type === "Adjustment (Cost)" ? (
-                          <span className="block text-center text-xs font-semibold text-slate-400 bg-slate-100 py-1.5 rounded-lg">0</span>
-                        ) : (
-                          <input
-                            type="number"
-                            step="any"
-                            min={0.0001}
-                            value={item.quantity_received}
-                            onChange={(e) => handleRowChange(index, 'quantity_received', e.target.value === "" ? "" : Number(e.target.value))}
-                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white"
-                          />
-                        )}
+                        <input
+                          type="number"
+                          step="any"
+                          min={0.0001}
+                          value={item.quantity_received}
+                          onChange={(e) => handleRowChange(index, 'quantity_received', e.target.value === "" ? "" : Number(e.target.value))}
+                          className={`w-full px-3 py-1.5 border rounded-lg text-sm font-medium outline-none focus:ring-2 transition-all ${
+                            item.movement_type === "Adjustment (Cost)"
+                              ? "border-purple-300 bg-purple-50 text-purple-900 focus:border-purple-500 focus:ring-purple-100"
+                              : "border-slate-200 bg-white text-slate-800 focus:border-blue-500 focus:ring-blue-100"
+                          }`}
+                        />
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-500 text-right">
                         {(() => {
@@ -593,12 +591,14 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
                       </td>
                       <td className="px-4 py-3 text-right">
                         {item.movement_type === "Adjustment (Cost)" ? (
-                          <span className="text-sm font-semibold text-slate-400">₱0.00</span>
+                          <span className="text-sm font-bold text-purple-900">
+                            ₱{Number((Number(item.unit_cost || 0) * Number(item.quantity_received || 0)).toFixed(2)).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
                         ) : (
                           <FormattedNumberInput
                             value={item.total_amount === "" || item.total_amount === undefined ? undefined : Number(item.total_amount)}
                             onChange={(val) => handleRowChange(index, 'total_amount', val)}
-                            className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all bg-white text-right"
+                            className="w-full px-3 py-1.5 border border-slate-200 bg-white text-slate-800 rounded-lg text-sm font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-right"
                           />
                         )}
                       </td>
@@ -645,6 +645,63 @@ export default function EditStockInModal({ isOpen, onClose, logData, inventory, 
           </button>
         </div>
       </div>
+
+      {/* Adj (Cost) Full Explanatory Modal */}
+      {showAdjCostModal && (
+        <div className="fixed inset-0 z-[99999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-orange-200 rounded-2xl shadow-2xl w-full max-w-md p-6 text-left relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm">
+                  i
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Meaning & Purpose of Adj (Cost)</h3>
+                  <p className="text-[11px] text-orange-600 font-semibold">Cost Adjustment Guide for Staff</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdjCostModal(false)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center text-base font-bold transition-colors"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-xs text-slate-700 leading-relaxed border-t border-slate-100 pt-4">
+              <p>
+                <strong>Adj (Cost)</strong> is used when you need to <strong>correct the unit cost (price) of an item</strong> &mdash; without adding or removing physical quantity from stock.
+              </p>
+              
+              <div className="bg-orange-50/80 border border-orange-100 rounded-xl p-3.5 space-y-1.5">
+                <p className="font-bold text-orange-950 text-[11px] uppercase tracking-wider">Example Scenario:</p>
+                <p className="text-orange-900 text-xs leading-relaxed">
+                  If an item (e.g. <em>Red Oxide Primer</em>) was deducted using <strong>Adjustment (-)</strong> to transfer or use it in a <strong>mixing product</strong>, <strong>Adj (Cost)</strong> is the solution to update the unit cost directly &mdash; so you <em>don&apos;t have to go to Master Inventory</em> to manually edit the unit cost of the mixing item.
+                </p>
+              </div>
+
+              <ul className="list-disc pl-4 space-y-1 text-slate-600 text-[11px]">
+                <li>Directly updates the Master Inventory Cost of the item.</li>
+                <li><strong>Does NOT add or deduct physical stock quantity.</strong></li>
+                <li><strong>NOT included in Total Purchase amount calculation.</strong></li>
+              </ul>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAdjCostModal(false)}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+

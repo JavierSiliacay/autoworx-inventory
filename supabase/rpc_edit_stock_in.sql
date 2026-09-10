@@ -26,10 +26,11 @@ DECLARE
 BEGIN
   v_branch_id := (p_log_payload->>'branch_id')::uuid;
 
-  -- 1. Revert Old Inventory (Subtract old quantities)
+  -- 1. Revert Old Inventory (Subtract old quantities, skip Adj Cost items)
   FOR v_old_item IN SELECT * FROM jsonb_array_elements(p_old_items_payload)
   LOOP
-    IF (v_old_item->>'inventory_id') IS NOT NULL AND (v_old_item->>'inventory_id') != '' THEN
+    IF (v_old_item->>'inventory_id') IS NOT NULL AND (v_old_item->>'inventory_id') != ''
+       AND COALESCE(v_old_item->>'movement_type', 'Stock In') NOT ILIKE '%cost%' THEN
       UPDATE public.inventory
       SET quantity = GREATEST(0, quantity - (v_old_item->>'quantity_received')::decimal)
       WHERE id = (v_old_item->>'inventory_id')::uuid;
@@ -76,8 +77,23 @@ BEGIN
       v_payable_amount := v_payable_amount + COALESCE((v_new_item->>'total_amount')::decimal, (v_new_item->>'quantity_received')::decimal * (v_new_item->>'unit_cost')::decimal);
     END IF;
 
-    -- Update inventory quantities and latest cost (only update cost if adding stock, not on negative adjustments)
-    IF (v_new_item->>'quantity_received')::decimal > 0 AND COALESCE(v_new_item->>'movement_type', 'Stock In') != 'Adjustment (-)' THEN
+    -- Update inventory quantities and latest cost
+    IF COALESCE(v_new_item->>'movement_type', 'Stock In') ILIKE '%cost%' THEN
+      -- Adj (Cost): always update cost; if qty_received > 0, set qty absolutely (override)
+      IF (v_new_item->>'quantity_received')::decimal > 0 THEN
+        UPDATE public.inventory
+        SET quantity = (v_new_item->>'quantity_received')::decimal,
+            cost = (v_new_item->>'unit_cost')::decimal,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = v_inventory_id;
+      ELSE
+        -- qty == 0: only update cost, keep existing qty
+        UPDATE public.inventory
+        SET cost = (v_new_item->>'unit_cost')::decimal,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = v_inventory_id;
+      END IF;
+    ELSIF (v_new_item->>'quantity_received')::decimal > 0 AND COALESCE(v_new_item->>'movement_type', 'Stock In') != 'Adjustment (-)' THEN
       UPDATE public.inventory
       SET quantity = quantity + (v_new_item->>'quantity_received')::decimal,
           cost = (v_new_item->>'unit_cost')::decimal,
