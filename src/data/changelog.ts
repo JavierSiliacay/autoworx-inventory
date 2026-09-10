@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789008334765",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "fix",
+    title: "Smarter AI Chat Failover",
+    description: "Updated backup AI models so the chat stays responsive even if the main service experiences issues, ensuring smoother, uninterrupted help."
+  },
+
+  {
     id: "update-1788942544394",
     version: "v1.9.9",
     date: "2026-09-09",
