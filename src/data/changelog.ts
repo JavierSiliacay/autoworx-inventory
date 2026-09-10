@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789024429606",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Enter negative amounts for deductions and returns",
+    description: "You can now input negative subtotals on invoices to record deductions or returns. Negative totals appear in red across forms, lists, and reports, making adjustments clear while leaving inventory unchanged."
+  },
+
+  {
     id: "update-1789021344925",
     version: "v1.9.10",
     date: "2026-09-10",
