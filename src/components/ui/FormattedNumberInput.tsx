@@ -15,22 +15,27 @@ export function FormattedNumberInput({ value, onChange, autoSize, className, pre
       setLocalStr("");
       return;
     }
-    const numLocal = Number(localStr.replace(/[^0-9.]/g, ''));
+    const isNegative = value < 0;
+    const numLocal = Number((isNegative ? '-' : '') + localStr.replace(/[^0-9.]/g, ''));
     if (numLocal !== value) {
-      setLocalStr(value.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+      const absFormatted = Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      setLocalStr(isNegative ? '-' + absFormatted : absFormatted);
     }
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let rawValue = e.target.value.replace(/[^0-9.]/g, '');
+    const raw = e.target.value;
+    const isNegative = raw.startsWith('-');
+    let rawValue = raw.replace(/[^0-9.]/g, '');
     const parts = rawValue.split('.');
     const wholePart = parts[0];
     const decimalPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
     const formattedWhole = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    const newVal = formattedWhole + decimalPart;
+    const newVal = (isNegative ? '-' : '') + formattedWhole + decimalPart;
     setLocalStr(newVal);
     
-    onChange(rawValue === "" ? undefined : Number(rawValue));
+    const numericStr = (isNegative ? '-' : '') + rawValue;
+    onChange(numericStr === '' || numericStr === '-' ? undefined : Number(numericStr));
   };
 
   const inputEl = (

@@ -301,7 +301,7 @@ export default function SalesReportPrint({
                   <tr key={`${sale.invoice_no}-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium">{formattedDate}</td>
                     <td className={`border border-black px-2 py-1 text-center font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : ''}`}>{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
-                    <td className={`border border-black px-2 py-1 text-right font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : ''}`}>{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className={`border border-black px-2 py-1 text-right font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : (sale.total_amount || 0) < 0 ? 'text-red-600' : ''}`}>{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className={`border border-black px-2 py-1 text-center font-medium uppercase ${sale.payment_type === 'Cancelled' ? 'text-red-600' : ''}`}>{sale.customer_name || 'UNKNOWN'}</td>
                     <td className={`border border-black px-2 py-1 text-center font-medium uppercase ${sale.payment_type === 'Cancelled' ? 'text-red-600 font-bold' : ''}`}>{remarks}</td>
                   </tr>
@@ -321,7 +321,7 @@ export default function SalesReportPrint({
               <tr>
                 <td colSpan={3} className="border-l border-b border-black border-r-0 border-t-0 p-0 text-right pr-2"></td>
                 <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold uppercase">{paymentTypeFilter !== 'All' ? `${paymentTypeFilter} ` : ''}Total Revenue:</td>
-                <td className="border border-black bg-gray-100 px-2 py-1.5 text-right font-bold">
+                <td className={`border border-black bg-gray-100 px-2 py-1.5 text-right font-bold ${totalSales < 0 ? 'text-red-600' : ''}`}>
                   {totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -631,7 +631,7 @@ export default function SalesReportPrint({
                         <tr key={`agora-cash-${i}`} className="border-b border-black">
                           <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'CASH'}</td>
                           <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                          <td className={`border border-black px-2 py-1 text-right font-medium ${(s.total_amount || 0) < 0 ? 'text-red-600' : ''}`}>{fmt(s.total_amount || 0)}</td>
                         </tr>
                       ))
                     ) : (
@@ -669,7 +669,7 @@ export default function SalesReportPrint({
                         <tr key={`agora-charge-${i}`} className="border-b border-black">
                           <td className="border border-black px-2 py-1 text-left uppercase font-medium">{s.customer_name || 'UNKNOWN'}</td>
                           <td className="border border-black px-2 py-1 text-center font-medium">{s.invoice_no || 'N/A'}</td>
-                          <td className="border border-black px-2 py-1 text-right font-medium">{fmt(s.total_amount || 0)}</td>
+                          <td className={`border border-black px-2 py-1 text-right font-medium ${(s.total_amount || 0) < 0 ? 'text-red-600' : ''}`}>{fmt(s.total_amount || 0)}</td>
                         </tr>
                       ))
                     ) : (
@@ -741,7 +741,7 @@ export default function SalesReportPrint({
                   <tbody>
                     <tr className="border-b border-black">
                       <td className="border border-black px-2 py-1.5 uppercase bg-slate-50 w-[60%]">CASH SALES:</td>
-                      <td className="border border-black px-2 py-1.5 text-right w-[40%] font-bold">{fmt(agoraCashTotal)}</td>
+                      <td className={`border border-black px-2 py-1.5 text-right w-[40%] font-bold ${agoraCashTotal < 0 ? 'text-red-600' : ''}`}>{fmt(agoraCashTotal)}</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">LESS GCASH PAYMENT:</td>
@@ -765,7 +765,7 @@ export default function SalesReportPrint({
                     </tr>
                     <tr className="bg-slate-100 text-[13px] font-black border-t-2 border-black">
                       <td className="border border-black px-2 py-2 uppercase">TOTAL CASH FOR REMITTANCE:</td>
-                      <td className="border border-black px-2 py-2 text-right font-black">{fmt(totalCashForRemittance)}</td>
+                      <td className={`border border-black px-2 py-2 text-right font-black ${totalCashForRemittance < 0 ? 'text-red-600' : ''}`}>{fmt(totalCashForRemittance)}</td>
                     </tr>
                     <tr className="border-b border-black">
                       <td className="border border-black px-2 py-1.5 uppercase bg-slate-50">TOTAL CHARGE SALES:</td>
@@ -773,7 +773,7 @@ export default function SalesReportPrint({
                     </tr>
                     <tr className="bg-gray-100 text-[15px] font-black border-t-2 border-b-[3px] border-black tracking-wide">
                       <td className="border border-black px-2 py-2 uppercase">OVERALL TOTAL SALES:</td>
-                      <td className="border border-black px-2 py-2 text-right font-black">{fmt(overallTotalSales)}</td>
+                      <td className={`border border-black px-2 py-2 text-right font-black ${overallTotalSales < 0 ? 'text-red-600' : ''}`}>{fmt(overallTotalSales)}</td>
                     </tr>
                   </tbody>
                 </table>

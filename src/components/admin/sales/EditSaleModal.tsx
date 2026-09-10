@@ -164,7 +164,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     return currentSale.items.reduce((sum, item) => {
       if (!item.item_id) return sum;
       const numVal = Number(item.subtotal || 0);
-      if (Number(item.quantity || 0) <= 0 && numVal <= 0) return sum;
+      if (Number(item.quantity || 0) <= 0 && numVal === 0) return sum;
       return sum + numVal;
     }, 0);
   };
@@ -173,7 +173,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     e.preventDefault();
     
     const validItems = currentSale.items.filter(
-      item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) > 0)
+      item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) !== 0)
     );
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
@@ -491,7 +491,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total Amount</p>
-              <p className="text-2xl font-extrabold text-[#1a1b20]">₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className={`text-2xl font-extrabold ${calculateTotal() < 0 ? 'text-red-600' : 'text-[#1a1b20]'}`}>₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div className="flex gap-3">
               <button

@@ -811,11 +811,11 @@ export default function AdminSalesPage() {
 
   const calculateTotal = () => {
     return currentSale.items.reduce((sum, item) => {
-      // Include items with a valid product item and either quantity > 0 OR subtotal > 0 (for non-physical charges)
+      // Include items with a valid product item and either quantity > 0 OR a non-zero subtotal (including negative for deductions)
       if (!item.item_id) return sum;
       const val = typeof item.subtotal === 'string' ? (item.subtotal as string).replace(/,/g, '') : item.subtotal;
       const numVal = Number(val) || 0;
-      if (Number(item.quantity || 0) <= 0 && numVal <= 0) return sum;
+      if (Number(item.quantity || 0) <= 0 && numVal === 0) return sum;
       return sum + numVal;
     }, 0);
   };
@@ -823,11 +823,11 @@ export default function AdminSalesPage() {
   const handleSaveSale = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Valid items: item selected AND (quantity > 0 OR subtotal > 0)
+    // Valid items: item selected AND (quantity > 0 OR subtotal != 0, including negative deductions)
     const validItems = currentSale.items.map(item => ({
       ...item,
       subtotal: typeof item.subtotal === 'string' ? Number((item.subtotal as string).replace(/,/g, '')) : item.subtotal
-    })).filter(item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) > 0));
+    })).filter(item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) !== 0));
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
       alert("Please add at least one valid item and an invoice number.");
@@ -1646,7 +1646,7 @@ export default function AdminSalesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex flex-col">
-                        <span className={`text-sm font-extrabold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>₱{invoice.total_amount.toLocaleString()}</span>
+                        <span className={`text-sm font-extrabold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : invoice.total_amount < 0 ? 'text-red-600' : 'text-[#1a1b20]'}`}>₱{invoice.total_amount.toLocaleString()}</span>
                         <div className={`flex items-center justify-end gap-1 text-[9px] font-bold uppercase tracking-tighter ${invoice.payment_type === 'Cancelled' ? 'text-red-500' : 'text-slate-400'}`}>
                           <span>{invoice.payment_type}</span>
                           <span className="opacity-50">|</span>
@@ -1705,7 +1705,7 @@ export default function AdminSalesPage() {
                          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in slide-in-from-top-2 duration-300">
                             <div className="bg-slate-50/50 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Breakdown</span>
-                               <span className="text-[9px] font-black text-emerald-600 uppercase">Grand Total: ₱{invoice.total_amount.toLocaleString()}</span>
+                               <span className={`text-[9px] font-black uppercase ${invoice.total_amount < 0 ? 'text-red-500' : 'text-emerald-600'}`}>Grand Total: ₱{invoice.total_amount.toLocaleString()}</span>
                             </div>
                             <div className="overflow-x-auto w-full">
                             <table className="w-full text-left text-xs">
@@ -1754,7 +1754,7 @@ export default function AdminSalesPage() {
                                         <td className="px-4 py-3 text-right font-medium font-mono">₱{((item.quantity > 0 && item.total_amount !== undefined ? (Number(item.total_amount) / Number(item.quantity)) : Number(item.unit_price || 0))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                         <td className="px-4 py-3 text-right">
                                            <div className="flex flex-col items-end">
-                                              <span className="font-bold text-slate-900">₱{item.total_amount.toLocaleString()}</span>
+                                              <span className={`font-bold ${item.total_amount < 0 ? 'text-red-600' : 'text-slate-900'}`}>₱{item.total_amount.toLocaleString()}</span>
                                               <div className="flex items-center gap-1.5 mt-0.5">
                                                  <span className="text-[8px] text-slate-400 font-medium">Cost Ref: ₱{(item.unit_cost * item.quantity).toLocaleString()}</span>
                                                  {(item.total_amount - (item.unit_cost * item.quantity)) > 0 ? (
@@ -2118,7 +2118,7 @@ export default function AdminSalesPage() {
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Total Receivable</p>
-                  <p className="text-2xl font-extrabold text-[#1a1b20]">₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className={`text-2xl font-extrabold ${calculateTotal() < 0 ? 'text-red-600' : 'text-[#1a1b20]'}`}>₱{calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="flex gap-2 items-center">
                   <button
