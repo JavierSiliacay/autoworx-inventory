@@ -716,10 +716,10 @@ export default function AdminSalesPage() {
       item.subtotal = sub;
       item.unit_price = q > 0 ? (sub / q) : sub;
     } else if (field === 'quantity') {
-      const q = Math.max(0, Number(value || 0));
+      const q = Number(value || 0);
       item.quantity = value;
       // If quantity is 0, preserve any manual subtotal entered, otherwise calculate qty * unit_price
-      if (q > 0) {
+      if (q !== 0) {
         item.subtotal = q * Number(item.unit_price || 0);
       }
     } else if (field === 'unit_price') {
@@ -827,7 +827,7 @@ export default function AdminSalesPage() {
     const validItems = currentSale.items.map(item => ({
       ...item,
       subtotal: typeof item.subtotal === 'string' ? Number((item.subtotal as string).replace(/,/g, '')) : item.subtotal
-    })).filter(item => item.item_id && (Number(item.quantity || 0) > 0 || Number(item.subtotal || 0) !== 0));
+    })).filter(item => item.item_id && (Number(item.quantity || 0) !== 0 || Number(item.subtotal || 0) !== 0));
     
     if (validItems.length === 0 || !currentSale.invoice_no) {
       alert("Please add at least one valid item and an invoice number.");
@@ -910,13 +910,13 @@ export default function AdminSalesPage() {
         }]);
       }
 
-      // 4. Update Inventory & Log Transactions for physical items only (quantity > 0)
+      // 4. Update Inventory & Log Transactions for items with non-zero quantity (including negative for stock returns)
       if (currentSale.payment_type !== 'Cancelled') {
-        const physicalItems = validItems.filter(item => Number(item.quantity || 0) > 0);
+        const physicalItems = validItems.filter(item => Number(item.quantity || 0) !== 0);
         // Consolidate deductions by item_id to avoid stale state issues if same product is in multiple rows
         const consolidatedDeductions: Record<string, number> = {};
         physicalItems.forEach(item => {
-          consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + item.quantity;
+          consolidatedDeductions[item.item_id] = (consolidatedDeductions[item.item_id] || 0) + Number(item.quantity);
         });
 
         for (const itemId in consolidatedDeductions) {
@@ -1007,7 +1007,7 @@ export default function AdminSalesPage() {
       if (salesList && salesList.length > 0) {
         // 2. Revert inventory for each physical product item
         for (const sale of salesList) {
-          if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+          if (sale.quantity != null && sale.quantity !== 0 && sale.item_id) {
             const { data: item } = await supabase
               .from('inventory')
               .select('quantity')
@@ -1134,7 +1134,7 @@ export default function AdminSalesPage() {
       
       if (sale) {
         // 2. Revert Inventory for physical item
-        if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+        if (sale.quantity != null && sale.quantity !== 0 && sale.item_id) {
           const { data: item } = await supabase
             .from('inventory')
             .select('quantity')
@@ -1274,7 +1274,7 @@ export default function AdminSalesPage() {
         if (salesList && salesList.length > 0) {
           for (const sale of salesList) {
              // Revert Inventory
-             if (sale.quantity && sale.quantity > 0 && sale.item_id) {
+             if (sale.quantity != null && sale.quantity !== 0 && sale.item_id) {
                const { data: item } = await supabase
                  .from('inventory')
                  .select('quantity')
@@ -2055,7 +2055,7 @@ export default function AdminSalesPage() {
                                 handleRowChange(idx, 'quantity', next);
                               }}
                               onDecrement={() => {
-                                const next = Math.max(0.01, Number((Number(item.quantity || 1) - 1).toFixed(2)));
+                                const next = Number((Number(item.quantity || 1) - 1).toFixed(2));
                                 handleRowChange(idx, 'quantity', next);
                               }}
                             />

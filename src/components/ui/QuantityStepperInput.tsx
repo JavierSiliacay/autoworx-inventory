@@ -30,27 +30,8 @@ export default function QuantityStepperInput({
     onDecrementRef.current = onDecrement;
   });
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // Actively prevent page/modal scrolling when scrolling on the quantity input
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (e.deltaY < 0) {
-        onIncrementRef.current();
-      } else if (e.deltaY > 0) {
-        onDecrementRef.current();
-      }
-    };
-
-    el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      el.removeEventListener("wheel", handleWheel);
-    };
-  }, []);
+  // Scroll wheel is intentionally disabled on quantity inputs
+  // to prevent accidental increment/decrement while scrolling the page.
 
   return (
     <div
@@ -66,7 +47,7 @@ export default function QuantityStepperInput({
         value={value === undefined ? "" : value}
         onChange={(e) => {
           const val = e.target.value;
-          if (val === "" || /^\d*\.?\d*$/.test(val)) {
+          if (val === "" || val === "-" || /^-?\d*\.?\d*$/.test(val)) {
             onChange(val === "" ? "" : val);
           }
         }}

@@ -89,9 +89,9 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
       item.subtotal = sub;
       item.unit_price = q > 0 ? (sub / q) : sub;
     } else if (field === 'quantity') {
-      const q = Math.max(0, Number(value || 0));
+      const q = Number(value || 0);
       item.quantity = value;
-      if (q > 0) {
+      if (q !== 0) {
         item.subtotal = q * Number(item.unit_price || 0);
       }
     } else if (field === 'unit_price') {
@@ -448,7 +448,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
                               handleRowChange(idx, 'quantity', next);
                             }}
                             onDecrement={() => {
-                              const next = Math.max(0, Number((Number(item.quantity || 1) - 1).toFixed(2)));
+                              const next = Number((Number(item.quantity || 1) - 1).toFixed(2));
                               handleRowChange(idx, 'quantity', next);
                             }}
                           />
