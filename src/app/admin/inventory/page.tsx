@@ -360,7 +360,7 @@ export default function AdminInventoryPage() {
             <Search className="w-5 h-5 text-[#16a34a] shrink-0" />
             <input
               className="bg-transparent border-none outline-none text-base w-full placeholder:text-slate-400 font-medium text-slate-800"
-              placeholder="Search product, SKU, category, or creator (e.g. Javier, System)..."
+              placeholder="Search product, SKU, category, or creator (e.g. Carla, Staff name)..."
               value={filter}
               onChange={e => { setFilter(e.target.value); setCurrentPage(1); }}
             />
