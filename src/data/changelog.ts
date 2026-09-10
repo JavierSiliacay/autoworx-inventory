@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789017791688",
+    version: "v1.9.10",
+    date: "2026-09-10",
+    type: "feature",
+    title: "Primer AI learns about cost adjustments and inventory types",
+    description: "Primer AI now understands unit cost changes and different stock‑in types, helping it give more accurate recommendations and insights for your inventory management."
+  },
+
+  {
     id: "update-1789012351504",
     version: "v1.9.10",
     date: "2026-09-10",
