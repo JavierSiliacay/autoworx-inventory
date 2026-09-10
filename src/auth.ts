@@ -60,6 +60,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
+      // Ensure Facebook profile picture URL uses permanent Graph API endpoint instead of expiring fbsbx lookaside URLs
+      if (account?.provider === "facebook" || user.email.endsWith("@facebook.com")) {
+        const fbId = account?.providerAccountId || user.email.split("@")[0];
+        if (fbId && /^\d+$/.test(fbId)) {
+          user.image = `https://graph.facebook.com/${fbId}/picture?type=large`;
+        }
+      }
+
       try {
         const isDeveloper = DEVELOPERS.includes(user.email);
         const isOwner = OWNERS.includes(user.email);

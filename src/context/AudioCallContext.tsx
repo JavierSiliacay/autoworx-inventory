@@ -37,6 +37,21 @@ interface AudioCallContextType {
 
 const AudioCallContext = createContext<AudioCallContextType | undefined>(undefined);
 
+export function formatCallDurationText(seconds: number): string {
+  if (seconds <= 0) return "0s";
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hrs > 0) {
+    return `${hrs}h ${mins}m ${secs}s`;
+  }
+  if (mins > 0) {
+    return `${mins}m ${secs.toString().padStart(2, "0")}s`;
+  }
+  return `${secs}s`;
+}
+
 const ICE_SERVERS: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -316,6 +331,14 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const callTimeoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const connectedStartTimeRef = useRef<number | null>(null);
+  const currentCallDurationRef = useRef<number>(0);
+  const activePeerRef = useRef<CallParticipant | null>(null);
+
+  useEffect(() => {
+    activePeerRef.current = activePeer;
+  }, [activePeer]);
+
   const recordMissedCall = useCallback(async (meta: {
     target: CallParticipant;
     conversationId: string;
@@ -337,6 +360,7 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
           subtitle: "Tap to call back",
           metadata: {
             callType: "audio",
+            status: "missed",
             timestamp: new Date().toISOString(),
             targetUserId: meta.target.id,
             targetUserName: meta.target.name,
@@ -346,6 +370,44 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err) {
       console.warn("Failed to record missed call message:", err);
+    }
+  }, [currentUserId, currentUserName, currentUserRole, currentUserImage]);
+
+  const recordCompletedCall = useCallback(async (info: {
+    conversationId: string;
+    branchId?: string;
+    durationSec: number;
+    target?: CallParticipant | null;
+  }) => {
+    if (!info || !info.conversationId || !currentUserId || info.durationSec <= 0) return;
+    try {
+      const formatted = formatCallDurationText(info.durationSec);
+      await sendMessage({
+        conversationId: info.conversationId,
+        branchId: info.branchId || "2af9ac25-18e7-4cbd-a750-299452f32491",
+        senderId: currentUserId,
+        senderName: currentUserName,
+        senderRole: currentUserRole as any,
+        senderImage: currentUserImage,
+        content: `📞 Audio call • ${formatted}`,
+        attachment: {
+          type: "call",
+          title: "Audio call",
+          subtitle: `Duration: ${formatted}`,
+          metadata: {
+            callType: "audio",
+            status: "completed",
+            duration: info.durationSec,
+            durationFormatted: formatted,
+            timestamp: new Date().toISOString(),
+            targetUserId: info.target?.id,
+            targetUserName: info.target?.name,
+          },
+        },
+        recipientId: info.target?.id === "admin" ? undefined : info.target?.id,
+      });
+    } catch (err) {
+      console.warn("Failed to record completed call duration message:", err);
     }
   }, [currentUserId, currentUserName, currentUserRole, currentUserImage]);
 
@@ -605,6 +667,15 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       if (currentUserEmail && payload.caller.email === currentUserEmail) return;
       if (callStatusRef.current !== "idle") return; // busy
 
+      // If call is targeted to a specific user or email, ONLY that targeted recipient should ring!
+      if (payload.targetUserId || payload.targetUserEmail) {
+        const matchesUserId = Boolean(currentUserId && payload.targetUserId === currentUserId);
+        const matchesUserEmail = Boolean(currentUserEmail && payload.targetUserEmail === currentUserEmail.toLowerCase().trim());
+        if (!matchesUserId && !matchesUserEmail) {
+          return; // Ignore call intended for another specific agent/user
+        }
+      }
+
       pendingIncomingRef.current = payload;
       activeRoomIdRef.current = payload.callId;
       setActivePeer(payload.caller);
@@ -704,10 +775,30 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
     }
 
     const wasCalling = callStatus === "calling";
+    const wasConnected = callStatus === "connected";
     const meta = outgoingCallMetaRef.current;
+
     if (wasCalling && meta) {
       outgoingCallMetaRef.current = null;
       recordMissedCall(meta);
+    } else if (wasConnected) {
+      const elapsedSec = currentCallDurationRef.current > 0
+        ? currentCallDurationRef.current
+        : connectedStartTimeRef.current
+        ? Math.max(1, Math.floor((Date.now() - connectedStartTimeRef.current) / 1000))
+        : 0;
+
+      const roomId = activeRoomIdRef.current || pendingIncomingRef.current?.callId;
+      const peer = activePeerRef.current || meta?.target || pendingIncomingRef.current?.caller;
+
+      if (roomId && elapsedSec > 0) {
+        recordCompletedCall({
+          conversationId: roomId,
+          branchId: meta?.branchId,
+          durationSec: elapsedSec,
+          target: peer,
+        });
+      }
     }
 
     const roomId = activeRoomIdRef.current || pendingIncomingRef.current?.callId;
@@ -759,7 +850,7 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
     }
 
     cleanupConnection();
-  }, [callStatus, currentUserId, cleanupConnection, recordMissedCall, broadcastSignal]);
+  }, [callStatus, currentUserId, cleanupConnection, recordMissedCall, recordCompletedCall, broadcastSignal]);
 
   // Action 2: Start Outgoing Call
   const startCall = useCallback(async (target: CallParticipant, conversationId: string, branchId?: string) => {
@@ -815,6 +906,8 @@ export function AudioCallProvider({ children }: { children: React.ReactNode }) {
       const callPayload = {
         callId: roomId,
         caller: callerInfo,
+        targetUserId: target.id !== "admin" ? target.id : undefined,
+        targetUserEmail: target.email ? target.email.toLowerCase().trim() : undefined,
         offer,
       };
 

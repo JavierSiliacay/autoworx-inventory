@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fallback 2: If calling a role without active specific subscription match, broadcast to role
-    if (activeSubscriptions.length === 0 && (targetRole === "admin" || targetRole === "agent")) {
+    // Fallback 2: If calling a role without active specific subscription match, broadcast to role ONLY IF no specific user was targeted
+    if (activeSubscriptions.length === 0 && (targetRole === "admin" || targetRole === "agent") && !targetUserId && !targetUserEmail) {
       try {
         const roleList = targetRole === "admin"
           ? ["admin", "manager", "developer", "owner", "staff"]

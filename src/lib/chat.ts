@@ -101,6 +101,28 @@ export function formatSeenByText(seenList: ChatSeenUser[], fallback = "Seen"): s
 }
 
 /**
+ * Resolve avatar image URL safely, replacing expired Facebook lookaside links with permanent Graph API pictures
+ */
+export function resolveUserAvatar(image?: string | null, email?: string | null): string | undefined {
+  if (email && email.toLowerCase().endsWith("@facebook.com")) {
+    const fbId = email.split("@")[0];
+    if (fbId && /^\d+$/.test(fbId)) {
+      return `https://graph.facebook.com/${fbId}/picture?type=large`;
+    }
+  }
+  if (image) {
+    if (image.includes("platform-lookaside.fbsbx.com") || image.includes("fbsbx.com")) {
+      const match = image.match(/asid=(\d+)/);
+      if (match && match[1]) {
+        return `https://graph.facebook.com/${match[1]}/picture?type=large`;
+      }
+    }
+    return image;
+  }
+  return undefined;
+}
+
+/**
  * Play audible chime on new incoming chat message
  */
 export function playChatNotificationSound() {
@@ -302,12 +324,25 @@ export async function sendMessage(params: {
   recipientId?: string;
   recipientEmail?: string;
 }): Promise<ChatMessage> {
+  let targetConvId = params.conversationId;
+  const isAgent = params.senderRole === "agent";
+
+  // If conversationId is virtual (for an uncontacted registered agent), ensure conversation exists in DB
+  if (targetConvId.startsWith("conv-virtual-") && params.recipientId) {
+    try {
+      const realConv = await getOrCreateConversation(params.recipientId, params.branchId);
+      targetConvId = realConv.id;
+    } catch (e) {
+      console.warn("Failed to create real conversation from virtual:", e);
+    }
+  }
+
   const newMsgId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `msg-${Date.now()}`;
   const now = new Date().toISOString();
 
   const msgPayload: ChatMessage = {
     id: newMsgId,
-    conversation_id: params.conversationId,
+    conversation_id: targetConvId,
     branch_id: params.branchId,
     sender_id: params.senderId,
     sender_name: params.senderName,
@@ -318,8 +353,6 @@ export async function sendMessage(params: {
     is_read: false,
     created_at: now,
   };
-
-  const isAgent = params.senderRole === "agent";
 
   // Try Supabase insert
   try {
@@ -334,7 +367,7 @@ export async function sendMessage(params: {
       const { data: currentConv } = await supabase
         .from("agent_admin_conversations")
         .select("agent_id, unread_admin_count, unread_agent_count")
-        .eq("id", params.conversationId)
+        .eq("id", targetConvId)
         .single();
 
       const updateData: any = {
@@ -352,7 +385,7 @@ export async function sendMessage(params: {
       await supabase
         .from("agent_admin_conversations")
         .update(updateData)
-        .eq("id", params.conversationId);
+        .eq("id", targetConvId);
 
       // Trigger Web Push notification (non-blocking fire-and-forget)
       // NOTE: no window check — works in both browser (client) and SSR (server)
@@ -631,43 +664,99 @@ export async function fetchAdminConversations(branchIds: string[], filterBranchI
       query = query.in("branch_id", branchIds);
     }
 
-    const { data: convs, error } = await query.order("last_message_at", { ascending: false });
+    const { data: convs } = await query.order("last_message_at", { ascending: false });
+    const existingConvs = convs || [];
 
-    if (!error && convs) {
-      // Enrich with Agent names & Branch names
-      const agentIds = Array.from(new Set(convs.map((c: any) => c.agent_id)));
-      const branchIdsFromConvs = Array.from(new Set(convs.map((c: any) => c.branch_id)));
+    // Fetch ALL users and branches to enrich active chats & include all registered sales agents
+    const [{ data: allUsers }, { data: allBranches }] = await Promise.all([
+      supabase.from("users").select("id, name, email, image, role, last_seen_at, created_at"),
+      supabase.from("branches").select("id, name"),
+    ]);
 
-      const [{ data: users }, { data: branches }] = await Promise.all([
-        supabase.from("users").select("id, name, email, image, last_seen_at"),
-        supabase.from("branches").select("id, name").in("id", branchIdsFromConvs),
-      ]);
+    const userMap = new Map<string, any>();
+    const registeredAgents: any[] = [];
 
-      const userMap = new Map<string, any>();
-      (users || []).forEach((u: any) => {
-        if (u.id) userMap.set(u.id, u);
-        if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
-        if (u.name) userMap.set(u.name.toLowerCase().trim(), u);
+    (allUsers || []).forEach((u: any) => {
+      if (u.id) userMap.set(u.id, u);
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+      if (u.name) userMap.set(u.name.toLowerCase().trim(), u);
+
+      const r = (u.role || "").toLowerCase().trim();
+      if (r === "sales_agent" || r === "agent" || r === "pending_agent") {
+        registeredAgents.push(u);
+      }
+    });
+
+    const branchMap = new Map((allBranches || []).map((b: any) => [b.id, b.name]));
+    const defaultBranchId = (filterBranchId && filterBranchId !== "all")
+      ? filterBranchId
+      : (branchIds[0] || "2af9ac25-18e7-4cbd-a750-299452f32491");
+    const defaultBranchName = branchMap.get(defaultBranchId) || "Main Distribution";
+
+    const resultList: ChatConversation[] = [];
+    const processedAgentKeys = new Set<string>();
+
+    // 1. Process active conversations first
+    existingConvs.forEach((c: any) => {
+      const u =
+        userMap.get(c.agent_id) ||
+        (c.agent_email ? userMap.get(c.agent_email.toLowerCase().trim()) : null) ||
+        (c.agent_name ? userMap.get(c.agent_name.toLowerCase().trim()) : null);
+
+      if (c.agent_id) processedAgentKeys.add(c.agent_id);
+      if (c.agent_email) processedAgentKeys.add(c.agent_email.toLowerCase().trim());
+      if (u?.id) processedAgentKeys.add(u.id);
+      if (u?.email) processedAgentKeys.add(u.email.toLowerCase().trim());
+
+      const resolvedEmail = u?.email || c.agent_email;
+      const rawImage = u?.image || c.agent_image;
+
+      resultList.push({
+        ...c,
+        agent_name: u?.name || c.agent_name || "Sales Agent",
+        agent_email: resolvedEmail,
+        agent_image: resolveUserAvatar(rawImage, resolvedEmail),
+        agent_last_seen_at: u?.last_seen_at || null,
+        branch_name: branchMap.get(c.branch_id) || c.branch_name || "Branch",
       });
+    });
 
-      const branchMap = new Map((branches || []).map((b: any) => [b.id, b.name]));
+    // 2. Append all registered agents who do NOT have an active conversation entry yet
+    registeredAgents.forEach((agent: any) => {
+      const agentKey = agent.id;
+      const emailKey = agent.email ? agent.email.toLowerCase().trim() : null;
 
-      return convs.map((c: any) => {
-        const u =
-          userMap.get(c.agent_id) ||
-          (c.agent_email ? userMap.get(c.agent_email.toLowerCase().trim()) : null) ||
-          (c.agent_name ? userMap.get(c.agent_name.toLowerCase().trim()) : null);
+      if (!processedAgentKeys.has(agentKey) && (!emailKey || !processedAgentKeys.has(emailKey))) {
+        processedAgentKeys.add(agentKey);
+        if (emailKey) processedAgentKeys.add(emailKey);
 
-        return {
-          ...c,
-          agent_name: u?.name || c.agent_name || "Sales Agent",
-          agent_email: u?.email || c.agent_email,
-          agent_image: u?.image || c.agent_image,
-          agent_last_seen_at: u?.last_seen_at || null,
-          branch_name: branchMap.get(c.branch_id) || c.branch_name || "Branch",
-        };
-      });
-    }
+        resultList.push({
+          id: `conv-virtual-${agent.id}`,
+          agent_id: agent.id,
+          branch_id: defaultBranchId,
+          last_message: "No messages yet — tap to start chat",
+          last_message_at: agent.created_at || new Date(0).toISOString(),
+          unread_admin_count: 0,
+          unread_agent_count: 0,
+          created_at: agent.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          agent_name: agent.name || "Sales Agent",
+          agent_email: agent.email,
+          agent_image: resolveUserAvatar(agent.image, agent.email),
+          agent_last_seen_at: agent.last_seen_at || null,
+          branch_name: defaultBranchName,
+        });
+      }
+    });
+
+    // 3. Sort conversations so active chats with recent messages appear first
+    resultList.sort((a, b) => {
+      const timeA = new Date(a.last_message_at || 0).getTime();
+      const timeB = new Date(b.last_message_at || 0).getTime();
+      return timeB - timeA;
+    });
+
+    return resultList;
   } catch (err) {
     console.warn("fetchAdminConversations error:", err);
   }

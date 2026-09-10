@@ -556,11 +556,17 @@ export default function AdminChatDrawer({
                       }`}
                     >
                       <div className="relative shrink-0">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200">
-                          {conv.agent_image ? (
-                            <img src={conv.agent_image} alt={conv.agent_name || "Agent"} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{conv.agent_name ? conv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200 relative">
+                          <span className="absolute">{conv.agent_name ? conv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                          {conv.agent_image && (
+                            <img
+                              src={conv.agent_image}
+                              alt={conv.agent_name || "Agent"}
+                              className="w-full h-full object-cover relative z-10"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
                           )}
                         </div>
                         {isThisAgentOnline ? (
@@ -624,11 +630,17 @@ export default function AdminChatDrawer({
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                   <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200">
-                        {selectedConv.agent_image ? (
-                          <img src={selectedConv.agent_image} alt={selectedConv.agent_name || "Agent"} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{selectedConv.agent_name ? selectedConv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200 relative">
+                        <span className="absolute">{selectedConv.agent_name ? selectedConv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                        {selectedConv.agent_image && (
+                          <img
+                            src={selectedConv.agent_image}
+                            alt={selectedConv.agent_name || "Agent"}
+                            className="w-full h-full object-cover relative z-10"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
                         )}
                       </div>
                       {isAgentOnline ? (
@@ -838,55 +850,63 @@ export default function AdminChatDrawer({
                                   </a>
                                 )}
 
-                                {msg.attachment?.type === "call" || msg.content?.includes("Missed audio call") ? (
-                                  <div className="py-1 min-w-[200px] max-w-[260px]">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ${
-                                        !isAgent 
-                                          ? "bg-rose-500 text-white ring-white/30" 
-                                          : "bg-rose-100 text-rose-600 ring-rose-200/60"
-                                      }`}>
-                                        <PhoneMissed className="w-4 h-4" />
+                                {msg.attachment?.type === "call" || msg.content?.includes("📞") || msg.content?.includes("audio call") ? (
+                                  (() => {
+                                    const isMissed = msg.attachment?.title?.toLowerCase().includes("missed") || msg.content?.toLowerCase().includes("missed");
+                                    const titleText = isMissed ? "Missed audio call" : "Audio call";
+                                    const subtitleText = msg.attachment?.subtitle || (isMissed ? (!isAgent ? "No answer" : "Tap to call back") : msg.content.replace(/^📞\s*/, ""));
+
+                                    return (
+                                      <div className="py-1 min-w-[200px] max-w-[260px]">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ${
+                                            isMissed
+                                              ? (!isAgent ? "bg-rose-500 text-white ring-white/30" : "bg-rose-100 text-rose-600 ring-rose-200/60")
+                                              : (!isAgent ? "bg-emerald-500 text-white ring-white/30" : "bg-emerald-100 text-emerald-600 ring-emerald-200/60")
+                                          }`}>
+                                            {isMissed ? <PhoneMissed className="w-4 h-4" /> : <PhoneCall className="w-4 h-4" />}
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <p className={`font-bold text-xs sm:text-sm leading-tight ${!isAgent ? "text-white" : "text-slate-900"}`}>
+                                              {titleText}
+                                            </p>
+                                            <p className={`text-[10px] sm:text-xs font-semibold mt-0.5 ${!isAgent ? "text-blue-100" : "text-slate-500"}`}>
+                                              {subtitleText}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        {isMissed && selectedConv && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              startCall(
+                                                {
+                                                  id: selectedConv.agent_id,
+                                                  name: selectedConv.agent_name || "Sales Agent",
+                                                  role: "sales_agent",
+                                                  image: selectedConv.agent_image || undefined,
+                                                  email: selectedConv.agent_email || undefined,
+                                                },
+                                                selectedConv.id,
+                                                selectedConv.branch_id
+                                              );
+                                            }}
+                                            disabled={callStatus !== "idle"}
+                                            className={`w-full mt-3 py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 ${
+                                              !isAgent
+                                                ? "bg-white text-blue-700 hover:bg-blue-50"
+                                                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                            }`}
+                                          >
+                                            <PhoneCall className="w-3.5 h-3.5" />
+                                            <span>Call back</span>
+                                          </button>
+                                        )}
                                       </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className={`font-bold text-xs sm:text-sm leading-tight ${!isAgent ? "text-white" : "text-slate-900"}`}>
-                                          Missed audio call
-                                        </p>
-                                        <p className={`text-[10px] sm:text-xs mt-0.5 ${!isAgent ? "text-blue-100" : "text-slate-500"}`}>
-                                          {!isAgent ? "No answer" : "Tap to call back"}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {selectedConv && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          startCall(
-                                            {
-                                              id: selectedConv.agent_id,
-                                              name: selectedConv.agent_name || "Sales Agent",
-                                              role: "sales_agent",
-                                              image: selectedConv.agent_image || undefined,
-                                              email: selectedConv.agent_email || undefined,
-                                            },
-                                            selectedConv.id,
-                                            selectedConv.branch_id
-                                          );
-                                        }}
-                                        disabled={callStatus !== "idle"}
-                                        className={`w-full mt-3 py-2 px-3 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 ${
-                                          !isAgent
-                                            ? "bg-white text-blue-700 hover:bg-blue-50"
-                                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                        }`}
-                                      >
-                                        <PhoneCall className="w-3.5 h-3.5" />
-                                        <span>{!isAgent ? "Call again" : "Call back"}</span>
-                                      </button>
-                                    )}
-                                  </div>
+                                    );
+                                  })()
                                 ) : (
-                                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                                 )}
                               </div>
 

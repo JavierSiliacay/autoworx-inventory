@@ -675,11 +675,17 @@ export default function AdminFloatingChatWidget() {
                           className="w-full p-3.5 text-left flex items-start gap-3 hover:bg-white transition-colors cursor-pointer bg-slate-50/50 border-b border-slate-100"
                         >
                           <div className="relative shrink-0">
-                            <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200">
-                              {conv.agent_image ? (
-                                <img src={conv.agent_image} alt={conv.agent_name || "Agent"} className="w-full h-full object-cover" />
-                              ) : (
-                                <span>{conv.agent_name ? conv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-800 text-white font-bold text-xs flex items-center justify-center shadow-xs border border-slate-200 relative">
+                              <span className="absolute">{conv.agent_name ? conv.agent_name.charAt(0).toUpperCase() : "A"}</span>
+                              {conv.agent_image && (
+                                <img
+                                  src={conv.agent_image}
+                                  alt={conv.agent_name || "Agent"}
+                                  className="w-full h-full object-cover relative z-10"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
+                                />
                               )}
                             </div>
                             {isThisAgentOnline ? (
