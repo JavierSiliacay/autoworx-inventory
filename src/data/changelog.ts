@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789090744924",
+    version: "v1.9.11",
+    date: "2026-09-11",
+    type: "fix",
+    title: "Improved staff permissions and access control",
+    description: "Staff roles now have standardized authorization and branch scoping, so users only see and manage the branches they're allowed to, enhancing security and ease of use."
+  },
+
+  {
     id: "update-1789026786954",
     version: "v1.9.10",
     date: "2026-09-10",
