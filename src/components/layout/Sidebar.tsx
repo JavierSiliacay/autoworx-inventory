@@ -116,7 +116,8 @@ export default function Sidebar() {
   };
 
   const role = (session?.user as any)?.role || 'staff';
-  const isStaff = role === 'staff';
+  const { isStaffRole } = require("@/lib/roles");
+  const isStaff = isStaffRole(role);
 
   const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory']);
 

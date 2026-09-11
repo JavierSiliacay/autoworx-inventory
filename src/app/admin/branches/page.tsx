@@ -47,9 +47,10 @@ export default function AdminBranchesPage() {
       let branchQuery = supabase.from('branches').select('*');
       
       // Enforce Staff Visibility: Only show their assigned branches
-      if (role === 'staff' && userBranchIds.length > 0) {
+      const { isStaffRole, isGlobalRole } = require("@/lib/roles");
+      if (isStaffRole(role) && userBranchIds.length > 0) {
         branchQuery = branchQuery.in('id', userBranchIds);
-      } else if (role === 'staff' && userBranchIds.length === 0) {
+      } else if (isStaffRole(role) && userBranchIds.length === 0) {
         // Staff with no assignments see nothing
         setBranches([]);
         setLoading(false);
@@ -66,8 +67,8 @@ export default function AdminBranchesPage() {
       
       setBranches(branchRes.data || []);
       setTotalStaff(staffRes.count || 0);
-    } catch (e) {
-      console.error("Error fetching branch data:", e);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
     } finally {
       setLoading(false);
     }
@@ -81,14 +82,14 @@ export default function AdminBranchesPage() {
   });
 
   return (
-    <div className="pb-20" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in font-sans">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 md:mb-12">
         <div>
           <h2 className="text-3xl md:text-5xl font-manrope font-extrabold text-[#1e40af] tracking-tight mb-2">Branch Network</h2>
           <p className="text-[#64748b] font-medium font-manrope">Real-time oversight of authorized logistics centers.</p>
         </div>
-        {(session?.user as any)?.role !== 'staff' && (
+        {require("@/lib/roles").isGlobalRole((session?.user as any)?.role) && (
           <button className="w-full md:w-auto bg-[#16a34a] hover:bg-[#15803d] text-white px-8 py-3.5 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-xl shadow-[#16a34a]/10 transition-all active:scale-95">
             <Plus className="w-5 h-5" />
             Provision New Branch

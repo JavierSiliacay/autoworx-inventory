@@ -28,7 +28,8 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     const role = (session?.user as any)?.role;
     const branchIds = (session?.user as any)?.branch_ids || [];
     
-    if (role === 'staff' && branchIds.length === 1) {
+    const { isLockedToSingleBranch } = require("@/lib/roles");
+    if (isLockedToSingleBranch(role, branchIds)) {
       setSelectedBranchIdState(branchIds[0]);
       return;
     }

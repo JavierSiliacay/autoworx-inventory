@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { useNetwork } from "@/context/NetworkContext";
 import AdminChatDrawer from "@/components/admin/AdminChatDrawer";
 import { autoPromptPushPermission, isPushNotificationSupported } from "@/lib/push";
+import { isStaffRole, isGlobalRole, canAccessAllBranches } from "@/lib/roles";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -29,9 +30,9 @@ export default function Header() {
       let query = supabase.from('branches').select('id, name').order('name');
       
       // Enforce Role-Based Scoping for the selector
-      if (role === 'staff' && userBranchIds.length > 0) {
+      if (isStaffRole(role) && userBranchIds.length > 0) {
         query = query.in('id', userBranchIds);
-      } else if (role === 'staff' && userBranchIds.length === 0) {
+      } else if (isStaffRole(role) && userBranchIds.length === 0) {
         // Staff with no assignments see nothing
         setBranches([]);
         return;
@@ -60,7 +61,7 @@ export default function Header() {
   };
 
   const role = (session?.user as any)?.role || 'staff';
-  const isStaff = role === 'staff';
+  const isStaff = isStaffRole(role);
   const userBranchIds = (session?.user as any)?.branch_ids || [];
 
   const currentBranch = branches.find(b => b.id === selectedBranchId);
@@ -160,7 +161,7 @@ export default function Header() {
 
     async function checkAlerts() {
       // If staff has no branch assignments, do nothing
-      if (role === 'staff' && userBranchIds.length === 0) return;
+      if (isStaffRole(role) && userBranchIds.length === 0) return;
 
       const fetchPayables = async () => {
         const today = new Date();
@@ -176,7 +177,7 @@ export default function Header() {
           .order('due_date', { ascending: true });
 
         // Enforce branch scoping for staff
-        if (role === 'staff' && userBranchIds.length > 0) {
+        if (isStaffRole(role) && userBranchIds.length > 0) {
           query = query.in('branch_id', userBranchIds);
         }
 
@@ -205,7 +206,7 @@ export default function Header() {
           .gt('remaining_balance', 0)
           .order('date', { ascending: true });
 
-        if (role === 'staff' && userBranchIds.length > 0) {
+        if (isStaffRole(role) && userBranchIds.length > 0) {
           query = query.in('branch_id', userBranchIds);
         }
 
@@ -375,7 +376,7 @@ export default function Header() {
         setSelectedBranchId(firstBranchId);
         router.push(`/admin/payables?branch=${firstBranchId}&urgent=true`);
       } else {
-        if (role !== 'staff') {
+        if (isGlobalRole(role)) {
           setSelectedBranchId("all");
           router.push(`/admin/payables?urgent=true`);
         } else if (firstBranchId) {
@@ -409,7 +410,7 @@ export default function Header() {
         setSelectedBranchId(firstBranchId);
         router.push(`/admin/receivable/accounts?branch=${firstBranchId}`);
       } else {
-        if (role !== 'staff') {
+        if (isGlobalRole(role)) {
           setSelectedBranchId("all");
           router.push(`/admin/receivable/accounts`);
         } else if (firstBranchId) {
@@ -457,7 +458,7 @@ export default function Header() {
             {mounted && (
               <>
                 {/* Staff with only 1 branch cannot see "All Network" */}
-                {(!isStaff || userBranchIds.length > 1) && (
+                {canAccessAllBranches(role, userBranchIds) && (
                   <option value="all">All Network</option>
                 )}
                 {branches.map(b => {

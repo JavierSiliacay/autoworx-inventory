@@ -322,7 +322,8 @@ export default function AdminSalesPage() {
   };
 
   const role = (session?.user as any)?.role || 'staff';
-  const isStaff = role === 'staff';
+  const { isStaffRole } = require("@/lib/roles");
+  const isStaff = isStaffRole(role);
   const userBranchIds = (session?.user as any)?.branch_ids || [];
 
   useEffect(() => {

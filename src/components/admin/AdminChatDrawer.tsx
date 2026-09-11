@@ -93,8 +93,9 @@ export default function AdminChatDrawer({
     selectedBranchId === "2af9ac25-18e7-4cbd-a750-299452f32491" ||
     (currentBranch && currentBranch.name.toLowerCase().includes("main"))
   );
+  const { isGlobalRole } = require("@/lib/roles");
   const canSwitchToMain = Boolean(
-    mainBranch && (userRole !== "staff" || userBranchIds.length === 0 || userBranchIds.includes(mainBranch.id))
+    mainBranch && (isGlobalRole(userRole) || userBranchIds.length === 0 || userBranchIds.includes(mainBranch.id))
   );
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);

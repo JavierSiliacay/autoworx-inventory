@@ -64,7 +64,8 @@ export default function AdminDashboardPage() {
     try {
       setLoading(true);
       const user = session?.user as any;
-      const isStaff = user?.role === 'staff';
+      const { isStaffRole } = require("@/lib/roles");
+      const isStaff = isStaffRole(user?.role);
       const userBranchIds = user?.branch_ids || [];
 
       // 1. Fetch Branches (Determine the scope of the table columns)
@@ -337,7 +338,8 @@ export default function AdminDashboardPage() {
   }
 
   const role = (session?.user as any)?.role || 'staff';
-  const isStaff = role === 'staff';
+  const { isStaffRole } = require("@/lib/roles");
+  const isStaff = isStaffRole(role);
 
   const handleDeleteSale = async (id: string, invoiceNo: string, itemId: string, qty: number) => {
     if (!mounted || role !== 'developer') return;

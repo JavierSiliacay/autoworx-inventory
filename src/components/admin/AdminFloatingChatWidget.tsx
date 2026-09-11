@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useNetwork } from "@/context/NetworkContext";
 import { supabase } from "@/lib/supabase";
+import { isGlobalRole } from "@/lib/roles";
 import { 
   ChatConversation, 
   ChatMessage, 
@@ -83,7 +84,7 @@ export default function AdminFloatingChatWidget() {
     (currentBranch && currentBranch.name.toLowerCase().includes("main"))
   );
   const canSwitchToMain = Boolean(
-    mainBranch && (role !== "staff" || userBranchIds.length === 0 || userBranchIds.includes(mainBranch.id))
+    mainBranch && (isGlobalRole(role) || userBranchIds.length === 0 || userBranchIds.includes(mainBranch.id))
   );
 
   const [isOpen, setIsOpen] = useState(false);
@@ -93,19 +94,40 @@ export default function AdminFloatingChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [stockMap, setStockMap] = useState<Record<string, { quantity: number; unit: string }>>({});
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [activeTab, setActiveTab] = useState<"chats" | "history">("chats");
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loadingList, setLoadingList] = useState(false);
+
+  // Call Audio Ref
+  const incomingRingAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const endCallRef = useRef<() => void>(() => {});
+  const activeCallPeerIdRef = useRef<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom(false);
+    }
+  }, [isOpen, messages]);
 
   useEffect(() => {
     if (messages.length > 0) {
       resolveProductStocks(messages, selectedConv?.branch_id).then(setStockMap);
     }
   }, [messages, selectedConv?.branch_id]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   const { onlineUsers, lastSeenMap } = usePresence();
 
@@ -144,10 +166,6 @@ export default function AdminFloatingChatWidget() {
     const timestampToUse = contextLastSeen || selectedConv.agent_last_seen_at;
     return formatLastActive(timestampToUse);
   }, [isAgentOnline, lastSeenMap, selectedConv]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   // 1. Fetch Conversations based on Branch Scope
   const loadConversations = async (silent = false) => {
@@ -237,7 +255,7 @@ export default function AdminFloatingChatWidget() {
             // - If user is staff, it must match one of their allowed branch IDs
             const isRelevantBranch = 
               (!selectedBranchId || selectedBranchId === "all" || newMsg.branch_id === selectedBranchId) &&
-              (role !== "staff" || userBranchIds.length === 0 || userBranchIds.includes(newMsg.branch_id));
+              (isGlobalRole(role) || userBranchIds.length === 0 || userBranchIds.includes(newMsg.branch_id));
 
             if (!isRelevantBranch) return;
 
