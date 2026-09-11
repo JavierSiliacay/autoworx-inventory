@@ -23,6 +23,7 @@ import {
   Truck,
   CreditCard,
   History,
+  ReceiptText,
   Code2
 } from "lucide-react";
 
@@ -135,6 +136,7 @@ export default function Sidebar() {
         { name: "Suppliers", href: "/admin/inventory/suppliers", icon: Building2 },
       ]
     },
+    { name: "Transaction Record", href: "/admin/transactions", icon: ReceiptText },
     { 
       name: "Sales", 
       href: "/admin/sales", 

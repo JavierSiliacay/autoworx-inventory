@@ -102,7 +102,11 @@ export default function Header() {
   let badge = role.charAt(0).toUpperCase() + role.slice(1) + " View";
   let subtitle = "";
 
-  if (pathname.includes("inventory")) {
+  if (pathname.includes("transactions")) {
+    title = "Transaction Record";
+    subtitle = "Unified item-by-item movement audit trail & financial ledger.";
+    badge = "";
+  } else if (pathname.includes("inventory")) {
     title = selectedBranchId === "all" ? "Global Inventory" : `${branchTerm} Inventory`;
     subtitle = "Real-time stock levels and product catalog.";
     badge = "";
@@ -433,17 +437,19 @@ export default function Header() {
 
   return (
     <header className="w-full flex justify-between items-center px-4 md:px-12 py-4 md:py-6 bg-transparent gap-4">
-      <div className="flex items-center gap-2 md:gap-4 min-w-0">
-        <h1 className="text-xl md:text-3xl font-extrabold text-[#1e40af] tracking-tight truncate flex items-center gap-2">
-          {displayTitle}
-        </h1>
-        {mounted && displayBadge && (
-          <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-blue-50 border border-blue-100/80 rounded-full flex items-center gap-1 shadow-xs shrink-0">
-            <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{displayBadge}</span>
-          </div>
-        )}
+      <div className="flex flex-col justify-center min-w-0 flex-1 pr-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-lg md:text-2xl font-black text-[#1e40af] tracking-tight truncate">
+            {displayTitle}
+          </h1>
+          {mounted && displayBadge && (
+            <div className="px-2 py-0.5 bg-blue-50 border border-blue-100/80 rounded-full flex items-center gap-1 shadow-xs shrink-0">
+              <span className="text-[8px] md:text-[10px] font-bold text-[#1e40af] tracking-widest uppercase">{displayBadge}</span>
+            </div>
+          )}
+        </div>
         {mounted && displaySubtitle && (
-          <p className="text-sm text-[#64748b] hidden xl:block truncate">{displaySubtitle}</p>
+          <p className="text-xs text-[#64748b] hidden md:block truncate mt-0.5 font-medium">{displaySubtitle}</p>
         )}
       </div>
 
