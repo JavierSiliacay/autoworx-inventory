@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789098070338",
+    version: "v1.9.11",
+    date: "2026-09-11",
+    type: "feature",
+    title: "Unified Audit Dashboard with Enhanced Permissions",
+    description: "Staff can now view all transaction audits in a single, easy-to-navigate screen. Role‑based scoping ensures each user sees only the data they’re authorized for, while the refreshed header makes switching between sections quicker and more intuitive."
+  },
+
+  {
     id: "update-1789090744924",
     version: "v1.9.11",
     date: "2026-09-11",
