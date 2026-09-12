@@ -9,7 +9,9 @@ ADD COLUMN IF NOT EXISTS po_no TEXT NULL;
 -- 2. Add index on po_no for fast lookups and searches
 CREATE INDEX IF NOT EXISTS idx_sales_po_no ON public.sales(po_no);
 
--- 3. Update edit_sale RPC to persist po_no
+-- 3. Drop and update edit_sale RPC to persist po_no
+DROP FUNCTION IF EXISTS public.edit_sale(jsonb, jsonb, jsonb, text, uuid);
+
 CREATE OR REPLACE FUNCTION public.edit_sale(
   p_sale_payload jsonb,
   p_old_items_payload jsonb,
@@ -170,7 +172,10 @@ BEGIN
 END;
 $$;
 
--- 4. Update search_sales_invoices RPC to also match po_no
+-- 4. Drop and Recreate search_sales_invoices RPC
+DROP FUNCTION IF EXISTS public.search_sales_invoices(text, uuid, date, date, text);
+DROP FUNCTION IF EXISTS public.search_sales_invoices;
+
 CREATE OR REPLACE FUNCTION public.search_sales_invoices(
   search_term TEXT,
   p_branch_id UUID DEFAULT NULL,

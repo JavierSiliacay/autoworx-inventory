@@ -1,10 +1,8 @@
 -- ====================================================================
--- MIGRATION: Master Transaction Record Unified System-Wide Audit View
--- Purpose: Unifies Sales, Stock In, Stock Out, Receivables, Payables, 
---          and Delete History into 1 fast, queryable Master View.
+-- MIGRATION: Update Master Transaction View to Support P.O. #
 -- ====================================================================
 
--- 1. Ensure Dependent Tables & Columns Exist
+-- 1. Ensure Dependent Tables Exist
 CREATE TABLE IF NOT EXISTS public.accounts_receivable (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE,
@@ -44,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.delete_history_logs (
     deleted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- 2. Create Unified Master SQL View with Strict Branch Isolation
+-- 2. Update Unified Master SQL View with P.O. # in Reference Numbers
 CREATE OR REPLACE VIEW vw_master_transactions AS
 
 -- A. Sales Transactions (CHARGE & CASH)
@@ -126,7 +124,7 @@ LEFT JOIN branches b ON b.id = st.branch_id
 UNION ALL
 
 -- D. Accounts Receivable & Customer Collections
-SELECT
+SELECT 
   ('ar-' || ar.id) AS id,
   COALESCE(ar.date_collected::timestamp, ar.date::timestamp, now()) AS date,
   COALESCE(ar.invoice_no, 'AR-Draft') AS ref_no,
@@ -146,7 +144,7 @@ LEFT JOIN branches b ON b.id = ar.branch_id
 UNION ALL
 
 -- E. Supplier Payables & Disbursements
-SELECT
+SELECT 
   ('ap-' || sp.id) AS id,
   COALESCE(sp.created_at, now()) AS date,
   COALESCE(sp.reference_no, 'AP-Draft') AS ref_no,
@@ -166,7 +164,7 @@ LEFT JOIN branches b ON b.id = sp.branch_id
 UNION ALL
 
 -- F. Delete History Vault
-SELECT
+SELECT 
   ('del-' || dh.id) AS id,
   dh.deleted_at AS date,
   ('DEL-' || dh.record_id) AS ref_no,
@@ -181,9 +179,3 @@ SELECT
   NULL AS branch_name,
   NULL AS branch_id
 FROM delete_history_logs dh;
-
--- 3. Create High-Performance B-Tree Indexes
-CREATE INDEX IF NOT EXISTS idx_sales_branch_date ON sales(branch_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_sales_invoice_no ON sales(invoice_no);
-CREATE INDEX IF NOT EXISTS idx_stockin_branch_date ON stock_in_logs(branch_id, date_received DESC);
-CREATE INDEX IF NOT EXISTS idx_stocktrans_type_branch ON stock_transactions(type, branch_id, created_at DESC);
