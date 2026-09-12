@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789180759381",
+    version: "v1.9.12",
+    date: "2026-09-12",
+    type: "improvement",
+    title: "Enhanced Purchase Order Data Management",
+    description: "Updated database migration scripts to improve how purchase order numbers and master views are stored, leading to more reliable and quicker access to order information for staff."
+  },
+
+  {
     id: "update-1789179576285",
     version: "v1.9.12",
     date: "2026-09-12",
