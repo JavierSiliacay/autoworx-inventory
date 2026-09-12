@@ -6,6 +6,7 @@ import React from 'react';
 interface SaleEntry {
   date: string;
   invoice_no: string;
+  po_no?: string | null;
   customer_name: string;
   total_amount: number;
   payment_type: string;
@@ -300,7 +301,10 @@ export default function SalesReportPrint({
                 return (
                   <tr key={`${sale.invoice_no}-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium">{formattedDate}</td>
-                    <td className={`border border-black px-2 py-1 text-center font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : ''}`}>{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className={`border border-black px-2 py-1 text-center font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : ''}`}>
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className={`border border-black px-2 py-1 text-right font-medium ${sale.payment_type === 'Cancelled' ? 'text-red-600 line-through' : (sale.total_amount || 0) < 0 ? 'text-red-600' : ''}`}>{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className={`border border-black px-2 py-1 text-center font-medium uppercase ${sale.payment_type === 'Cancelled' ? 'text-red-600' : ''}`}>{sale.customer_name || 'UNKNOWN'}</td>
                     <td className={`border border-black px-2 py-1 text-center font-medium uppercase ${sale.payment_type === 'Cancelled' ? 'text-red-600 font-bold' : ''}`}>{remarks}</td>
@@ -1074,7 +1078,10 @@ export default function SalesReportPrint({
                 {cashSalesWithReceipt.concat(cashSalesNoReceipt).map((sale, i) => (
                   <tr key={`cash-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN {sale.payment_type.toUpperCase()}</td>
                   </tr>
@@ -1095,7 +1102,10 @@ export default function SalesReportPrint({
                 {digitalSalesArr.map((sale, i) => (
                   <tr key={`digital-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">PAID IN {sale.payment_type.toUpperCase()}</td>
                   </tr>
@@ -1116,7 +1126,10 @@ export default function SalesReportPrint({
                 {deliverySalesArr.map((sale, i) => (
                   <tr key={`delivery-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'DELIVERY').toUpperCase()}</td>
                   </tr>
@@ -1137,7 +1150,10 @@ export default function SalesReportPrint({
                 {chargeSalesArr.map((sale, i) => (
                   <tr key={`charge-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.customer_name || 'UNKNOWN'}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase">
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className="border border-black px-2 py-1 text-right font-medium">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase pt-1">{(sale.payment_type || 'CHARGE').toUpperCase()}</td>
                   </tr>
@@ -1158,7 +1174,10 @@ export default function SalesReportPrint({
                 {cancelledSalesArr.map((sale, i) => (
                   <tr key={`cancelled-${i}`} className="border-b border-black">
                     <td className="border border-black px-2 py-1 text-center font-medium uppercase text-red-600">{sale.customer_name || 'UNKNOWN'}</td>
-                    <td className="border border-black px-2 py-1 text-center font-medium uppercase text-red-600 line-through">{sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}</td>
+                    <td className="border border-black px-2 py-1 text-center font-medium uppercase text-red-600 line-through">
+                      {sale.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : (sale.invoice_no || 'N/A')}
+                      {sale.po_no ? ` (PO: ${sale.po_no})` : ''}
+                    </td>
                     <td className="border border-black px-2 py-1 text-right font-medium text-red-600 line-through">{(sale.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="border border-black px-2 py-1 text-center font-bold uppercase pt-1 text-red-600">CANCELLED</td>
                   </tr>

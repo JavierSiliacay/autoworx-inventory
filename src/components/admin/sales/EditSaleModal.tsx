@@ -25,6 +25,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
     date: "",
     invoice_no: "",
     old_invoice_no: "",
+    po_no: "",
     customer_name: "",
     sales_agent: "",
     payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
@@ -39,6 +40,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         date: new Date(invoiceData.date).toISOString().split('T')[0],
         invoice_no: invoiceData.invoice_no,
         old_invoice_no: invoiceData.invoice_no,
+        po_no: invoiceData.po_no || invoiceData.items?.[0]?.po_no || "",
         customer_name: invoiceData.customer_name || "",
         sales_agent: invoiceData.sales_agent || "",
         payment_type: invoiceData.payment_type || "Cash",
@@ -137,6 +139,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         date: new Date(invoiceData.date).toISOString().split('T')[0],
         invoice_no: invoiceData.invoice_no,
         old_invoice_no: invoiceData.invoice_no,
+        po_no: invoiceData.po_no || invoiceData.items?.[0]?.po_no || "",
         customer_name: invoiceData.customer_name || "",
         sales_agent: invoiceData.sales_agent || "",
         payment_type: invoiceData.payment_type || "Cash",
@@ -216,6 +219,7 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         old_invoice_no: currentSale.old_invoice_no,
         old_payment_type: currentSale.old_payment_type,
         invoice_no: currentSale.invoice_no,
+        po_no: currentSale.po_no?.trim() || null,
         customer_name: currentSale.customer_name,
         sales_agent: currentSale.sales_agent || null,
         payment_type: currentSale.payment_type,
@@ -292,82 +296,105 @@ export default function EditSaleModal({ isOpen, onClose, invoiceData, inventory,
         </div>
 
         <form onSubmit={handleSaveSale} className="p-4 md:p-4 md:p-8 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sale Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="date"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                  value={currentSale.date}
-                  onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
-                />
-              </div>
-            </div>
+          {(() => {
+            const isMainBranch = Boolean(invoiceData?.branch_name?.toLowerCase().includes('main') || invoiceData?.items?.[0]?.branches?.name?.toLowerCase().includes('main')) && salesAgents && salesAgents.length > 0;
 
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoice No.</label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                  value={currentSale.invoice_no}
-                  onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
-                />
-              </div>
-            </div>
+            return (
+              <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isMainBranch ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-4`}>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sale Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="date"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      value={currentSale.date}
+                      onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <SearchableSelect
-                  options={customers?.map(c => ({ value: c.name, label: c.name })) || []}
-                  value={currentSale.customer_name}
-                  onChange={(val) => setCurrentSale({...currentSale, customer_name: val})}
-                  placeholder="Select a customer..."
-                  className="pl-8"
-                />
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                    <span>P.O. #</span>
+                    <span className="text-[9px] font-normal text-slate-400 lowercase italic">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. PO-00123"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      value={currentSale.po_no}
+                      onChange={(e) => setCurrentSale({...currentSale, po_no: e.target.value})}
+                    />
+                  </div>
+                </div>
 
-            {Boolean(invoiceData?.branch_name?.toLowerCase().includes('main') || invoiceData?.items?.[0]?.branches?.name?.toLowerCase().includes('main')) && salesAgents && salesAgents.length > 0 && (
-              <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
-                  Sales Agent (Quota Tracking)
-                </label>
-                <div className="relative">
-                  <SearchableSelect
-                    options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
-                    value={currentSale.sales_agent || ""}
-                    onChange={(val) => setCurrentSale({...currentSale, sales_agent: val})}
-                    placeholder="Select sales agent..."
-                    className="border-[#f59e0b]/30 focus:border-[#f59e0b] focus:ring-[#f59e0b]/20"
-                  />
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoice No.</label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                      value={currentSale.invoice_no}
+                      onChange={(e) => setCurrentSale({...currentSale, invoice_no: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Customer</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <SearchableSelect
+                      options={customers?.map(c => ({ value: c.name, label: c.name })) || []}
+                      value={currentSale.customer_name}
+                      onChange={(val) => setCurrentSale({...currentSale, customer_name: val})}
+                      placeholder="Select a customer..."
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+
+                {isMainBranch && (
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-bold text-[#f59e0b] uppercase tracking-widest flex items-center gap-1.5">
+                      Sales Agent (Quota Tracking)
+                    </label>
+                    <div className="relative">
+                      <SearchableSelect
+                        options={salesAgents.map(a => ({ value: a.name, label: a.name }))}
+                        value={currentSale.sales_agent || ""}
+                        onChange={(val) => setCurrentSale({...currentSale, sales_agent: val})}
+                        placeholder="Select sales agent..."
+                        className="border-[#f59e0b]/30 focus:border-[#f59e0b] focus:ring-[#f59e0b]/20"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Type</label>
+                  <select
+                    className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
+                    value={currentSale.payment_type}
+                    onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Charge">Charge (Receivable)</option>
+                    <option value="Delivery">Delivery (Receivable)</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
                 </div>
               </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Type</label>
-              <select
-                className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                value={currentSale.payment_type}
-                onChange={(e) => setCurrentSale({...currentSale, payment_type: e.target.value as any})}
-              >
-                <option value="Cash">Cash</option>
-                <option value="GCash">GCash</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Charge">Charge (Receivable)</option>
-                <option value="Delivery">Delivery (Receivable)</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">

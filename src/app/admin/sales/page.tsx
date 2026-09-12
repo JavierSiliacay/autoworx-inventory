@@ -18,6 +18,7 @@ interface SaleEntry {
   id: string;
   date: string;
   invoice_no: string;
+  po_no?: string | null;
   customer_name: string;
   item_id: string;
   quantity: number;
@@ -71,6 +72,7 @@ export default function AdminSalesPage() {
   const [currentSale, setCurrentSale] = useState({
     date: new Date().toISOString().split('T')[0],
     invoice_no: "",
+    po_no: "",
     customer_name: "",
     sales_agent: "",
     payment_type: "Cash" as "Cash" | "GCash" | "Bank Transfer" | "Charge" | "Delivery" | "Cancelled",
@@ -535,7 +537,7 @@ export default function AdminSalesPage() {
     const effectiveBranchId = filterBranch || (selectedBranchId !== 'all' ? selectedBranchId : null) || (isStaff && userBranchIds.length > 0 ? userBranchIds[0] : null) || 'default';
     const draftKey = `sales_invoice_draft_${effectiveBranchId}`;
     try {
-      const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.sales_agent || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
+      const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.po_no || currentSale.sales_agent || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
       if (hasData) {
         localStorage.setItem(draftKey, JSON.stringify(currentSale));
       }
@@ -649,6 +651,7 @@ export default function AdminSalesPage() {
         if (!groups[key]) {
           groups[key] = {
             invoice_no: sale.invoice_no,
+            po_no: sale.po_no || null,
             customer_name: sale.customer_name,
             sales_agent: sale.sales_agent,
             date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
@@ -763,7 +766,7 @@ export default function AdminSalesPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setRemovedItems([]);
-    const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
+    const hasData = currentSale.customer_name || currentSale.invoice_no || currentSale.po_no || currentSale.items.some(it => it.item_id || it.unit_price > 0 || it.color_code);
     if (hasData) {
       setAutoSaveToast({ show: true, message: "Sales invoice draft saved" });
     }
@@ -792,6 +795,7 @@ export default function AdminSalesPage() {
       setCurrentSale({
         date: new Date().toISOString().split('T')[0],
         invoice_no: "",
+        po_no: "",
         customer_name: "",
         sales_agent: "",
         payment_type: "Cash",
@@ -876,6 +880,7 @@ export default function AdminSalesPage() {
         return {
           date: currentSale.date,
           invoice_no: finalInvoiceNo,
+          po_no: currentSale.po_no?.trim() || null,
           customer_name: currentSale.customer_name,
           payment_type: currentSale.payment_type,
           sales_agent: currentSale.sales_agent || null,
@@ -950,6 +955,7 @@ export default function AdminSalesPage() {
       setCurrentSale({
         date: new Date().toISOString().split('T')[0],
         invoice_no: "",
+        po_no: "",
         customer_name: "",
         sales_agent: "",
         payment_type: "Cash",
@@ -1365,7 +1371,9 @@ export default function AdminSalesPage() {
       if (!groups[key]) {
         groups[key] = {
           invoice_no: sale.invoice_no,
+          po_no: sale.po_no || null,
           customer_name: sale.customer_name,
+          sales_agent: sale.sales_agent,
           date: sale.date ? `${sale.date}T${(sale.created_at || "00:00:00Z").split('T')[1]}` : sale.created_at,
           payment_type: sale.payment_type,
           branch_id: sale.branch_id,
@@ -1634,6 +1642,11 @@ export default function AdminSalesPage() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={`text-sm font-bold ${invoice.payment_type === 'Cancelled' ? 'text-red-600 line-through' : 'text-[#1a1b20]'}`}>{invoice.invoice_no?.startsWith('MIG-NO-REC') ? 'CASH SALES - NO RECEIPT' : invoice.invoice_no}</span>
+                        {invoice.po_no && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60 inline-flex items-center w-fit mt-0.5">
+                            P.O. #{invoice.po_no}
+                          </span>
+                        )}
                         <span className={`text-[10px] font-medium ${invoice.payment_type === 'Cancelled' ? 'text-red-400' : 'text-slate-400'}`}>
                           {new Date(invoice.date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -1909,7 +1922,7 @@ export default function AdminSalesPage() {
                 const isMainDistributionBranch = Boolean(activeBranchName && activeBranchName.toLowerCase().includes('main'));
 
                 return (
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 ${isMainDistributionBranch ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isMainDistributionBranch ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-4`}>
                     <div className="space-y-2">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sale Date</label>
                       <div className="relative">
@@ -1920,6 +1933,23 @@ export default function AdminSalesPage() {
                           className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
                           value={currentSale.date}
                           onChange={(e) => setCurrentSale({...currentSale, date: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                        <span>P.O. #</span>
+                        <span className="text-[10px] font-normal text-slate-400 lowercase italic">(optional)</span>
+                      </label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text" 
+                          placeholder="e.g. PO-00123"
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1b20]/20 focus:border-[#1a1b20] font-bold text-[#1a1b20]"
+                          value={currentSale.po_no}
+                          onChange={(e) => setCurrentSale({...currentSale, po_no: e.target.value})}
                         />
                       </div>
                     </div>

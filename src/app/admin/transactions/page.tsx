@@ -161,7 +161,7 @@ export default function MasterTransactionRecordPage() {
 
       // Fallback: Direct Query Aggregation (Sales + Stock-In + Stock-Out)
       let salesQuery = supabase.from("sales").select(`
-        id, date, invoice_no, customer_name, payment_type, sales_agent, notes, branch_id, quantity, unit_price, total_amount, branches(name),
+        id, date, invoice_no, po_no, customer_name, payment_type, sales_agent, notes, branch_id, quantity, unit_price, total_amount, branches(name),
         inventory:inventory(product_name, unit)
       `).order("date", { ascending: false });
 
@@ -200,7 +200,7 @@ export default function MasterTransactionRecordPage() {
           allRows.push({
             id: `sale-${sale.id}`,
             date: sale.date || new Date().toISOString(),
-            ref_no: sale.invoice_no || "DR-N/A",
+            ref_no: sale.po_no ? `${sale.invoice_no || "DR-N/A"} (PO: ${sale.po_no})` : (sale.invoice_no || "DR-N/A"),
             customer_supplier: sale.customer_name || "CASH",
             item_description: sale.inventory?.product_name || "Product Item",
             type: typeBadge,

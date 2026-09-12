@@ -1,9 +1,15 @@
 -- ========================================================
--- OPTIMIZE DATABASE: RPC for Bulk Edit Sales
+-- MIGRATION: Add optional P.O. # to Sales Table & Functions
 -- ========================================================
--- This function replaces sequential client-side HTTP requests
--- with a single atomic transaction for editing a sale.
 
+-- 1. Add po_no column to sales table
+ALTER TABLE public.sales 
+ADD COLUMN IF NOT EXISTS po_no TEXT NULL;
+
+-- 2. Add index on po_no for fast lookups and searches
+CREATE INDEX IF NOT EXISTS idx_sales_po_no ON public.sales(po_no);
+
+-- 3. Update edit_sale RPC to persist po_no
 CREATE OR REPLACE FUNCTION public.edit_sale(
   p_sale_payload jsonb,
   p_old_items_payload jsonb,
@@ -161,5 +167,36 @@ BEGIN
     END IF;
   END LOOP;
 
+END;
+$$;
+
+-- 4. Update search_sales_invoices RPC to also match po_no
+CREATE OR REPLACE FUNCTION public.search_sales_invoices(
+  search_term TEXT,
+  p_branch_id UUID DEFAULT NULL,
+  p_start_date DATE DEFAULT NULL,
+  p_end_date DATE DEFAULT NULL,
+  p_payment_type TEXT DEFAULT NULL
+)
+RETURNS TABLE (invoice_no TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT s.invoice_no
+  FROM public.sales s
+  WHERE (p_branch_id IS NULL OR s.branch_id = p_branch_id)
+    AND (p_start_date IS NULL OR s.date >= p_start_date)
+    AND (p_end_date IS NULL OR s.date <= p_end_date)
+    AND (p_payment_type IS NULL OR s.payment_type = p_payment_type)
+    AND (
+      search_term IS NULL OR search_term = ''
+      OR s.invoice_no ILIKE ('%' || search_term || '%')
+      OR s.po_no ILIKE ('%' || search_term || '%')
+      OR s.customer_name ILIKE ('%' || search_term || '%')
+      OR s.sales_agent ILIKE ('%' || search_term || '%')
+    )
+  ORDER BY s.invoice_no;
 END;
 $$;
