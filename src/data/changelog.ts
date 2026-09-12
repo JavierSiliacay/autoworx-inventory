@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789195837696",
+    version: "v1.9.12",
+    date: "2026-09-12",
+    type: "feature",
+    title: "AI Gains Real-Time Transaction Insight",
+    description: "The primer AI now understands transaction records and can query live data, providing staff with instant, up-to-date answers and recommendations."
+  },
+
+  {
     id: "update-1789191340036",
     version: "v1.9.12",
     date: "2026-09-12",
