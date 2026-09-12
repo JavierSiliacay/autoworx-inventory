@@ -221,6 +221,43 @@ async function fetchSafeLiveContext(
         }
     }
 
+    // ─── 6. Live Transaction Record Intent ───
+    const isTransIntent = !isHowToQuestion && /\b(transaction|transactions|transaksyon|audit log|movement|movements|stock out|inbound|outbound|ref_no|reference no|dr-|rr-)\b/i.test(lower);
+    if (isTransIntent) {
+        try {
+            let transQuery = supabase
+                .from('vw_master_transactions' as any)
+                .select('date, ref_no, customer_supplier, item_description, type, qty, unit, total_amount, branch_name')
+                .order('date', { ascending: false })
+                .limit(6);
+
+            if (selectedBranchId && selectedBranchId !== "all") {
+                transQuery = transQuery.eq('branch_id', selectedBranchId);
+            }
+
+            if (meaningfulKeywords.length > 0) {
+                const kw = meaningfulKeywords.find(k => k.length >= 3) || meaningfulKeywords[0];
+                transQuery = transQuery.or(`item_description.ilike.%${kw}%,ref_no.ilike.%${kw}%,customer_supplier.ilike.%${kw}%`);
+            }
+
+            const { data: transData } = await transQuery;
+            if (transData && transData.length > 0) {
+                liveSnippets.push(`[LIVE MASTER TRANSACTION RECORDS (${transData.length} records)]:\n` + JSON.stringify(transData.map(t => ({
+                    date: t.date,
+                    ref_no: t.ref_no || 'N/A',
+                    type: t.type,
+                    customer_supplier: t.customer_supplier || 'N/A',
+                    item: t.item_description,
+                    quantity: `${t.qty} ${t.unit || ''}`.trim(),
+                    amount: t.total_amount ? `₱${Number(t.total_amount).toLocaleString()}` : 'N/A',
+                    branch: t.branch_name || 'Main Distribution'
+                })), null, 2));
+            }
+        } catch (e) {
+            console.warn("[Primer AI] Transaction record lookup notice:", e);
+        }
+    }
+
     if (liveSnippets.length === 0) return "";
 
     return `=== 🔴 LIVE DATABASE REAL-TIME CONTEXT (READ-ONLY SNAPSHOT) ===\n` +
@@ -334,6 +371,7 @@ When guiding users to different sections, ALWAYS provide clickable markdown link
 - **Stock-In / Receiving**: [/admin/inventory/stock-in](/admin/inventory/stock-in) - Receive orders, PO linkage, mixed multi-item movements (Stock In, Adjustment +, Adjustment -, Adjustment Cost).
 - **New Stock-In**: [/admin/inventory/stock-in/new](/admin/inventory/stock-in/new) - Process incoming stock, invoices, or unit cost adjustments.
 - **Stock-Out / Transfers**: [/admin/inventory/stock-out](/admin/inventory/stock-out) - Record outward item movements.
+- **Transaction Record**: [/admin/transactions](/admin/transactions) - Master chronological audit log of all inventory and sales movements (STOCK IN, STOCK OUT, CHARGE, CASH, STOCK TRANSFER, ADJUSTMENT) with multi-field search and CSV export.
 - **Suppliers**: [/admin/inventory/suppliers](/admin/inventory/suppliers) - Supplier directory, payment terms, contact info.
 - **Sales Center**: [/admin/sales](/admin/sales) - Process sales invoices, payment filters (Cash, GCash, Bank Transfer, Charge, Delivery), Daily Sales Report generator.
 - **Customers**: [/admin/sales/customers](/admin/sales/customers) - Customer records, credit terms, addresses.
@@ -403,6 +441,17 @@ Key System Features & Detailed Workflows:
     - **CURRENT PURCHASES Keyword**: Kung i-type o pilion ang \`CURRENT PURCHASES\`, awtomatikong mo-total kini sa unpaid invoices ug DILI kini madoble og kwenta sa Total Amount Due.
     - **LESS PARTIAL Keyword**: Kung magbutang og \`LESS PARTIAL\` o \`DISCOUNT\`, awtomatikong mo-minus kini sa Total Amount Due.
     - **Perfect Print**: Symmetrical 15mm margins, ink-efficient bond paper layout, ug limpyo nga print preview nga walay makitang edit buttons.
+
+13. **Master Transaction Record & Movement Types Audit**:
+    - **Unified Ledger**: Sa [/admin/transactions](/admin/transactions), makita ang tibook chronological history sa tanang inventory ug sales movements across all branches.
+    - **Supported Movement Types**:
+      * **\`CHARGE\`**: Credit sales invoices charged to accounts receivable.
+      * **\`CASH\`**: Direct cash, GCash, or bank transfer sales.
+      * **\`STOCK IN\`**: Incoming supplier purchases and deliveries (linked to Receiving Reports / RR).
+      * **\`STOCK OUT\`**: Outgoing items departing the warehouse for sales or deliveries.
+      * **\`STOCK TRANSFER\`**: Inter-branch transfers (e.g. from Main Distribution to Agora, Valencia, or Kauswagan).
+      * **\`ADJUSTMENT (-)\`**: Reconciled stock deductions for damaged, expired, or missing cans.
+    - **Multi-Field Filtering & Export**: Pwede i-filter by Search Field (\`ALL\`, \`ITEM DESCRIPTION\`, \`INVOICE NO.\`, \`CUSTOMER / SUPPLIER\`, o \`DATE\`), i-filter by specific Movement Type, o i-export ang tibook list ngadto sa CSV / Excel gamit ang **Export CSV** button.
 
 Communication Tone:
 - Always be encouraging, respectful, and helpful.
