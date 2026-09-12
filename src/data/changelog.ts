@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789191340036",
+    version: "v1.9.12",
+    date: "2026-09-12",
+    type: "fix",
+    title: "Newest sales invoices show up first",
+    description: "Sales invoices are now sorted by the most recent date and timestamp, so the latest entries appear at the top for quicker access."
+  },
+
+  {
     id: "update-1789180759381",
     version: "v1.9.12",
     date: "2026-09-12",
