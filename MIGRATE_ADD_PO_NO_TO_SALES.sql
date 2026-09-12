@@ -189,7 +189,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT DISTINCT s.invoice_no
+  SELECT s.invoice_no
   FROM public.sales s
   WHERE (p_branch_id IS NULL OR s.branch_id = p_branch_id)
     AND (p_start_date IS NULL OR s.date >= p_start_date)
@@ -202,6 +202,7 @@ BEGIN
       OR s.customer_name ILIKE ('%' || search_term || '%')
       OR s.sales_agent ILIKE ('%' || search_term || '%')
     )
-  ORDER BY s.invoice_no;
+  GROUP BY s.invoice_no
+  ORDER BY MAX(s.date) DESC, MAX(s.created_at) DESC;
 END;
 $$;
