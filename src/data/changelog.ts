@@ -11,6 +11,15 @@ export interface SystemUpdate {
 
 export const SYSTEM_UPDATES: SystemUpdate[] = [
   {
+    id: "update-1789179576285",
+    version: "v1.9.12",
+    date: "2026-09-12",
+    type: "feature",
+    title: "Optional Purchase Order Number Field",
+    description: "Staff can now optionally add a purchase order number next to the invoice number, making order tracking easier and more flexible."
+  },
+
+  {
     id: "update-1789098070338",
     version: "v1.9.11",
     date: "2026-09-11",
